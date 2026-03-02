@@ -42,10 +42,20 @@ Provides Distill SDK, plugin loading, and sink delivery on top of archives; what
 
 ## 非目标 | Non-Goals
 
-- 不是仅做“记录器” / Not just a recorder
-- 不是仅绑定 OpenCode / Not OpenCode-only
-- 不是默认自动外发 / Not auto-publish by default
-- 第一阶段不做向量检索 / No vector search in phase 1
+### 永不做 | Absolute Non-Goals
+
+- 不替代 AI 编程工具本身 / Not a replacement for AI coding tools
+- 不做训练数据集生成或模型微调 / No training data generation or fine-tuning
+- 不做实时多人协作工作区 / No real-time collaborative workspace
+
+### 阶段性不做 | Deferred (with unlock conditions)
+
+- **自动外发发布**：M2 稳定运行 ≥ 2 周 + evidence 质量评分机制就绪后启动
+- **向量检索**：归档会话 ≥ 500 条或用户明确提出跨会话搜索需求后启动
+- **Web UI**：M3 完成 + ≥ 3 个外部用户提出需求后启动
+- **distiller 市场**：接口向后兼容 ≥ 2 个 minor 版本 + ≥ 3 个社区 distiller 后启动
+
+> 详细解锁条件见 [roadmap.md — 非目标](./roadmap.md#非目标--non-goals)
 
 ## 成功标准 | Success Criteria
 
