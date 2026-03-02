@@ -7,7 +7,7 @@
 
 **Context / 背景**: 项目目标是多工具接入（OpenCode/Claude Code/Cursor/...）与多模型萃取，单一插件形态会限制扩展。
 
-**Decision / 决策**: AICapture 作为独立程序运行。OpenCode 仅作为 Provider；必要时通过薄桥接插件转发事件。
+**Decision / 决策**: Loamlog 作为独立程序运行。OpenCode 仅作为 Provider；必要时通过薄桥接插件转发事件。
 
 **Consequences / 影响**:
 - (+) Provider 可扩展，长期架构稳定
@@ -24,14 +24,14 @@
 **Context / 背景**: 直接写到 repo 内（如 `convos/`）有误提交风险，且跨项目检索困难。
 
 **Decision / 决策**:
-- 使用 `AIC_DUMP_DIR` 作为统一归档目录（未配置则禁用写入）
+- 使用 `LOAM_DUMP_DIR` 作为统一归档目录（未配置则禁用写入）
 - 默认开启 repo 分桶
-- 推荐目录：`D:\AI\aicapture-archive\`
+- 推荐目录：`D:\AI\loamlog-archive\`
 
 **Layout / 目录示例**:
 ```
-{AIC_DUMP_DIR}/repos/{repo-name}/sessions/{timestamp}-{session_id}.{json|md}
-{AIC_DUMP_DIR}/_global/sessions/...   # 无 repo 上下文
+{LOAM_DUMP_DIR}/repos/{repo-name}/sessions/{timestamp}-{session_id}.{json|md}
+{LOAM_DUMP_DIR}/_global/sessions/...   # 无 repo 上下文
 ```
 
 ---
@@ -48,7 +48,7 @@
 **Snapshot minimum / 最小结构**:
 ```typescript
 interface SessionSnapshot {
-  meta: { session_id, captured_at, capture_trigger, aic_version }
+  meta: { session_id, captured_at, capture_trigger, loam_version }
   context: { cwd, worktree, repo?, branch?, commit?, dirty? }
   session: Session
   messages: MessageWithParts[]
@@ -97,7 +97,7 @@ interface SessionSnapshot {
 
 **Decision / 决策**:
 - 每个 distiller 包以 `DistillerFactory` 为默认导出：`export default (config?) => DistillerPlugin`
-- `aic.config.ts` 中声明 `distillers` 数组，元素为包名字符串或 `{ plugin, config }` 对象
+- `loam.config.ts` 中声明 `distillers` 数组，元素为包名字符串或 `{ plugin, config }` 对象
 - `DistillEngine.loadFromConfig` 启动时按序动态 `import(specifier)` 并调用工厂函数
 - `DistillerRegistry` 统一管理已加载实例，支持按 id 查询
 - 插件具有独立生命周期：`initialize(ctx)` → `run(input)` → `teardown()`
@@ -123,7 +123,7 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 - stdio：可行但要求插件能打开子进程，与薄插件设计冲突
 
 **Decision / 决策**:
-- AIC daemon 监听 `localhost:37468`（默认端口，可通过 `AIC_PORT` 配置）
+- AIC daemon 监听 `localhost:37468`（默认端口，可通过 `LOAM_PORT` 配置）
 - 薄插件在 `session.idle` 事件触发后，向 `POST /capture` 发送 `{ session_id, trigger }`
 - AIC 主动拉取完整 session 数据（通过 OpenCode SDK HTTP client）
 
@@ -140,7 +140,7 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 **Status**: Confirmed
 
 **Context / 背景**:
-多次运行 `aic distill` 会重复处理已萃取过的 Session，浪费 LLM Token 并产生重复结果。
+多次运行 `loam distill` 会重复处理已萸取过的 Session，浪费 LLM Token 并产生重复结果。
 
 **Decision / 决策**:
 - 引入 `DistillerStateKV`，持久化存储 distiller 运行状态（水位线 + 已处理 session 集合）
@@ -150,7 +150,7 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 
 **Storage / 存储**:
 ```
-{AIC_DUMP_DIR}/_global/distill_state.db  # watermark per (distiller_id, repo)
+{LOAM_DUMP_DIR}/_global/distill_state.db  # watermark per (distiller_id, repo)
 # 表结构：{ distiller_id, session_id, processed_at, fingerprints[] }
 ```
 
@@ -177,15 +177,15 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 
 3. **`payloadSchema` 字段**：`DistillerPlugin` 新增 `payloadSchema?: Record<string, JSONSchema7>`，按 type 映射。引擎在流转给 Sink 前进行运行时校验。
 
-4. **`@aicapture/distiller-sdk` 包**：提供：
+4. **`@loamlog/distiller-sdk` 包**：提供：
    - `defineDistiller(spec)` — 高阶函数，隐藏全部样板代码
    - `createEvidence(artifact, message, excerpt)` — 自动提取 session_id/message_id
-   - `aic distill --test-session` CLI 模拟运行（无需启动完整 daemon）
+   - `loam distill --test-session` CLI 模拟运行（无需启动完整 daemon）
 
 **Consequences / 影响**:
 - (+) 最小可用 distiller 减少到只需实现 `id`、`supported_types`、`run` 三个字段
 - (+) 第三方可不依赖 LLM 做纯规则萃取，接口不强制
-- (+) `defineDistiller` 为未来的 `npm create @aicapture/distiller` 脉架工具奠定基础
+- (+) `defineDistiller` 为未来的 `npm create @loamlog/distiller` 脚手架工具奠定基础
 - (-) SDK 包需独立发布并跟踪版本
 
 ---
@@ -196,11 +196,11 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 **Status**: Confirmed
 
 **Context / 背景**:
-采集链路需要在 daemon 侧独立拉取 OpenCode 会话，并满足“默认脱敏 + 未配置 `AIC_DUMP_DIR` 不写入”的硬约束。
+采集链路需要在 daemon 侧独立拉取 OpenCode 会话，并满足“默认脱敏 + 未配置 `LOAM_DUMP_DIR` 不写入”的硬约束。
 
 **Decision / 决策**:
 
-1. **Provider 拉取路径**：`@aicapture/provider-opencode` 默认通过本地 HTTP server 拉取：
+1. **Provider 拉取路径**：`@loamlog/provider-opencode` 默认通过本地 HTTP server 拉取：
    - `GET /session/:sessionID`
    - `GET /session/:sessionID/message`
    - `GET /path`
@@ -219,7 +219,7 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
    - sensitive path segment: `auth/`, `credentials/`, `.env`
    - 统一替换格式：`[REDACTED:type]`
 
-5. **误杀排除**：`AIC_REDACT_IGNORE` 作为 regex 列表输入（分号或换行分隔）。
+5. **误杀排除**：`LOAM_REDACT_IGNORE` 作为 regex 列表输入（分号或换行分隔）。
 
 **Consequences / 影响**:
 - (+) daemon 独立完成拉取与归档，不依赖插件上下文中的 SDK client

@@ -2,6 +2,8 @@
 
 **Turn every AI interaction into a compounding asset.**
 
+**English** | [中文](./README.zh.md)
+
 > Like sediment building up over time — your AI conversations accumulate into layers of reusable knowledge.
 
 Loamlog is a standalone platform that automatically captures sessions from AI coding tools (OpenCode, Claude Code, Cursor, ...) and transforms them into structured, reusable assets — issue candidates, PRD drafts, knowledge cards, and more — through a pluggable distill engine with multi-model routing.

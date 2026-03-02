@@ -112,8 +112,8 @@ Directory routing header:
 
 ## M2 Provider 配置项 | M2 Provider Config Inputs
 
-`@aicapture/provider-opencode` 当前支持以下输入（代码参数与环境变量二选一，参数优先）：
-`@aicapture/provider-opencode` currently supports these inputs (code option overrides env):
+`@loamlog/provider-opencode` 当前支持以下输入（代码参数与环境变量二选一，参数优先）：
+`@loamlog/provider-opencode` currently supports these inputs (code option overrides env):
 
 - `baseUrl` / `OPENCODE_SERVER_URL`
 - `token` / `OPENCODE_SERVER_TOKEN`

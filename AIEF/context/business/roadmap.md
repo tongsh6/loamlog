@@ -20,8 +20,8 @@ As of 2026-03-02, the capture pipeline is fully runnable end-to-end (plugin forw
 Completed items:
 
 - OpenCode 薄插件转发 `session.idle/session.status:idle` 到 `POST /capture`
-- daemon 按 `AIC_DUMP_DIR` 规则控制写入（未配置不写）
-- `@aicapture/provider-opencode` 使用本地 HTTP API 拉取 session/messages/path/vcs
+- daemon 按 `LOAM_DUMP_DIR` 规则控制写入（未配置不写）
+- `@loamlog/provider-opencode` 使用本地 HTTP API 拉取 session/messages/path/vcs
 - 默认脱敏规则接入（`sk-*`, `ghp_*`, `AKIA*`, `Bearer *`, `auth/credentials/.env`）
 - 测试覆盖包含 provider mapping、redaction、daemon 落盘与端到端链路
 
@@ -45,10 +45,10 @@ Completed items:
 - `packages/archive`: 存储、脱敏、指纹
 - `packages/providers/opencode`: OpenCode Provider
 - `plugins/opencode`: 薄桥接插件（仅事件转发）
-- `packages/cli`: `aic capture`
+- `packages/cli`: `loam capture`
 
 **验收 / Acceptance**:
-1. 配置 `AIC_DUMP_DIR` 后会话可自动归档
+1. 配置 `LOAM_DUMP_DIR` 后会话可自动归档
 2. 输出按 repo 分桶并附带 session/时间/repo 上下文
 3. 先稳定生成 JSON（Markdown transcript 在下一阶段补齐）
 4. 脱敏生效且不影响主流程
@@ -62,7 +62,7 @@ Completed items:
 - `packages/distill`: engine + llm-router + plugin loader
 - `packages/distillers/pitfall-card`
 - `packages/sinks/file`
-- CLI: `aic distill --distiller pitfall-card --llm deepseek/deepseek-chat`
+- CLI: `loam distill --distiller pitfall-card --llm deepseek/deepseek-chat`
 
 **验收 / Acceptance**:
 1. Distiller 按契约可运行
