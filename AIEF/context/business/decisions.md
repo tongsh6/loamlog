@@ -226,3 +226,25 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 - (+) 默认安全基线满足项目硬约束，且保留误杀兜底手段
 - (+) 采集链路具备可测试性（provider mapping + redaction + e2e）
 - (-) 目前优先 HTTP 路径；SDK fallback 属于后续增强项
+
+---
+
+## ADR-011: OpenCode 桥接插件独立发布 | OpenCode Bridge Plugin as Independent Package
+
+**Date**: 2026-03-02  
+**Status**: Confirmed
+
+**Context / 背景**:
+`plugins/opencode` 目前作为 loamlog monorepo 的一个子目录存在，但其职责（向 OpenCode 转发 session.idle 事件）与 loamlog 主体完全解耦，且面向 OpenCode 插件市场发布，生命周期与主仓不同步。
+
+**Decision / 决策**:
+- `plugins/opencode` 将迁移为独立 Git 仓库，单独发布到 OpenCode 插件市场
+- loamlog 主仓中的 `plugins/` 目录标记为 `[deprecated]`，后续清空
+- 插件与主体之间仅通过 HTTP 契约（`POST /capture`）通信，无代码依赖
+- 独立插件包名规划：`loamlog-opencode`（opencode plugin id）
+
+**Consequences / 影响**:
+- (+) 插件可独立迭代版本，不阻塞 loamlog 主体发布节奏
+- (+) 用户安装路径更清晰：OpenCode 插件市场直接搜索 loamlog
+- (+) 主仓职责边界更清晰（只做采集引擎 + 萃取引擎，不做宿主工具适配）
+- (-) 跨仓协调：接口变更需同步通知插件仓库维护者
