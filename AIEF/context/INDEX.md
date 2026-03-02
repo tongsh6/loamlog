@@ -26,3 +26,4 @@ Project long-term context navigation entry.
 | 文件 / File | 说明 / Description | 状态 / Status |
 |---|---|---|
 | [opencode-plugin-findings.md](experience/opencode-plugin-findings.md) | OpenCode 内部机制调研与 convodump 对比 / OpenCode internals research and convodump comparison | 参考 / Reference |
+| [session-retrospective-2026-03-02.md](experience/session-retrospective-2026-03-02.md) | 2026-03-02 会话复盘：问题、经验、模板、checklist、最佳实践、自动化脚本 / Session retrospective: problems, learnings, templates, checklists, best practices, automation scripts | 参考 / Reference |
