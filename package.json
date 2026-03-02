@@ -1,0 +1,21 @@
+{
+  "name": "loamlog",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "packages/*",
+    "packages/providers/*",
+    "plugins/*"
+  ],
+  "scripts": {
+    "build": "pnpm --filter @loamlog/core run build && pnpm --filter @loamlog/archive run build && pnpm --filter @loamlog/provider-opencode run build && pnpm --filter @loamlog/cli run build && pnpm --filter @loamlog/plugin-opencode run build",
+    "test": "node --import tsx --test packages/**/*.test.ts plugins/**/*.test.ts",
+    "typecheck": "pnpm --filter @loamlog/core run build && pnpm --filter @loamlog/archive run build && pnpm --filter @loamlog/provider-opencode run build && pnpm --filter @loamlog/core run typecheck && pnpm --filter @loamlog/archive run typecheck && pnpm --filter @loamlog/provider-opencode run typecheck && pnpm --filter @loamlog/cli run typecheck && pnpm --filter @loamlog/plugin-opencode run typecheck"
+  },
+  "devDependencies": {
+    "@types/node": "^22.15.30",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  }
+}
