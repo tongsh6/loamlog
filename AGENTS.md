@@ -71,7 +71,7 @@ loamlog/
 │   ├── sinks/             # Output adapters
 │   └── cli/               # CLI entry point
 ├── plugins/
-│   └── opencode/          # Thin OpenCode bridge plugin (event forwarding only)
+│   └── opencode/          # [deprecated] Bridge plugin — will be extracted to standalone repo
 └── config/
 ```
 
