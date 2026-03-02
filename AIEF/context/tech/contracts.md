@@ -12,7 +12,7 @@ interface SessionArtifact {
     session_id: string
     captured_at: string
     capture_trigger: string
-    aic_version: string
+    loam_version: string
     provider: string
   }
   context: {
@@ -179,8 +179,8 @@ interface RedactionPolicy {
   // Default rules: sk-*, ghp_*, AKIA*, Bearer *, sensitive path segments(auth/credentials/.env)
   replacement_format: "[REDACTED:type]"
 
-  // AIC_REDACT_IGNORE 支持用分号或换行分隔多个 regex（不使用逗号分隔）
-  // AIC_REDACT_IGNORE supports semicolon/newline-separated regex list (comma is not used)
+  // LOAM_REDACT_IGNORE 支持用分号或换行分隔多个 regex（不使用逗号分隔）
+  // LOAM_REDACT_IGNORE supports semicolon/newline-separated regex list (comma is not used)
   ignore?: string
 }
 
@@ -251,7 +251,7 @@ interface DistillerContext {
 interface DistillerRegistry {
   /**
    * 从 specifier 加载并注册插件：
-   * - npm 包：'@aicapture/distiller-pitfall'
+   * - npm 包：'@loamlog/distiller-pitfall'
    * - 本地路径：'./my-distiller' | '/abs/path/to/distiller'
    * Load and register plugin from specifier (npm package id or local path).
    */
@@ -303,11 +303,11 @@ interface DistillReport {
 
 ```typescript
 /**
- * aic.config.ts（或 aic.config.json）的根结构。
- * Root structure of aic.config.ts (or aic.config.json).
+ * loam.config.ts（或 aic.config.json）的根结构。
+ * Root structure of loam.config.ts (or aic.config.json).
  */
 interface AICConfig {
-  dump_dir?: string              // 覆盖 AIC_DUMP_DIR 环境变量 | Overrides AIC_DUMP_DIR env
+  dump_dir?: string              // 覆盖 LOAM_DUMP_DIR 环境变量 | Overrides LOAM_DUMP_DIR env
 
   capture?: {
     providers: string[]          // e.g., ["opencode"]
@@ -344,22 +344,22 @@ interface AICConfig {
 ### 配置示例 | Config Example
 
 ```typescript
-// aic.config.ts
-import type { AICConfig } from '@aicapture/core'
+// loam.config.ts
+import type { AICConfig } from '@loamlog/core'
 
 export default {
-  dump_dir: process.env.AIC_DUMP_DIR,
+  dump_dir: process.env.LOAM_DUMP_DIR,
   capture: {
     providers: ['opencode'],
     debounce_ms: 2000,
   },
   distillers: [
-    '@aicapture/distiller-pitfall',              // npm 包，无额外配置
-    { plugin: '@aicapture/distiller-issue',      // npm 包，带配置
+    '@loamlog/distiller-pitfall',              // npm 包，无额外配置
+    { plugin: '@loamlog/distiller-issue',      // npm 包，带配置
       config: { min_confidence: 0.7 } },
     './distillers/my-custom-distiller',           // 本地路径
   ],
-  sinks: ['@aicapture/sink-file'],
+  sinks: ['@loamlog/sink-file'],
   llm: {
     default_budget: 'cheap',
   },
@@ -441,13 +441,13 @@ interface LLMRouter {
 }
 ```
 
-## @aicapture/distiller-sdk（第三方开发辅助 | Third-party Dev SDK）
+## @loamlog/distiller-sdk（第三方开发辅助 | Third-party Dev SDK）
 
-第三方开发者应使用 `@aicapture/distiller-sdk`，而非直接实现原始接口。
-Third parties should use `@aicapture/distiller-sdk` instead of implementing raw interfaces.
+第三方开发者应使用 `@loamlog/distiller-sdk`，而非直接实现原始接口。
+Third parties should use `@loamlog/distiller-sdk` instead of implementing raw interfaces.
 
 ```typescript
-import { defineDistiller, createEvidence } from '@aicapture/distiller-sdk'
+import { defineDistiller, createEvidence } from '@loamlog/distiller-sdk'
 
 /**
  * defineDistiller：高阶函数，自动处理样板代码。
@@ -491,7 +491,7 @@ function createEvidence(
 
 ```typescript
 // my-distiller/index.ts
-import { defineDistiller, createEvidence } from '@aicapture/distiller-sdk'
+import { defineDistiller, createEvidence } from '@loamlog/distiller-sdk'
 
 export default defineDistiller({
   id: '@my-org/find-todos',
@@ -524,10 +524,10 @@ export default defineDistiller({
 })
 ```
 
-### aic.config.ts 接入方式 | How to Register
+### loam.config.ts 接入方式 | How to Register
 
 ```typescript
-// aic.config.ts
+// loam.config.ts
 export default {
   distillers: [
     // 本地开发中的自定义 distiller | local custom distiller under development
@@ -543,5 +543,5 @@ export default {
 ```bash
 # 无需启动完整 AIC 进程，直接传入一个会话 JSON 文件模拟运行
 # No need to start AIC daemon; pass a session JSON to simulate a run
-aic distill --distiller ./my-distiller --test-session ./sample-session.json
+loam distill --distiller ./my-distiller --test-session ./sample-session.json
 ```

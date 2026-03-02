@@ -30,6 +30,7 @@ pnpm-debug.log*
 # Loamlog archive dumps (never commit real session data)
 loamlog-archive/
 loam-archive/
+convos/
 
 # Temp
 *.tmp

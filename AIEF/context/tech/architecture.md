@@ -21,10 +21,10 @@ aicapture/
 │   ├── providers/
 │   │   └── opencode/      # OpenCode provider
 │   ├── distill/           # Engine + LLM router + registry + metadata injector
-│   ├── distiller-sdk/     # @aicapture/distiller-sdk: defineDistiller, createEvidence, testRunner
+│   ├── distiller-sdk/     # @loamlog/distiller-sdk: defineDistiller, createEvidence, testRunner
 │   ├── distillers/        # Built-in distillers (reference implementations)
 │   ├── sinks/             # Output adapters
-│   └── cli/               # CLI entry (aic distill --test-session support)
+│   └── cli/               # CLI entry (loam distill --test-session support)
 ├── plugins/
 │   └── opencode/          # Thin bridge plugin (event forwarding)
 └── config/
@@ -71,8 +71,8 @@ OpenCode Plugin               AIC Daemon (localhost:37468)
 
 ## OpenCode 拉取序列（M2） | OpenCode Pull Sequence (M2)
 
-当前 `@aicapture/provider-opencode` 通过本地 OpenCode server HTTP 拉取会话数据。
-Current `@aicapture/provider-opencode` pulls session data from local OpenCode server via HTTP.
+当前 `@loamlog/provider-opencode` 通过本地 OpenCode server HTTP 拉取会话数据。
+Current `@loamlog/provider-opencode` pulls session data from local OpenCode server via HTTP.
 
 ```text
 GET /session/:sessionID
@@ -90,16 +90,16 @@ Supports auth and routing context headers:
 ## 萃取层插件加载流程 | Distill Plugin Load Flow
 
 ```
-aic.config.ts
+loam.config.ts
   distillers: [
-    '@aicapture/distiller-pitfall',
+    '@loamlog/distiller-pitfall',
     { plugin: './my-distiller', config: { ... } }
   ]
         |
         v
   DistillEngine.loadFromConfig(config)
         |
-        |-- dynamic import('@aicapture/distiller-pitfall')
+        |-- dynamic import('@loamlog/distiller-pitfall')
         |       └── default export: DistillerFactory
         |               └── factory(config?) -> DistillerPlugin
         |
@@ -131,7 +131,7 @@ Each distiller exposes a `DistillerFactory`; the engine calls it and injects dep
 ## 存储布局 | Storage Layout
 
 ```
-{AIC_DUMP_DIR}/
+{LOAM_DUMP_DIR}/
 ├── repos/
 │   └── {repo-name}/
 │       └── sessions/
