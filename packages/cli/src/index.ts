@@ -1,7 +1,11 @@
 import { startDaemon } from "./daemon.js";
+import { runDistillCommand } from "./distill.js";
 
 function printUsage(): void {
-  console.log("Usage: loam daemon [--port <number>] [--dump-dir <path>] [--providers <list>]");
+  console.log("Usage: loam <command> [options]");
+  console.log("Commands:");
+  console.log("  daemon  [--port <number>] [--dump-dir <path>] [--providers <list>]");
+  console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>]");
 }
 
 function parsePort(args: string[]): number | undefined {
@@ -43,6 +47,11 @@ async function main(): Promise<void> {
   if (!command) {
     printUsage();
     process.exitCode = 1;
+    return;
+  }
+
+  if (command === "distill") {
+    await runDistillCommand(args);
     return;
   }
 

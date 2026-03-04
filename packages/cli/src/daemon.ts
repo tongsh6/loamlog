@@ -92,9 +92,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
           snapshot: redacted.snapshot,
         });
 
-        logger(
-          logger(`[loam daemon] snapshot saved path=${persisted.jsonPath} redacted_count=${redacted.redacted_count}`),
-        );
+        logger(`[loam daemon] snapshot saved path=${persisted.jsonPath} redacted_count=${redacted.redacted_count}`);
         sendJson(res, 202, {
           accepted: true,
           session_id: payload.session_id,

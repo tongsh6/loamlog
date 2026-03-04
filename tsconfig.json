@@ -3,6 +3,10 @@
   "references": [
     { "path": "./packages/core" },
     { "path": "./packages/archive" },
+    { "path": "./packages/distiller-sdk" },
+    { "path": "./packages/distill" },
+    { "path": "./packages/distillers/pitfall-card" },
+    { "path": "./packages/sinks/file" },
     { "path": "./packages/providers/opencode" },
     { "path": "./packages/cli" },
     { "path": "./plugins/opencode" }

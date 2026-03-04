@@ -13,6 +13,7 @@
   "dependencies": {
     "@loamlog/archive": "workspace:*",
     "@loamlog/core": "workspace:*",
+    "@loamlog/distill": "workspace:*",
     "@loamlog/provider-opencode": "workspace:*"
   }
 }

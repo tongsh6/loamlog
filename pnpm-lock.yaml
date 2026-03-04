@@ -20,33 +20,70 @@ importers:
 
   packages/archive:
     dependencies:
-      '@aicapture/core':
+      '@loamlog/core':
         specifier: workspace:*
         version: link:../core
 
   packages/cli:
     dependencies:
-      '@aicapture/archive':
+      '@loamlog/archive':
         specifier: workspace:*
         version: link:../archive
-      '@aicapture/core':
+      '@loamlog/core':
         specifier: workspace:*
         version: link:../core
-      '@aicapture/provider-opencode':
+      '@loamlog/distill':
+        specifier: workspace:*
+        version: link:../distill
+      '@loamlog/provider-opencode':
         specifier: workspace:*
         version: link:../providers/opencode
 
-  packages/core: {}
+  packages/core:
+    devDependencies:
+      '@types/json-schema':
+        specifier: ^7.0.15
+        version: 7.0.15
+
+  packages/distill:
+    dependencies:
+      '@loamlog/archive':
+        specifier: workspace:*
+        version: link:../archive
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/distiller-sdk:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../core
+
+  packages/distillers/pitfall-card:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@loamlog/distiller-sdk':
+        specifier: workspace:*
+        version: link:../../distiller-sdk
 
   packages/providers/opencode:
     dependencies:
-      '@aicapture/core':
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
+
+  packages/sinks/file:
+    dependencies:
+      '@loamlog/core':
         specifier: workspace:*
         version: link:../../core
 
   plugins/opencode:
     dependencies:
-      '@aicapture/core':
+      '@loamlog/core':
         specifier: workspace:*
         version: link:../../packages/core
 
@@ -208,6 +245,9 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@types/json-schema@7.0.15':
+    resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
+
   '@types/node@22.19.13':
     resolution: {integrity: sha512-akNQMv0wW5uyRpD2v2IEyRSZiR+BeGuoB6L310EgGObO44HSMNT8z1xzio28V8qOrgYaopIDNA18YgdXd+qTiw==}
 
@@ -319,6 +359,8 @@ snapshots:
 
   '@esbuild/win32-x64@0.27.3':
     optional: true
+
+  '@types/json-schema@7.0.15': {}
 
   '@types/node@22.19.13':
     dependencies:
