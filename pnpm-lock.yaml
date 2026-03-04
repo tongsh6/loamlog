@@ -83,6 +83,10 @@ importers:
 
   plugins/opencode:
     dependencies:
+      '@opencode-ai/plugin':
+        specifier: '>=1.0.0'
+        version: 1.2.16
+    devDependencies:
       '@loamlog/core':
         specifier: workspace:*
         version: link:../../packages/core
@@ -245,6 +249,12 @@ packages:
     cpu: [x64]
     os: [win32]
 
+  '@opencode-ai/plugin@1.2.16':
+    resolution: {integrity: sha512-9Kb7BQIC2P3oKCvI8K3thP5YP0vE7yLvcmBmgyACUIqc3e5UL6U+4umLpTvgQa2eQdjxtOXznuGTNwgcGMHUHg==}
+
+  '@opencode-ai/sdk@1.2.16':
+    resolution: {integrity: sha512-y9ae9VnCcuog0GaI4DveX1HB6DBoZgGN3EuJVlRFbBCPwhzkls6fCfHSb5+VnTS6Fy0OWFUL28VBCmixL/D+/Q==}
+
   '@types/json-schema@7.0.15':
     resolution: {integrity: sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA==}
 
@@ -279,6 +289,9 @@ packages:
 
   undici-types@6.21.0:
     resolution: {integrity: sha512-iwDZqg0QAGrg9Rav5H4n0M64c3mkR59cJ6wQp+7C4nI0gsmExaedaYLNO44eT4AtBBwjbTiGPMlt2Md0T9H9JQ==}
+
+  zod@4.1.8:
+    resolution: {integrity: sha512-5R1P+WwQqmmMIEACyzSvo4JXHY5WiAFHRMg+zBZKgKS+Q1viRa0C1hmUKtHltoIFKtIdki3pRxkmpP74jnNYHQ==}
 
 snapshots:
 
@@ -360,6 +373,13 @@ snapshots:
   '@esbuild/win32-x64@0.27.3':
     optional: true
 
+  '@opencode-ai/plugin@1.2.16':
+    dependencies:
+      '@opencode-ai/sdk': 1.2.16
+      zod: 4.1.8
+
+  '@opencode-ai/sdk@1.2.16': {}
+
   '@types/json-schema@7.0.15': {}
 
   '@types/node@22.19.13':
@@ -414,3 +434,5 @@ snapshots:
   typescript@5.9.3: {}
 
   undici-types@6.21.0: {}
+
+  zod@4.1.8: {}
