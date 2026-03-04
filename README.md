@@ -121,13 +121,17 @@ The daemon listens on `http://127.0.0.1:37468` by default and captures sessions 
 
 ### Install the OpenCode plugin
 
-The `opencode-loamlog` plugin forwards session idle events to the `loam` daemon. OpenCode will automatically download and activate it from npm.
+The `opencode-loamlog` plugin forwards session idle events to the `loam` daemon. Install it globally so OpenCode can discover it:
 
-Add the plugin to your project's `opencode.json` (or global `~/.config/opencode/opencode.json`):
+```bash
+npm install -g opencode-loamlog
+```
+
+Add the plugin to your global `~/.config/opencode/opencode.json`:
 
 ```json
 {
-  "plugins": ["opencode-loamlog"]
+  "plugins": ["opencode-loamlog@latest"]
 }
 ```
 

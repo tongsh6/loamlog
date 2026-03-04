@@ -11,15 +11,13 @@
 
 ## 安装 (Installation)
 
-该插件已发布为 NPM 包，你可以使用你偏好的包管理器进行安装：
+建议全局安装该插件，以便 OpenCode 能够正确识别：
 
 ```bash
-pnpm add opencode-loamlog
-# 或
-npm install opencode-loamlog
+npm install -g opencode-loamlog
 ```
 
-安装完成后，请确保在 OpenCode 配置文件（`~/.config/opencode/opencode.json`）中启用了该插件：
+安装完成后，请确保在全局 OpenCode 配置文件（`~/.config/opencode/opencode.json`）中启用了该插件：
 
 ```json
 {

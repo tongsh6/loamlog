@@ -11,15 +11,13 @@ OpenCode plugin for Loamlog — automatically captures sessions on idle and arch
 
 ## Installation
 
-The plugin is available as an NPM package. You can install it using your preferred package manager:
+The plugin should be installed globally so that OpenCode can discover it:
 
 ```bash
-pnpm add opencode-loamlog
-# or
-npm install opencode-loamlog
+npm install -g opencode-loamlog
 ```
 
-After installation, ensure the plugin is enabled in your OpenCode configuration (`~/.config/opencode/opencode.json`):
+After installation, ensure the plugin is enabled in your global OpenCode configuration (`~/.config/opencode/opencode.json`):
 
 ```json
 {
