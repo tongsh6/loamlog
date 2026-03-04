@@ -5,7 +5,7 @@ import type { Server } from "node:http";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import type { SessionProvider } from "@loamlog/core";
-import createOpenCodeBridgePlugin from "../../../plugins/opencode/src/index.js";
+import { LoamlogPlugin } from "../../../plugins/opencode/src/index.js";
 import { startDaemon } from "./daemon.js";
 
 let server: Server | undefined;
@@ -97,21 +97,47 @@ describe("M0 flow: plugin -> daemon", () => {
     });
     server = started.server;
 
-    const plugin = await createOpenCodeBridgePlugin({
-      daemonUrl: `http://127.0.0.1:${started.port}`,
-      log: {
-        info: () => undefined,
-        warn: () => undefined,
-        error: () => undefined,
-      },
+    const originalDaemonUrl = process.env.LOAM_DAEMON_URL;
+    process.env.LOAM_DAEMON_URL = `http://127.0.0.1:${started.port}`;
+
+    const plugin = await LoamlogPlugin({
+      client: {
+        session: {
+          get: async () => ({ data: { id: "ses_m0_e2e_001", time: { created: Date.now() } } }),
+          messages: async () => ({
+            data: [
+              {
+                info: {
+                  id: "msg-e2e-1",
+                  role: "assistant",
+                  time: { created: Date.now() },
+                },
+                parts: [{ type: "text", text: "e2e payload" }],
+              },
+            ],
+          }),
+        },
+        path: {
+          get: async () => ({ data: { directory: "D:/repo", worktree: "D:/repo" } }),
+        },
+        vcs: {
+          get: async () => ({ data: { branch: "main" } }),
+        },
+      } as any,
     });
 
     await plugin.event({
       event: {
         type: "session.idle",
-        session_id: "ses_m0_e2e_001",
-      },
+        properties: { sessionID: "ses_m0_e2e_001" },
+      } as any,
     });
+
+    if (originalDaemonUrl) {
+      process.env.LOAM_DAEMON_URL = originalDaemonUrl;
+    } else {
+      delete process.env.LOAM_DAEMON_URL;
+    }
 
     assert.deepEqual(captured, ["ses_m0_e2e_001"]);
 

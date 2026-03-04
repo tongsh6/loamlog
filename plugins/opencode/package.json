@@ -1,6 +1,6 @@
 {
   "name": "opencode-loamlog",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "OpenCode plugin for Loamlog — automatically captures sessions on idle and archives them as structured JSON snapshots via the loam daemon",
   "type": "module",
   "main": "dist/index.js",

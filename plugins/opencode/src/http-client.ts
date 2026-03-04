@@ -20,15 +20,23 @@ export async function forwardCaptureEvent(options: ForwardCaptureOptions): Promi
   const requestUrl = new URL(CAPTURE_PATH, daemonUrl).toString();
   const fetchImpl = options.fetchImpl ?? fetch;
 
-  const response = await fetchImpl(requestUrl, {
-    method: "POST",
-    headers: {
-      "content-type": "application/json",
-    },
-    body: JSON.stringify(options.request),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 3000);
 
-  if (!response.ok) {
-    throw new Error(`daemon rejected capture request: ${response.status}`);
+  try {
+    const response = await fetchImpl(requestUrl, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify(options.request),
+      signal: controller.signal,
+    });
+
+    if (!response.ok) {
+      throw new Error(`daemon rejected capture request: ${response.status}`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
 }

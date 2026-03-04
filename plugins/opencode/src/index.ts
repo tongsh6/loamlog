@@ -1,5 +1,6 @@
 import { appendFileSync } from "fs";
-import type { PulledSessionPayload, SessionArtifactPart } from "@loamlog/core";
+import type { PulledSessionPayload, SessionArtifactPart, CaptureRequest } from "@loamlog/core";
+import { BufferManager } from "./buffer-manager.js";
 
 // ---------------------------------------------------------------------------
 // Minimal OpenCode SDK client types (injected by the plugin runtime)
@@ -49,14 +50,42 @@ interface OpenCodeEvent {
 // ---------------------------------------------------------------------------
 
 const DEBUG_LOG = process.env.LOAM_DEBUG_LOG ?? "/tmp/loamlog-debug.log";
-const DAEMON_URL = process.env.LOAM_DAEMON_URL ?? "http://127.0.0.1:37468";
 const CAPTURE_PATH = "/capture";
+const DEFAULT_TIMEOUT_MS = 3000;
+
+const bufferManager = new BufferManager();
+
+function getDaemonUrl(): string {
+  return process.env.LOAM_DAEMON_URL ?? "http://127.0.0.1:37468";
+}
 
 function debugLog(msg: string): void {
   try {
     appendFileSync(DEBUG_LOG, `[${new Date().toISOString()}] ${msg}\n`);
   } catch (_) {
     // Never crash the host
+  }
+}
+
+// ---------------------------------------------------------------------------
+// Network Helpers
+// ---------------------------------------------------------------------------
+
+async function sendToDaemon(payload: CaptureRequest): Promise<void> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), DEFAULT_TIMEOUT_MS);
+  try {
+    const res = await fetch(`${getDaemonUrl()}${CAPTURE_PATH}`, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload),
+      signal: controller.signal,
+    });
+    if (!res.ok) {
+      throw new Error(`daemon rejected: ${res.status}`);
+    }
+  } finally {
+    clearTimeout(timeoutId);
   }
 }
 
@@ -207,18 +236,23 @@ export const LoamlogPlugin = async ({ client }: { client: OpenCodeClient }) => {
           },
         };
 
-        const res = await fetch(`${DAEMON_URL}${CAPTURE_PATH}`, {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({
-            session_id: sessionId,
-            trigger: event.type,
-            captured_at: now,
-            provider: "opencode",
-            pulled,
-          }),
-        });
-        debugLog(`POST to daemon: ${res.status}`);
+        const payload: CaptureRequest = {
+          session_id: sessionId,
+          trigger: event.type,
+          captured_at: now,
+          provider: "opencode",
+          pulled,
+        };
+
+        try {
+          await sendToDaemon(payload);
+          debugLog(`POST to daemon: success`);
+          // Support late-start: flush buffer on success
+          bufferManager.flush(sendToDaemon).catch((e) => debugLog(`flush error: ${e}`));
+        } catch (err) {
+          debugLog(`POST to daemon failed, buffering: ${err}`);
+          await bufferManager.save(payload);
+        }
       } catch (err) {
         debugLog(`error in session.idle handler: ${err}`);
         // Errors MUST NOT crash OpenCode
