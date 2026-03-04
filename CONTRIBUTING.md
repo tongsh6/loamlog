@@ -111,6 +111,10 @@ Currently handled manually via `pnpm publish` within each package directory afte
 The OpenCode plugin has a dedicated CI/CD pipeline:
 OpenCode 插件拥有独立的 CI/CD 流水线：
 
+> **⚠️ IMPORTANT / 重要警告**  
+> Never run `npm publish` or `pnpm publish` locally for the plugin. All releases are strictly automated via GitHub Actions to ensure consistency and proper environment handling.  
+> 严禁在本地为插件执行 `npm publish` 或 `pnpm publish`。所有发布均必须通过 GitHub Actions 严格自动化进行，以确保一致性与正确的环境处理。
+
 1. **Automation | 自动化**: Uses GitHub Actions for NPM publishing. 使用 GitHub Actions 进行 NPM 发布。
 2. **Trigger | 触发机制**:
    - **Tag | 标签**: Pushing a tag like `opencode-loamlog@v0.2.x` triggers an automatic publish. 推送如 `opencode-loamlog@v0.2.x` 的标签会触发自动发布。
