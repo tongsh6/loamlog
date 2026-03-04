@@ -1,15 +1,49 @@
 {
-  "name": "@loamlog/plugin-opencode",
+  "name": "opencode-loamlog",
   "version": "0.2.1",
-  "private": true,
+  "description": "OpenCode plugin for Loamlog — automatically captures sessions on idle and archives them as structured JSON snapshots via the loam daemon",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
-  "dependencies": {
+  "keywords": [
+    "opencode",
+    "opencode-plugin",
+    "loamlog",
+    "session-capture",
+    "archive",
+    "ai",
+    "productivity"
+  ],
+  "author": "tongsh6",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tongsh6/loamlog.git",
+    "directory": "plugins/opencode"
+  },
+  "homepage": "https://github.com/tongsh6/loamlog#readme",
+  "peerDependencies": {
+    "@opencode-ai/plugin": ">=1.0.0"
+  },
+  "peerDependenciesMeta": {
+    "@opencode-ai/plugin": {
+      "optional": true
+    }
+  },
+  "devDependencies": {
     "@loamlog/core": "workspace:*"
   }
 }
