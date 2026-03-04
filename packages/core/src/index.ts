@@ -1,3 +1,5 @@
+import type { JSONSchema7 } from "json-schema";
+
 export const DEFAULT_DAEMON_HOST = "127.0.0.1";
 export const DEFAULT_DAEMON_PORT = 37468;
 export const CAPTURE_PATH = "/capture";
@@ -72,6 +74,237 @@ export interface SessionSnapshot {
   redacted: {
     patterns_applied: string[];
     redacted_count: number;
+  };
+}
+
+export type ArtifactPart =
+  | { type: "text"; text: string }
+  | { type: "reasoning"; text: string }
+  | { type: "tool"; name: string; input: unknown; output?: string; error?: string }
+  | { type: "file"; filename: string; mime: string };
+
+export interface SessionArtifact {
+  schema_version: "1.0";
+  meta: {
+    session_id: string;
+    captured_at: string;
+    capture_trigger: string;
+    loam_version: string;
+    provider: string;
+  };
+  context: {
+    cwd: string;
+    worktree: string;
+    repo?: string;
+    branch?: string;
+    commit?: string;
+    dirty?: boolean;
+  };
+  time_range: {
+    start: string;
+    end: string;
+  };
+  session: Record<string, unknown>;
+  messages: Array<{
+    id: string;
+    role: "user" | "assistant" | "system";
+    timestamp: string;
+    content?: string;
+    parts?: ArtifactPart[];
+  }>;
+  tools?: Array<{
+    id: string;
+    message_id: string;
+    name: string;
+    input: Record<string, unknown>;
+    output?: string;
+    error?: string;
+  }>;
+  redacted: {
+    patterns_applied: string[];
+    redacted_count: number;
+  };
+}
+
+export interface DistillEvidenceDraft {
+  session_id: string;
+  message_id: string;
+  excerpt: string;
+  position?: { start: number; end: number };
+}
+
+export interface DistillEvidence extends DistillEvidenceDraft {
+  trace_command: string;
+}
+
+export type DistillResultDraft<T = Record<string, unknown>> = {
+  type: string;
+  title: string;
+  summary: string;
+  confidence: number;
+  tags: string[];
+  payload: T;
+  evidence: DistillEvidenceDraft[];
+  actions?: Array<{
+    type: string;
+    label: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  render?: {
+    markdown?: string;
+    html?: string;
+  };
+};
+
+export interface DistillResult<T = Record<string, unknown>> {
+  id: string;
+  fingerprint: string;
+  distiller_id: string;
+  distiller_version: string;
+  type: string;
+  title: string;
+  summary: string;
+  confidence: number;
+  tags: string[];
+  payload: T;
+  evidence: DistillEvidence[];
+  actions?: Array<{
+    type: string;
+    label: string;
+    metadata?: Record<string, unknown>;
+  }>;
+  render?: {
+    markdown?: string;
+    html?: string;
+  };
+}
+
+export interface DeliveryReport {
+  delivered: number;
+  failed: number;
+  errors?: Array<{ result_index: number; error: string }>;
+}
+
+export interface SinkPlugin {
+  id: string;
+  name: string;
+  version: string;
+  supports(resultType: string): boolean;
+  deliver(input: {
+    results: DistillResult[];
+    config: Record<string, unknown>;
+  }): Promise<DeliveryReport>;
+}
+
+export interface ArtifactQueryClient {
+  getUnprocessed(distillerId: string, limit?: number): AsyncIterable<SessionArtifact>;
+  query(filter: {
+    repo?: string;
+    since?: string;
+    until?: string;
+    session_ids?: string[];
+  }): AsyncIterable<SessionArtifact>;
+}
+
+export interface DistillerStateKV {
+  get<V>(key: string): Promise<V | undefined>;
+  set<V>(key: string, value: V): Promise<void>;
+  markProcessed(distillerId: string, sessionIds: string[]): Promise<void>;
+}
+
+export interface LLMProvider {
+  id: string;
+  complete(input: {
+    messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
+    model: string;
+    temperature?: number;
+    max_tokens?: number;
+    response_format?: "text" | "json";
+  }): Promise<{
+    content: string;
+    tokens: { input: number; output: number };
+    cost?: number;
+  }>;
+}
+
+export interface LLMRouter {
+  route(request: {
+    task: "extract" | "summarize" | "classify" | "score";
+    budget: "cheap" | "standard" | "premium";
+    input_tokens: number;
+  }): { provider: LLMProvider; model: string };
+}
+
+export interface DistillerContext {
+  dumpDir: string;
+  repo?: string;
+  logger: {
+    info(msg: string): void;
+    warn(msg: string): void;
+    error(msg: string, err?: unknown): void;
+  };
+}
+
+export interface DistillerRunInput {
+  artifactStore: ArtifactQueryClient;
+  llm: LLMRouter;
+  state: DistillerStateKV;
+  config?: Record<string, unknown>;
+  distiller_id?: string;
+  distiller_version?: string;
+}
+
+export interface DistillerPlugin {
+  id: string;
+  name: string;
+  version: string;
+  supported_types: string[];
+  configSchema?: JSONSchema7;
+  payloadSchema?: Record<string, JSONSchema7>;
+  initialize?(ctx: DistillerContext): Promise<void>;
+  run(input: DistillerRunInput): Promise<DistillResultDraft[]>;
+  teardown?(): Promise<void>;
+}
+
+export type DistillerFactory = (config?: Record<string, unknown>) => DistillerPlugin;
+
+export interface DistillerRegistry {
+  load(specifier: string, config?: Record<string, unknown>): Promise<DistillerPlugin>;
+  register(plugin: DistillerPlugin): void;
+  get(id: string): DistillerPlugin | undefined;
+  list(): DistillerPlugin[];
+}
+
+export interface DistillReport {
+  distiller_id: string;
+  artifacts_processed: number;
+  results_produced: number;
+  results_skipped: number;
+  errors: Array<{ message: string; session_id?: string }>;
+  duration_ms: number;
+}
+
+export interface DistillEngine {
+  loadFromConfig(config: AICConfig): Promise<void>;
+  run(options?: {
+    distillers?: string[];
+    repo?: string;
+    since?: string;
+    until?: string;
+  }): Promise<DistillReport[]>;
+}
+
+export interface AICConfig {
+  dump_dir?: string;
+  capture?: {
+    providers: string[];
+    debounce_ms?: number;
+  };
+  distillers: Array<string | { plugin: string; config: Record<string, unknown> }>;
+  sinks?: Array<string | { plugin: string; config: Record<string, unknown> }>;
+  llm?: {
+    default_budget?: "cheap" | "standard" | "premium";
+    providers?: Record<string, { api_key?: string; base_url?: string; model?: string }>;
   };
 }
 
@@ -293,3 +526,5 @@ export function isCaptureRequest(value: unknown): value is CaptureRequest {
     candidate.provider.length > 0
   );
 }
+
+export type { JSONSchema7 };
