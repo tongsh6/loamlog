@@ -56,11 +56,9 @@ jobs:
         run: pnpm --filter @loamlog/core run build
 
       - name: Build Plugin
-        run: pnpm --filter @loamlog/plugin-opencode run build
+        run: pnpm --filter opencode-loamlog run build
 
       - name: Publish to NPM
-        run: |
-          cd plugins/opencode
-          npm publish --access public
+        run: npm publish ./plugins/opencode --access public
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
