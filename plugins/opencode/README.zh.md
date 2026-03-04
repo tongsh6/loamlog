@@ -9,12 +9,22 @@
 - **延迟同步 (Late-start Sync)**：一旦守护进程恢复可用，插件将在下一次成功上报后自动冲刷并同步缓冲区内的旧数据。
 - **鲁棒性 (Robustness)**：隔离的错误处理确保插件永远不会导致 OpenCode 宿主程序崩溃。
 
-## 安装
+## 安装 (Installation)
 
-可以通过 OpenCode 插件管理器或手动安装：
+该插件已发布为 NPM 包，你可以使用你偏好的包管理器进行安装：
 
 ```bash
+pnpm add opencode-loamlog
+# 或
 npm install opencode-loamlog
+```
+
+安装完成后，请确保在 OpenCode 配置文件（`~/.config/opencode/opencode.json`）中启用了该插件：
+
+```json
+{
+  "plugin": ["opencode-loamlog@latest"]
+}
 ```
 
 ## 配置
