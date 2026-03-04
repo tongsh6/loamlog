@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, unlink, writeFile, stat } from "fs/promises";
+import { mkdir, readdir, readFile, unlink, writeFile, stat, rename } from "fs/promises";
 import { join } from "path";
 import { homedir } from "os";
 import type { CaptureRequest } from "@loamlog/core";
@@ -9,27 +9,43 @@ const BUFFER_DIR = join(homedir(), ".loamlog", "buffer");
 export class BufferManager {
   private dir: string;
   private isFlushing = false;
+  private logger?: (msg: string) => void;
 
-  constructor(dir: string = BUFFER_DIR) {
+  constructor(dir: string = BUFFER_DIR, logger?: (msg: string) => void) {
     this.dir = dir;
+    this.logger = logger;
   }
 
   async save(payload: CaptureRequest): Promise<void> {
     try {
       await mkdir(this.dir, { recursive: true });
       await this.evictOldestIfNeeded();
-      const filename = `capture-${Date.now()}-${Math.random().toString(36).slice(2, 7)}.json`;
-      await writeFile(join(this.dir, filename), JSON.stringify(payload), "utf-8");
+
+      const baseName = `capture-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+      const finalPath = join(this.dir, `${baseName}.json`);
+      const tmpPath = join(this.dir, `${baseName}.tmp`);
+
+      // Atomic write: write to .tmp then rename to .json
+      await writeFile(tmpPath, JSON.stringify(payload), "utf-8");
+      await rename(tmpPath, finalPath);
+
+      this.logger?.(`buffered payload to ${finalPath}`);
     } catch (err) {
-      // Silent error to avoid crashing the plugin
+      this.logger?.(`failed to buffer payload: ${err}`);
     }
   }
 
   async flush(sendFn: (payload: CaptureRequest) => Promise<void>): Promise<void> {
     if (this.isFlushing) return;
     this.isFlushing = true;
+
     try {
       const files = await this.listSorted();
+      if (files.length === 0) return;
+
+      this.logger?.(`flushing ${files.length} buffered payloads...`);
+      let successCount = 0;
+
       for (const file of files) {
         const filePath = join(this.dir, file.name);
         try {
@@ -37,22 +53,27 @@ export class BufferManager {
           const payload = JSON.parse(content) as CaptureRequest;
           await sendFn(payload);
           await unlink(filePath);
+          successCount++;
         } catch (err) {
-          // If sending fails, stop flushing to preserve order for next time
-          // If parsing fails, delete the corrupted file
           if (err instanceof SyntaxError) {
+            this.logger?.(`deleting corrupted buffer file: ${file.name}`);
             await unlink(filePath).catch(() => {});
           } else {
+            this.logger?.(`flush interrupted at ${file.name}: ${err}`);
             break; 
           }
         }
       }
+      if (successCount > 0) {
+        this.logger?.(`flush completed: ${successCount} files sent.`);
+      }
     } catch (err) {
-      // Silent error
+      this.logger?.(`flush error: ${err}`);
     } finally {
       this.isFlushing = false;
     }
   }
+
 
   private async listSorted() {
     try {

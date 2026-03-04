@@ -53,7 +53,7 @@ const DEBUG_LOG = process.env.LOAM_DEBUG_LOG ?? "/tmp/loamlog-debug.log";
 const CAPTURE_PATH = "/capture";
 const DEFAULT_TIMEOUT_MS = 3000;
 
-const bufferManager = new BufferManager();
+const bufferManager = new BufferManager(undefined, debugLog);
 
 function getDaemonUrl(): string {
   return process.env.LOAM_DAEMON_URL ?? "http://127.0.0.1:37468";
@@ -248,7 +248,7 @@ export const LoamlogPlugin = async ({ client }: { client: OpenCodeClient }) => {
           await sendToDaemon(payload);
           debugLog(`POST to daemon: success`);
           // Support late-start: flush buffer on success
-          bufferManager.flush(sendToDaemon).catch((e) => debugLog(`flush error: ${e}`));
+          bufferManager.flush(sendToDaemon);
         } catch (err) {
           debugLog(`POST to daemon failed, buffering: ${err}`);
           await bufferManager.save(payload);
