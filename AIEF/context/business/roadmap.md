@@ -94,6 +94,8 @@ As of 2026-03-02, the capture pipeline is fully runnable end-to-end (plugin forw
 1. 同一 distiller 可不改代码切换模型
 2. provider 不可用时有明确错误提示
 
+详细执行计划 / Detailed execution plan: `AIEF/context/business/m3-execution-plan.md`
+
 ---
 
 ## M4：多数据源接入 | Multi-source Providers

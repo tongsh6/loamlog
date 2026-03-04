@@ -12,6 +12,7 @@ Project long-term context navigation entry.
 | [project-spec.md](business/project-spec.md) | 项目定义、核心价值、问题陈述、成功标准 / Project definition, core value, problem statement, success criteria | 已建立 / Established |
 | [decisions.md](business/decisions.md) | 架构决策记录（ADR）与依据 / Architecture decision records with rationale | 活跃 / Active |
 | [roadmap.md](business/roadmap.md) | 里程碑、交付物、验收标准 / Milestones, deliverables, acceptance criteria | 活跃 / Active |
+| [m3-execution-plan.md](business/m3-execution-plan.md) | M3 多模型路由执行计划与 OpenCode 手工验证清单 / M3 multi-provider execution plan and OpenCode manual verification checklist | 活跃 / Active |
 
 ### tech/ - 架构、集成、契约 | Architecture, integrations, contracts
 

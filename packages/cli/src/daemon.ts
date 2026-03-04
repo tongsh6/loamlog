@@ -80,7 +80,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
           return;
         }
 
-        const pulled = await sessionProvider.pullSession(payload.session_id);
+        const pulled = payload.pulled ?? await sessionProvider.pullSession(payload.session_id);
         const snapshot = buildSessionSnapshot({
           capture: payload,
           pulled,

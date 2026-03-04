@@ -10,6 +10,8 @@ export interface CaptureRequest {
   trigger: string;
   captured_at: string;
   provider: string;
+  /** Pre-fetched session payload from the plugin side. When present, the daemon skips the provider pull. */
+  pulled?: PulledSessionPayload;
 }
 
 export interface CaptureResponse {

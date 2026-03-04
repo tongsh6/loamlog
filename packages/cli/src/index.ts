@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { startDaemon } from "./daemon.js";
 import { runDistillCommand } from "./distill.js";
 
