@@ -55,9 +55,9 @@ loamlog/
 │   ├── archive/            # 统一存储（写入 / 脱敏 / 指纹）
 │   ├── providers/
 │   │   └── opencode/       # OpenCode 数据源适配器
-│   ├── distill/            # 萃取引擎 + LLM 路由          [M2 规划]
-│   ├── distillers/         # 内置 distiller               [M2 规划]
-│   ├── sinks/              # 输出适配器                    [M2 规划]
+│   ├── distill/            # 萃取引擎 + LLM 路由
+│   ├── distillers/         # 内置 distiller
+│   ├── sinks/              # 输出适配器
 │   └── cli/                # CLI 入口（loam 命令）
 └── plugins/
     └── opencode/           # 薄桥接插件（仅事件转发）
@@ -71,7 +71,7 @@ loamlog/
 |--------|------|------|
 | M0 | 验证 OpenCode 事件与 payload 拉取链路 | ✅ 已完成 |
 | M1 | 采集层 MVP — 自动归档会话 | ✅ 已完成 |
-| M2 | 萃取层 MVP — pitfall-card distiller | ⏳ 规划中 |
+| M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | ⏳ 规划中 |
 | M4 | 多数据源接入（Claude Code 等） | ⏳ 规划中 |
 | M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
@@ -80,6 +80,12 @@ loamlog/
 
 ```
 OpenCode 插件 → POST /capture → loam daemon → provider 拉取 → 脱敏 → 原子 JSON 落盘
+```
+
+萃取管道现已可端到端运行：
+
+```bash
+loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek-chat
 ```
 
 ---
@@ -111,7 +117,7 @@ export LOAM_DUMP_DIR=~/loamlog-archive
 loam daemon --providers opencode
 ```
 
-daemon 默认监听 `http://127.0.0.1:4857`，在 OpenCode 空闲时自动采集会话。
+daemon 默认监听 `http://127.0.0.1:37468`，在 OpenCode 空闲时自动采集会话。
 
 ### 安装 OpenCode 插件
 
@@ -180,7 +186,7 @@ export LOAM_REDACT_IGNORE="my-safe-pattern;another-pattern"
 
 ## 编写自定义 Distiller
 
-> ⚠️ 萃取引擎（M2）尚未发布，本节为规划 API 文档。
+本节文档为已发布的 M2 distiller SDK API。
 
 ```typescript
 // my-distiller/index.ts

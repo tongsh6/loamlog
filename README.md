@@ -55,9 +55,9 @@ loamlog/
 │   ├── archive/            # Unified storage (write / redact / fingerprint)
 │   ├── providers/
 │   │   └── opencode/       # OpenCode data source adapter
-│   ├── distill/            # Distill engine + LLM router          [planned M2]
-│   ├── distillers/         # Built-in distillers                   [planned M2]
-│   ├── sinks/              # Output adapters                       [planned M2]
+│   ├── distill/            # Distill engine + LLM router
+│   ├── distillers/         # Built-in distillers
+│   ├── sinks/              # Output adapters
 │   └── cli/                # CLI entry point (loam)
 └── plugins/
     └── opencode/           # Thin OpenCode bridge plugin (event forwarding only)
@@ -71,7 +71,7 @@ loamlog/
 |-----------|------|--------|
 | M0 | Validate OpenCode event/payload pipeline | ✅ Completed |
 | M1 | Capture layer MVP — auto-archive sessions | ✅ Completed |
-| M2 | Distill platform MVP — pitfall-card distiller | ⏳ Planned |
+| M2 | Distill platform MVP — pitfall-card distiller | ✅ Completed |
 | M3 | Multi-model LLM routing | ⏳ Planned |
 | M4 | Multi-source providers (Claude Code, ...) | ⏳ Planned |
 | M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
@@ -80,6 +80,12 @@ The capture pipeline is fully runnable end-to-end:
 
 ```
 OpenCode plugin → POST /capture → loam daemon → provider pull → redaction → atomic JSON snapshot
+```
+
+The distill pipeline is now runnable end-to-end:
+
+```bash
+loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek-chat
 ```
 
 ---
@@ -111,7 +117,7 @@ export LOAM_DUMP_DIR=~/loamlog-archive
 loam daemon --providers opencode
 ```
 
-The daemon listens on `http://127.0.0.1:4857` by default and captures sessions whenever OpenCode becomes idle.
+The daemon listens on `http://127.0.0.1:37468` by default and captures sessions whenever OpenCode becomes idle.
 
 ### Install the OpenCode plugin
 
@@ -180,7 +186,7 @@ export LOAM_REDACT_IGNORE="my-safe-pattern;another-pattern"
 
 ## Writing a Custom Distiller
 
-> ⚠️ Distill engine (M2) is not yet released. This documents the planned API.
+This section documents the released M2 distiller SDK API.
 
 ```typescript
 // my-distiller/index.ts

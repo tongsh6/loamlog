@@ -6,7 +6,7 @@
 |------|------|--------|----------|------|
 | M0 | 对齐 OpenCode 事件 payload | — | 0.5 day | ✅ 已完成 |
 | M1 | 采集层 MVP — 自动归档会话 | core, archive, providers/opencode, cli | 1–2 days | ✅ 已完成 |
-| M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ⏳ 规划中 |
+| M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ⏳ 规划中 |
 | M4 | 多数据源接入 | providers/claude-code | 1–2 days | ⏳ 规划中 |
 | M5 | 生态化与工作流 | sinks/github, approve-flow, more distillers | Ongoing | ⏳ 规划中 |
@@ -25,6 +25,10 @@ As of 2026-03-02, the capture pipeline is fully runnable end-to-end (plugin forw
 - `@loamlog/provider-opencode` 使用本地 HTTP API 拉取 session/messages/path/vcs
 - 默认脱敏规则接入（`sk-*`, `ghp_*`, `AKIA*`, `Bearer *`, `auth/credentials/.env`）
 - 测试覆盖包含 provider mapping、redaction、daemon 落盘与端到端链路
+- `@loamlog/distill` 落地：plugin registry、state、query、metadata、LLM router、engine
+- `@loamlog/distiller-sdk` 落地：`defineDistiller`、`createEvidence`
+- `@loamlog/distiller-pitfall-card` 与 `@loamlog/sink-file` 落地，支持本地候选输出
+- CLI 新增 `loam distill` 命令，支持 `--distiller/--llm/--since/--until/--test-session`
 
 ---
 
