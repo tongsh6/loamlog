@@ -101,6 +101,24 @@ pnpm run test
 
 ---
 
+## Release Process | 发布流程
+
+### Core Packages | 核心包
+Currently handled manually via `pnpm publish` within each package directory after a release branch is merged into `master`.
+目前在发布分支合并入 `master` 后，通过在各包目录下手动运行 `pnpm publish` 处理。
+
+### OpenCode Plugin (`opencode-loamlog`) | OpenCode 插件
+The OpenCode plugin has a dedicated CI/CD pipeline:
+OpenCode 插件拥有独立的 CI/CD 流水线：
+
+1. **Automation | 自动化**: Uses GitHub Actions for NPM publishing. 使用 GitHub Actions 进行 NPM 发布。
+2. **Trigger | 触发机制**:
+   - **Tag | 标签**: Pushing a tag like `opencode-loamlog@v0.2.x` triggers an automatic publish. 推送如 `opencode-loamlog@v0.2.x` 的标签会触发自动发布。
+   - **Manual | 手动**: Run the "Publish OpenCode Plugin" workflow in GitHub Actions. 在 GitHub Actions 中手动运行 "Publish OpenCode Plugin" 工作流。
+3. **Secret | 密钥**: Requires `NPM_TOKEN` in GitHub Secrets. 需要在 GitHub Secrets 中配置 `NPM_TOKEN`。
+
+---
+
 ## Testing
 
 New behavior must come with tests. The test suite is run with:

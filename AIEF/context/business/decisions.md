@@ -229,22 +229,23 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 
 ---
 
-## ADR-011: OpenCode 桥接插件独立发布 | OpenCode Bridge Plugin as Independent Package
+## ADR-012: OpenCode 插件本地文件缓冲策略 | Local File Buffering Strategy for OpenCode Plugin
 
-**Date**: 2026-03-02  
+**Date**: 2026-03-05  
 **Status**: Confirmed
 
-**Context / 背景**:
-`plugins/opencode` 目前作为 loamlog monorepo 的一个子目录存在，但其职责（向 OpenCode 转发 session.idle 事件）与 loamlog 主体完全解耦，且面向 OpenCode 插件市场发布，生命周期与主仓不同步。
+**Context / 背景**: 
+当 Loamlog Daemon 未启动或由于网络原因不可达时，OpenCode 插件上报的 `session.idle` 事件会丢失。为了提高健壮性，插件需要一种临时的离线存储机制。
 
 **Decision / 决策**:
-- `plugins/opencode` 将迁移为独立 Git 仓库，单独发布到 OpenCode 插件市场
-- loamlog 主仓中的 `plugins/` 目录标记为 `[deprecated]`，后续清空
-- 插件与主体之间仅通过 HTTP 契约（`POST /capture`）通信，无代码依赖
-- 独立插件包名规划：`loamlog-opencode`（opencode plugin id）
+1. **存储路径**: 使用用户家目录下的隐藏目录 `~/.loamlog/buffer/`，确保跨平台持久化。
+2. **缓冲机制**: 请求失败（连接拒绝、超时、5xx 错误）时，将 payload 序列化为 JSON 文件。
+3. **淘汰策略 (FIFO)**: 目录上限设为 **50 个文件**。写入新文件前，若超限则按修改时间删除最旧的文件，防止磁盘占用过大。
+4. **延迟同步 (Late-start Sync)**: 插件在成功发送任一当前事件后，异步触发 `flush` 逻辑，按时间顺序重发缓冲区内的旧文件。
+5. **异常处理**: 同步过程中若再次失败，立即停止 flush 流程以保持顺序；损坏的 JSON 文件将被直接删除。
 
 **Consequences / 影响**:
-- (+) 插件可独立迭代版本，不阻塞 loamlog 主体发布节奏
-- (+) 用户安装路径更清晰：OpenCode 插件市场直接搜索 loamlog
-- (+) 主仓职责边界更清晰（只做采集引擎 + 萃取引擎，不做宿主工具适配）
-- (-) 跨仓协调：接口变更需同步通知插件仓库维护者
+- (+) 显著提升数据采集率，允许 Daemon “无序启动”
+- (+) 磁盘占用受控，不会因长时间断连撑爆用户磁盘
+- (-) 引入了简单的文件 I/O，需注意多实例下的文件竞争（已通过随机文件名缓解）
+- (-) 仅在下一次事件触发时同步，若长期无新会话，旧数据将一直滞留在缓冲区
