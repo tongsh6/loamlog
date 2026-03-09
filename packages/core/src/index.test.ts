@@ -1,6 +1,11 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { buildSessionSnapshot, type AICConfig, type DistillResultDraft } from "./index.js";
+import {
+  LLMAuthError,
+  buildSessionSnapshot,
+  type AICConfig,
+  type DistillResultDraft,
+} from "./index.js";
 
 describe("core distill exports", () => {
   test("exposes distill contracts for consumers", () => {
@@ -8,6 +13,14 @@ describe("core distill exports", () => {
       dump_dir: "/tmp/loam",
       distillers: ["@loamlog/distiller-pitfall-card"],
       sinks: ["@loamlog/sink-file"],
+      llm: {
+        timeout_ms: 30_000,
+        providers: {
+          openai: {
+            model: "gpt-4o-mini",
+          },
+        },
+      },
     };
 
     const draft: DistillResultDraft = {
@@ -29,5 +42,7 @@ describe("core distill exports", () => {
     assert.equal(typeof buildSessionSnapshot, "function");
     assert.equal(config.distillers.length, 1);
     assert.equal(draft.evidence.length, 1);
+    assert.equal(config.llm?.timeout_ms, 30_000);
+    assert.equal(new LLMAuthError("missing key", "openai").provider, "openai");
   });
 });

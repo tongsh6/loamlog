@@ -149,7 +149,9 @@ export function createDistillEngine(options: { dumpDir: string; config: AICConfi
         await this.loadFromConfig(runtimeConfig);
       }
 
-      const llm = createLLMRouter(runtimeConfig.llm);
+      const llm = createLLMRouter(runtimeConfig.llm, {
+        logger: createLogger("llm-router"),
+      });
       const selected = runOptions?.distillers
         ? registry.list().filter((plugin: DistillerPlugin) => runOptions.distillers?.includes(plugin.id))
         : registry.list();
