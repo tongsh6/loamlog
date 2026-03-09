@@ -214,6 +214,57 @@ export interface DistillerStateKV {
   markProcessed(distillerId: string, sessionIds: string[]): Promise<void>;
 }
 
+export type LLMTask = "extract" | "summarize" | "classify" | "score";
+
+export type LLMBudget = "cheap" | "standard" | "premium";
+
+export interface LLMProviderConfig {
+  api_key?: string;
+  base_url?: string;
+  model?: string;
+}
+
+export class LLMError extends Error {
+  provider: string;
+
+  constructor(message: string, provider: string) {
+    super(message);
+    this.name = "LLMError";
+    this.provider = provider;
+  }
+}
+
+export class LLMAuthError extends LLMError {
+  constructor(message: string, provider: string) {
+    super(message, provider);
+    this.name = "LLMAuthError";
+  }
+}
+
+export class LLMRateLimitError extends LLMError {
+  retryAfterMs?: number;
+
+  constructor(message: string, provider: string, retryAfterMs?: number) {
+    super(message, provider);
+    this.name = "LLMRateLimitError";
+    this.retryAfterMs = retryAfterMs;
+  }
+}
+
+export class LLMTimeoutError extends LLMError {
+  constructor(message: string, provider: string) {
+    super(message, provider);
+    this.name = "LLMTimeoutError";
+  }
+}
+
+export class LLMResponseFormatError extends LLMError {
+  constructor(message: string, provider: string) {
+    super(message, provider);
+    this.name = "LLMResponseFormatError";
+  }
+}
+
 export interface LLMProvider {
   id: string;
   complete(input: {
@@ -231,8 +282,8 @@ export interface LLMProvider {
 
 export interface LLMRouter {
   route(request: {
-    task: "extract" | "summarize" | "classify" | "score";
-    budget: "cheap" | "standard" | "premium";
+    task: LLMTask;
+    budget: LLMBudget;
     input_tokens: number;
   }): { provider: LLMProvider; model: string };
 }
@@ -305,8 +356,9 @@ export interface AICConfig {
   distillers: Array<string | { plugin: string; config: Record<string, unknown> }>;
   sinks?: Array<string | { plugin: string; config: Record<string, unknown> }>;
   llm?: {
-    default_budget?: "cheap" | "standard" | "premium";
-    providers?: Record<string, { api_key?: string; base_url?: string; model?: string }>;
+    default_budget?: LLMBudget;
+    timeout_ms?: number;
+    providers?: Record<string, LLMProviderConfig>;
   };
 }
 
