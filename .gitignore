@@ -35,3 +35,6 @@ convos/
 # Temp
 *.tmp
 nul
+
+# Local browser runtime data used by dev-browser skill
+skills/dev-browser/profiles/browser-data/
