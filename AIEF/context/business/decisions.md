@@ -245,7 +245,99 @@ AIC 作为独立进程运行，需要与 OpenCode 薄插件通信。候选机制
 5. **异常处理**: 同步过程中若再次失败，立即停止 flush 流程以保持顺序；损坏的 JSON 文件将被直接删除。
 
 **Consequences / 影响**:
-- (+) 显著提升数据采集率，允许 Daemon “无序启动”
+- (+) 显著提升数据采集率，允许 Daemon "无序启动"
 - (+) 磁盘占用受控，不会因长时间断连撑爆用户磁盘
 - (-) 引入了简单的文件 I/O，需注意多实例下的文件竞争（已通过随机文件名缓解）
 - (-) 仅在下一次事件触发时同步，若长期无新会话，旧数据将一直滞留在缓冲区
+
+---
+
+## ADR-011: Claude Code Provider 采集机制 | Claude Code Provider Capture Mechanism
+
+**Date**: 2026-03-10  
+**Status**: Proposed
+
+**Context / 背景**:
+填补 ADR-010（OpenCode Provider 拉取策略）与 ADR-012（OpenCode 插件缓冲策略）之间的编号缺口。Claude Code 作为第二个 Provider 家族，需要定义其采集机制，以验证 Provider 抽象在多源场景下的可行性。
+
+**Decision / 决策**:
+1. **采集路径**: 通过 Claude Code 的本地 HTTP API（默认端口 3000）拉取会话数据
+2. **数据结构映射**: 将 Claude Code 的会话结构映射为 Loamlog 标准 `SessionSnapshot`
+3. **认证机制**: 支持 Bearer token（`CLAUDE_CODE_TOKEN`）或 Basic auth
+4. **上下文提取**: 从 Claude Code 的 workspace 信息中提取 repo、branch、commit 等上下文
+
+**Consequences / 影响**:
+- (+) 验证 Provider 抽象在多源场景下的可行性
+- (+) 为后续 Cursor、GitHub Copilot 等 Provider 提供参考实现
+- (-) 需要处理 Claude Code 特有的数据结构差异
+- (-) 需确保与现有 OpenCode Provider 的接口兼容性
+
+---
+
+## ADR-013: `loam list` 命令接口设计 | `loam list` Command Interface Design
+
+**Date**: 2026-03-10  
+**Status**: Proposed
+
+**Context / 背景**:
+用户需要浏览已归档的会话快照，但当前 CLI 仅支持 `daemon` 和 `distill` 命令。需要设计一个直观的列表命令，支持按 repo、时间范围、Provider 等维度过滤。
+
+**Decision / 决策**:
+1. **命令格式**: `loam list [--repo <name>] [--last <7d|30d|all>] [--since <ISO>] [--until <ISO>] [--provider <opencode|claude-code>] [--format <table|json>]`
+2. **输出内容**: 显示 session_id、captured_at、repo、provider、message_count 等关键信息
+3. **分页支持**: 默认显示最近 20 条，支持 `--limit` 和 `--offset` 参数
+4. **详细模式**: `--verbose` 显示更多元数据，如 capture_trigger、redacted_count 等
+
+**Consequences / 影响**:
+- (+) 提供用户友好的归档浏览界面
+- (+) 支持多维度过滤，便于查找特定会话
+- (-) 需要实现新的 CLI 子命令和参数解析逻辑
+- (-) 需考虑性能优化，避免扫描大量文件时的延迟
+
+---
+
+## ADR-014: 多 Provider Daemon 设计 | Multi-Provider Daemon Design
+
+**Date**: 2026-03-10  
+**Status**: Proposed
+
+**Context / 背景**:
+当前 daemon 硬编码了 OpenCode Provider（`createOpencodeSessionProvider()`），无法同时监听多个 Provider。随着 Claude Code 等新 Provider 的加入，需要设计支持多 Provider 的 daemon 架构。
+
+**Decision / 决策**:
+1. **Provider 注册表**: daemon 启动时根据 `--providers` 参数动态加载注册的 Provider
+2. **统一捕获端点**: 所有 Provider 共享 `/capture` 端点，通过 `payload.provider` 字段区分来源
+3. **并发处理**: daemon 支持同时处理来自不同 Provider 的捕获请求
+4. **配置驱动**: 通过 `loam.config.ts` 或环境变量配置 Provider 列表和各自参数
+
+**Consequences / 影响**:
+- (+) 支持同时采集多个 AI 工具的会话数据
+- (+) 架构扩展性强，新增 Provider 无需修改 daemon 核心逻辑
+- (-) 需要重构 daemon 初始化逻辑，支持动态 Provider 加载
+- (-) 需处理不同 Provider 的认证和配置隔离
+
+---
+
+## ADR-015: `aic_version` 与 `loam_version` 字段命名拆分 | `aic_version` and `loam_version` Field Naming Split
+
+**Date**: 2026-03-10  
+**Status**: Confirmed
+
+**Context / 背景**:
+在代码审查中发现 `SessionSnapshot.meta.aic_version`（磁盘存储字段）与 `SessionArtifact.meta.loam_version`（内存处理字段）使用不同命名。这是有意设计：`aic_version` 反映采集时的 AIC 版本，`loam_version` 反映处理时的 Loamlog 版本。
+
+**Decision / 决策**:
+1. **字段语义**:
+   - `SessionSnapshot.meta.aic_version`: 采集工具版本（写入磁盘时）
+   - `SessionArtifact.meta.loam_version`: 处理引擎版本（内存转换时）
+2. **映射关系**: `distill/src/query.ts` 中的 `snapshotToArtifact()` 函数完成映射：`loam_version: snapshot.meta.aic_version`
+3. **向后兼容**: 保持现有字段不变，不触发代码迁移
+4. **文档说明**: 明确两个字段的语义差异和映射关系
+
+**Consequences / 影响**:
+- (+) 清晰区分采集版本和处理版本的概念
+- (+) 保持向后兼容，现有快照无需修改
+- (+) 为未来版本迁移提供语义基础
+- (-) 需要开发人员理解两个字段的语义差异
+
+*注：此为回顾性文档，记录已有设计决策，不触发代码迁移。*
