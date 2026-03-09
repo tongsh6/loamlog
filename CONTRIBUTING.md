@@ -72,8 +72,10 @@ test(archive): add redaction edge-case coverage
 2. **Target branch**: Always `develop` (except hotfixes → `master`)
 3. **PR title**: Must follow commit convention (e.g., `feat(cli): add list command`)
 4. **PR body**: Use the provided template — fill in every section
-5. **CI must pass**: All checks green before merge
-6. **Squash merge**: Prefer squash merge to keep `develop` history clean
+5. **Protected branches**: `develop` and `master` are protected; use PRs instead of direct pushes in normal flow
+6. **CI must pass**: `Test & Typecheck` must be green before merge
+7. **Merge strategy**: Keep history intentional — squash small/noisy branches, or preserve meaningful atomic commits when that makes review and rollback clearer
+8. **Branch cleanup**: Merged branches are auto-deleted by GitHub
 
 For large changes, open an issue first to discuss approach before writing code.
 

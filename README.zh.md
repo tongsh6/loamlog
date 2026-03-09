@@ -46,6 +46,16 @@ Cursor*      ──►  脱敏处理             多 distiller          notion*
 
 ---
 
+## 当前方向
+
+截至 2026-03-09，Loamlog 已经从“只完成采集 MVP”进入“采集 + 多模型萃取链路可运行”的阶段。
+
+- **M3 已完成**：distill 引擎已可在不改 distiller 代码的前提下切换 OpenAI、Anthropic、DeepSeek、Ollama
+- **当前主焦点是 M4**：接入第二类 AI 数据源，验证 source-provider 抽象在 OpenCode 之外也成立
+- **M5 仍是扩展阶段**：更多 distiller、外部 sink、以及带审批的工作流将在当前本地优先引擎之上展开
+
+---
+
 ## 目录结构
 
 ```
@@ -72,8 +82,8 @@ loamlog/
 | M0 | 验证 OpenCode 事件与 payload 拉取链路 | ✅ 已完成 |
 | M1 | 采集层 MVP — 自动归档会话 | ✅ 已完成 |
 | M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
-| M3 | 多模型 LLM 路由 | ⏳ 规划中 |
-| M4 | 多数据源接入（Claude Code 等） | ⏳ 规划中 |
+| M3 | 多模型 LLM 路由 | ✅ 已完成 |
+| M4 | 多数据源接入（Claude Code 等） | ▶ 下一步 |
 | M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
 
 采集管道已可端到端运行：
@@ -86,6 +96,15 @@ OpenCode 插件 → POST /capture → loam daemon → provider 拉取 → 脱敏
 
 ```bash
 loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek-chat
+```
+
+当前路由器已支持以下 provider/model 组合示例：
+
+```bash
+loam distill --llm openai/gpt-4o-mini
+loam distill --llm anthropic/claude-3-5-haiku-latest
+loam distill --llm deepseek/deepseek-chat
+loam distill --llm ollama/llama3.2:3b
 ```
 
 ---
@@ -140,6 +159,13 @@ npm install -g opencode-loamlog
 - **日志验证**：检查 `/tmp/loamlog-debug.log` 以确认插件初始化和事件捕获状态。
 
 npm: https://www.npmjs.com/package/opencode-loamlog
+
+### 开发工作流
+
+- 分支流转采用 `feature/* -> develop -> master`
+- `develop` 是默认 PR 目标分支，`master` 是稳定发布分支
+- `develop` 和 `master` 当前都受保护，正常流程需要 PR 且 `Test & Typecheck` 为绿色
+- GitHub 已开启已合并分支自动删除
 
 ### 浏览归档
 
