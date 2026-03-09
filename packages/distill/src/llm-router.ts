@@ -1,109 +1,197 @@
-import type { AICConfig, LLMProvider, LLMRouter } from "@loamlog/core";
+import {
+  LLMAuthError,
+  LLMError,
+  LLMResponseFormatError,
+  LLMRateLimitError,
+  LLMTimeoutError,
+  type AICConfig,
+  type LLMBudget,
+  type LLMProvider,
+  type LLMProviderConfig,
+  type LLMRouter,
+} from "@loamlog/core";
+import { createProvider } from "./providers/index.js";
 
-interface ProviderRuntimeConfig {
+interface Logger {
+  info(message: string): void;
+  warn(message: string): void;
+}
+
+interface RouterRuntimeProvider {
   id: string;
+  config: LLMProviderConfig;
+  provider: LLMProvider;
+}
+
+interface RoutedAttempt {
+  id: string;
+  provider: LLMProvider;
   model: string;
-  baseUrl: string;
-  apiKey: string;
 }
 
-interface OpenAIChatCompletionResponse {
-  choices?: Array<{
-    message?: {
-      content?: string;
-    };
-  }>;
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-  };
+const DEFAULT_TIMEOUT_MS = 30_000;
+
+const NOOP_LOGGER: Logger = {
+  info() {},
+  warn() {},
+};
+
+const DEFAULT_MODELS: Record<string, Record<LLMBudget, string>> = {
+  openai: {
+    cheap: "gpt-4o-mini",
+    standard: "gpt-4o",
+    premium: "gpt-4o",
+  },
+  deepseek: {
+    cheap: "deepseek-chat",
+    standard: "deepseek-chat",
+    premium: "deepseek-reasoner",
+  },
+  anthropic: {
+    cheap: "claude-3-5-haiku-latest",
+    standard: "claude-3-5-sonnet-latest",
+    premium: "claude-3-opus-latest",
+  },
+  ollama: {
+    cheap: "llama3.2:3b",
+    standard: "llama3.1:8b",
+    premium: "llama3.1:70b",
+  },
+};
+
+function getProviderEntries(config?: AICConfig["llm"]): Array<[string, LLMProviderConfig]> {
+  const entries = Object.entries(config?.providers ?? {});
+  return entries.length > 0 ? entries : [["openai", {}]];
 }
 
-function normalizeBaseUrl(baseUrl: string): string {
-  return baseUrl.endsWith("/") ? baseUrl.slice(0, -1) : baseUrl;
+function resolveTimeoutMs(config?: AICConfig["llm"]): number {
+  return config?.timeout_ms ?? DEFAULT_TIMEOUT_MS;
 }
 
-function resolveProviderConfig(config?: AICConfig["llm"]): ProviderRuntimeConfig {
-  const providers = config?.providers ?? {};
-  const knownProviderId = Object.keys(providers)[0] ?? "openai";
-  const providerConfig = providers[knownProviderId] ?? {};
-
-  const apiKey =
-    providerConfig.api_key ??
-    (knownProviderId === "deepseek" ? process.env.DEEPSEEK_API_KEY : process.env.OPENAI_API_KEY);
-
-  if (!apiKey) {
-    throw new Error(`missing API key for provider: ${knownProviderId}`);
-  }
-
-  const defaultBaseUrl = knownProviderId === "deepseek" ? "https://api.deepseek.com" : "https://api.openai.com";
-  const defaultModel = knownProviderId === "deepseek" ? "deepseek-chat" : "gpt-4o-mini";
-
-  return {
-    id: knownProviderId,
-    model: providerConfig.model ?? defaultModel,
-    baseUrl: normalizeBaseUrl(providerConfig.base_url ?? defaultBaseUrl),
-    apiKey,
-  };
+function resolveModel(providerId: string, providerConfig: LLMProviderConfig, budget: LLMBudget): string {
+  return providerConfig.model ?? DEFAULT_MODELS[providerId]?.[budget] ?? DEFAULT_MODELS.openai[budget];
 }
 
-function createOpenAICompatibleProvider(runtime: ProviderRuntimeConfig): LLMProvider {
-  return {
+function toErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function buildAttempts(runtimes: RouterRuntimeProvider[], budget: LLMBudget): RoutedAttempt[] {
+  return runtimes.map((runtime) => ({
     id: runtime.id,
-    async complete(input: {
-      messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
-      model: string;
-      temperature?: number;
-      max_tokens?: number;
-      response_format?: "text" | "json";
-    }) {
-      const body: Record<string, unknown> = {
-        model: input.model,
-        messages: input.messages,
-        temperature: input.temperature,
-        max_tokens: input.max_tokens,
-      };
+    provider: runtime.provider,
+    model: resolveModel(runtime.id, runtime.config, budget),
+  }));
+}
 
-      if (input.response_format === "json") {
-        body.response_format = { type: "json_object" };
+function buildFallbackProvider(
+  attempts: RoutedAttempt[],
+  logger: Logger,
+  budget: LLMBudget,
+  inputTokens: number,
+): LLMProvider {
+  return {
+    id: attempts[0]?.id ?? "unknown",
+    async complete(input) {
+      const failures: string[] = [];
+
+      for (let index = 0; index < attempts.length; index += 1) {
+        const attempt = attempts[index];
+
+        try {
+          return await attempt.provider.complete({
+            ...input,
+            model: attempt.model,
+          });
+        } catch (error) {
+          if (error instanceof LLMAuthError || error instanceof LLMResponseFormatError) {
+            throw error;
+          }
+
+          if (error instanceof LLMRateLimitError || error instanceof LLMTimeoutError) {
+            failures.push(`${attempt.id}/${attempt.model}: ${toErrorMessage(error)}`);
+
+            const nextAttempt = attempts[index + 1];
+            if (nextAttempt) {
+              logger.warn(
+                `[llm-router] fallback: ${attempt.id}/${attempt.model} -> ${nextAttempt.id}/${nextAttempt.model} reason=${error instanceof Error ? error.name : "unknown"}`,
+              );
+              continue;
+            }
+
+            if (failures.length === 1) {
+              throw error;
+            }
+
+            throw new LLMError(
+              `all providers failed task_budget=${budget} input_tokens=${inputTokens}: ${failures.join("; ")}`,
+              attempts[0]?.id ?? attempt.id,
+            );
+          }
+
+          if (error instanceof LLMError) {
+            failures.push(`${attempt.id}/${attempt.model}: ${toErrorMessage(error)}`);
+
+            const nextAttempt = attempts[index + 1];
+            if (nextAttempt) {
+              logger.warn(
+                `[llm-router] fallback: ${attempt.id}/${attempt.model} -> ${nextAttempt.id}/${nextAttempt.model} reason=${error.name}`,
+              );
+              continue;
+            }
+
+            if (failures.length === 1) {
+              throw error;
+            }
+
+            throw new LLMError(
+              `all providers failed task_budget=${budget} input_tokens=${inputTokens}: ${failures.join("; ")}`,
+              attempts[0]?.id ?? attempt.id,
+            );
+          }
+
+          if (failures.length > 0) {
+            failures.push(`${attempt.id}/${attempt.model}: ${toErrorMessage(error)}`);
+            throw new LLMError(
+              `all providers failed task_budget=${budget} input_tokens=${inputTokens}: ${failures.join("; ")}`,
+              attempts[0]?.id ?? attempt.id,
+            );
+          }
+
+          throw error;
+        }
       }
 
-      const response = await fetch(`${runtime.baseUrl}/v1/chat/completions`, {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          authorization: `Bearer ${runtime.apiKey}`,
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const text = await response.text();
-        throw new Error(`llm request failed status=${response.status} body=${text.slice(0, 200)}`);
-      }
-
-      const payload = (await response.json()) as OpenAIChatCompletionResponse;
-      const content = payload.choices?.[0]?.message?.content ?? "";
-      return {
-        content,
-        tokens: {
-          input: payload.usage?.prompt_tokens ?? 0,
-          output: payload.usage?.completion_tokens ?? 0,
-        },
-      };
+      throw new LLMError(`no LLM providers available for budget=${budget}`, attempts[0]?.id ?? "unknown");
     },
   };
 }
 
-export function createLLMRouter(config?: AICConfig["llm"]): LLMRouter {
-  const runtime = resolveProviderConfig(config);
-  const provider = createOpenAICompatibleProvider(runtime);
+export function createLLMRouter(
+  config?: AICConfig["llm"],
+  options?: {
+    logger?: Logger;
+  },
+): LLMRouter {
+  const timeoutMs = resolveTimeoutMs(config);
+  const logger = options?.logger ?? NOOP_LOGGER;
+  const runtimes = getProviderEntries(config).map(([providerId, providerConfig]) => ({
+    id: providerId,
+    config: providerConfig,
+    provider: createProvider(providerId, providerConfig, { timeoutMs }),
+  }));
 
   return {
-    route() {
+    route(request) {
+      const attempts = buildAttempts(runtimes, request.budget);
+      const primary = attempts[0];
+      logger.info(
+        `[llm-router] route: task=${request.task} budget=${request.budget} input_tokens=${request.input_tokens} -> ${primary.id}/${primary.model}`,
+      );
+
       return {
-        provider,
-        model: runtime.model,
+        provider: buildFallbackProvider(attempts, logger, request.budget, request.input_tokens),
+        model: primary.model,
       };
     },
   };
