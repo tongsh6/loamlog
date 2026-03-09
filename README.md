@@ -46,6 +46,16 @@ Cursor*      ──►  redaction            multi-distiller       notion*
 
 ---
 
+## Current Direction
+
+As of 2026-03-09, Loamlog has moved past the capture-only MVP stage and now has a working multi-provider distill path.
+
+- **M3 is complete** — the distill engine can route across OpenAI, Anthropic, DeepSeek, and Ollama without changing distiller code
+- **Current focus is M4** — add the second provider family beyond OpenCode and prove the provider abstraction at the source layer
+- **M5 remains the product expansion phase** — more distillers, external sinks, and approval-oriented workflow on top of the current local-first engine
+
+---
+
 ## Project Structure
 
 ```
@@ -72,8 +82,8 @@ loamlog/
 | M0 | Validate OpenCode event/payload pipeline | ✅ Completed |
 | M1 | Capture layer MVP — auto-archive sessions | ✅ Completed |
 | M2 | Distill platform MVP — pitfall-card distiller | ✅ Completed |
-| M3 | Multi-model LLM routing | ⏳ Planned |
-| M4 | Multi-source providers (Claude Code, ...) | ⏳ Planned |
+| M3 | Multi-model LLM routing | ✅ Completed |
+| M4 | Multi-source providers (Claude Code, ...) | ▶ Next |
 | M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
 
 The capture pipeline is fully runnable end-to-end:
@@ -86,6 +96,15 @@ The distill pipeline is now runnable end-to-end:
 
 ```bash
 loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek-chat
+```
+
+The current router supports provider/model pairs such as:
+
+```bash
+loam distill --llm openai/gpt-4o-mini
+loam distill --llm anthropic/claude-3-5-haiku-latest
+loam distill --llm deepseek/deepseek-chat
+loam distill --llm ollama/llama3.2:3b
 ```
 
 ---
@@ -101,7 +120,7 @@ loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek
 ### Install & Build
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/loamlog.git
+git clone https://github.com/tongsh6/loamlog.git
 cd loamlog
 pnpm install
 pnpm run build
@@ -140,6 +159,13 @@ Add the plugin to your global `~/.config/opencode/opencode.json`:
 - **Logs**: Check `/tmp/loamlog-debug.log` to verify initialization and event capture.
 
 npm: https://www.npmjs.com/package/opencode-loamlog
+
+### Development workflow
+
+- Branches follow `feature/* -> develop -> master`
+- `develop` is the default PR target; `master` is the stable release branch
+- `develop` and `master` are protected; PRs and green `Test & Typecheck` are required in normal flow
+- Merged branches are auto-deleted on GitHub
 
 ### Browse your archive
 

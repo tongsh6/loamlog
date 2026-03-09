@@ -7,16 +7,16 @@
 | M0 | 对齐 OpenCode 事件 payload | — | 0.5 day | ✅ 已完成 |
 | M1 | 采集层 MVP — 自动归档会话 | core, archive, providers/opencode, cli | 1–2 days | ✅ 已完成 |
 | M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ✅ 已完成 |
-| M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ⏳ 规划中 |
-| M4 | 多数据源接入 | providers/claude-code | 1–2 days | ⏳ 规划中 |
+| M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ✅ 已完成 |
+| M4 | 多数据源接入 | providers/claude-code | 1–2 days | ▶ 下一步 |
 | M5 | 生态化与工作流 | sinks/github, approve-flow, more distillers | Ongoing | ⏳ 规划中 |
 
 ---
 
 ## 当前进度 | Current Progress
 
-截至 2026-03-02，采集链路已完成可运行闭环（插件转发 → daemon 接收 → provider 拉取 → 脱敏 → 原子 JSON 落盘）。  
-As of 2026-03-02, the capture pipeline is fully runnable end-to-end (plugin forward → daemon receive → provider pull → redaction → atomic JSON snapshot write).
+截至 2026-03-09，采集链路与多模型萃取链路都已完成可运行闭环。  
+As of 2026-03-09, both the capture pipeline and the multi-provider distill pipeline are runnable end-to-end.
 
 已完成项 / Completed items:
 
@@ -29,6 +29,9 @@ As of 2026-03-02, the capture pipeline is fully runnable end-to-end (plugin forw
 - `@loamlog/distiller-sdk` 落地：`defineDistiller`、`createEvidence`
 - `@loamlog/distiller-pitfall-card` 与 `@loamlog/sink-file` 落地，支持本地候选输出
 - CLI 新增 `loam distill` 命令，支持 `--distiller/--llm/--since/--until/--test-session`
+- M3 多 provider LLM 路由已落地：OpenAI / Anthropic / DeepSeek / Ollama
+- CLI 已支持 `--llm-timeout-ms`，Router 支持 fallback 与类型化错误
+- GitHub 工作流治理已补齐：`develop` / `master` 受保护，已开启合并后自动删分支
 
 ---
 

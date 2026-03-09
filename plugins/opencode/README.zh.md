@@ -21,7 +21,7 @@ npm install -g opencode-loamlog
 
 ```json
 {
-  "plugin": ["opencode-loamlog@latest"]
+  "plugins": ["opencode-loamlog@latest"]
 }
 ```
 
@@ -61,11 +61,12 @@ pnpm run test
   ```
 - **手动触发**：前往 GitHub Actions -> "Publish OpenCode Plugin" -> "Run workflow"。选择版本升级类型（patch/minor/major）。
 
-#### 2. 手动发布
-如果你拥有相应权限且本地配置了 `NPM_TOKEN`：
-```bash
-cd plugins/opencode
-npm publish --access public
-```
+#### 2. 禁止本地发布
+
+不要在本地为该插件执行 `npm publish` 或 `pnpm publish`。
+
+- 所有插件发布都必须通过 GitHub Actions 完成
+- Tag 发布使用 `opencode-loamlog@v*` 约定
+- 如需手动发布，应在 GitHub Actions 中运行 "Publish OpenCode Plugin" 工作流
 
 **注意**：必须在 GitHub 仓库的 Secrets 中配置 `NPM_TOKEN` 才能使自动工作流生效。
