@@ -144,4 +144,63 @@ describe("daemon /capture", () => {
     assert.equal(snapshotText.includes("\"redacted\""), true);
     assert.equal(snapshotText.includes("[REDACTED:openai-token]"), true);
   });
+
+  test("routes capture by provider id when multiple providers are configured", async () => {
+    tempDumpDir = await mkdtemp(path.join(tmpdir(), "loamlog-m4-"));
+
+    const started = await startDaemon({
+      port: 0,
+      dumpDir: tempDumpDir,
+      sessionProviders: {
+        opencode: {
+          id: "opencode",
+          async pullSession() {
+            throw new Error("wrong provider selected");
+          },
+        },
+        "claude-code": {
+          id: "claude-code",
+          async pullSession(sessionId) {
+            return {
+              session: { id: sessionId, source: "claude" },
+              messages: [
+                {
+                  id: "msg-claude-1",
+                  role: "assistant",
+                  timestamp: "2026-03-10T00:00:00.000Z",
+                  content: "claude session",
+                },
+              ],
+              context: {
+                cwd: "/Users/demo/loamlog",
+                worktree: "/Users/demo/loamlog",
+                repo: "loamlog",
+              },
+            };
+          },
+        },
+      },
+      logger: () => undefined,
+    });
+    server = started.server;
+
+    const response = await fetch(`http://127.0.0.1:${started.port}/capture`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        session_id: "claude-session-001",
+        trigger: "session.idle",
+        captured_at: "2026-03-10T00:00:02.000Z",
+        provider: "claude-code",
+      }),
+    });
+
+    assert.equal(response.status, 202);
+    const body = (await response.json()) as { snapshot_path?: string; accepted: boolean };
+    const snapshotText = await readFile(body.snapshot_path as string, "utf8");
+    assert.equal(snapshotText.includes('"provider": "claude-code"'), true);
+    assert.equal(snapshotText.includes('"claude session"'), true);
+  });
 });
