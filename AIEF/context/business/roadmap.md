@@ -106,12 +106,17 @@ As of 2026-03-09, both the capture pipeline and the multi-provider distill pipel
 **目标 / Goal**: 接入第二个 AI 工具，验证 ProviderAdapter 接口可扩展性。
 
 **交付 / Deliverables**:
-- `packages/providers/claude-code`（首选）
-- 或 `packages/providers/cursor`
+- `packages/providers/claude-code`（Claude Code 文件系统监听 provider）
+- `loam capture` 命令（手动触发单次采集，不启动 daemon）
+- daemon `--providers` flag 实际解析（修复当前只在 usage 文本中存在的问题）
 
 **验收 / Acceptance**:
-1. 与 OpenCode provider 并行采集，无代码耦合
-2. 归档结构与 OpenCode 一致
+1. pnpm run test 全部通过（含 @loamlog/provider-claude-code 单元测试，使用 fixture JSONL 文件）
+2. loam daemon --providers opencode,claude-code 启动后日志中同时出现两个 provider 的确认信息
+3. 通过 loam capture 或 daemon 触发的 Claude Code 会话，归档 snapshot 的 .meta.provider 字段值为 "claude-code"
+4. Claude Code provider 与 OpenCode provider 可并行采集，互不干扰，归档路径结构完全一致
+
+详细执行计划 / Detailed execution plan: `AIEF/context/business/m4-execution-plan.md`
 
 ---
 
@@ -126,7 +131,30 @@ As of 2026-03-09, both the capture pipeline and the multi-provider distill pipel
 - 更多内置 distiller（issue-candidate、prd-draft、knowledge-card）
 - distiller 结果合并去重
 
+### M5 子阶段拆解 | M5 Sub-phase Breakdown
+
+| 子阶段 | 目标 | 关键交付 | 解锁条件 |
+|--------|------|----------|----------|
+| M5.0 | `loam list` 命令 + 细粒度 redaction 配置 | CLI `list`、redaction config file | M4 完成 |
+| M5.1 | GitHub sink | `@loamlog/sink-github`（创建 Issue/PR） | M4 + evidence 质量评分机制就绪 |
+| M5.2 | 人工审批流 | `loam review` 命令、approved/rejected 目录 | M5.1 完成 |
+| M5.3 | 更多内置萃取器 | issue-candidate、prd-draft、knowledge-card distillers | M5.1 完成 |
+| M5.4 | Notion sink | `@loamlog/sink-notion` | M5.2 完成 |
+
 ---
+
+## 遗留项追踪 | Deferred Item Tracking
+
+以下各项在 M1/M2 阶段标注为"下阶段实现"，现正式分配至里程碑：
+The following items were marked "planned in next phase" in M1/M2 and are now formally assigned:
+
+| 项目 / Item | 来源 / Source | 分配至 / Assigned To |
+|-------------|---------------|----------------------|
+| Markdown transcript 输出（JSON 已有，MD 待实现）| architecture.md M2 Status | M4（P3+，视 P0-P2 完成情况）|
+| OpenCode HTTP 不可用时 SDK fallback | architecture.md M2 Status | M4（P3+，Out of Scope 若资源不足）|
+| 细粒度 redaction 规则配置文件 | architecture.md M2 Status | M5.0 |
+| `loam list` 命令 | AGENTS.md、README（已文档化，未实现）| M5.0 |
+| `loam capture` 手动采集命令 | AGENTS.md（已文档化，未实现）| M4 P3 |
 
 ## 非目标 | Non-Goals
 

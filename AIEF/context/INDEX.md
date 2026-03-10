@@ -13,6 +13,7 @@ Project long-term context navigation entry.
 | [decisions.md](business/decisions.md) | 架构决策记录（ADR）与依据 / Architecture decision records with rationale | 活跃 / Active |
 | [roadmap.md](business/roadmap.md) | 里程碑、交付物、验收标准 / Milestones, deliverables, acceptance criteria | 活跃 / Active |
 | [m3-execution-plan.md](business/m3-execution-plan.md) | M3 多模型路由执行计划与 OpenCode 手工验证清单 / M3 multi-provider execution plan and OpenCode manual verification checklist | 活跃 / Active |
+| [m4-execution-plan.md](business/m4-execution-plan.md) | M4 Claude Code provider 执行计划与手工验证清单 / M4 Claude Code provider execution plan and manual verification checklist | 活跃 / Active |
 
 ### tech/ - 架构、集成、契约 | Architecture, integrations, contracts
 
