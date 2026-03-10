@@ -6,7 +6,7 @@
 
 > Like sediment building up over time — your AI conversations accumulate into layers of reusable knowledge.
 
-Loamlog is a standalone platform that automatically captures sessions from AI coding tools (OpenCode, Claude Code, Cursor, ...) and transforms them into structured, reusable assets — issue candidates, PRD drafts, knowledge cards, and more — through a pluggable distill engine with multi-model routing.
+Loamlog is a standalone platform that automatically captures sessions from AI coding tools (OpenCode, Claude Code, Cursor, ...) and transforms them into structured, reusable assets — issue drafts, PRD drafts, knowledge cards, and more — through a pluggable distill engine with multi-model routing.
 
 ---
 
@@ -30,7 +30,7 @@ Loamlog breaks this pattern across three layers:
 AI Tools          Capture Layer        Distill Engine       Sinks
 ─────────────     ─────────────────    ─────────────────    ──────────
 OpenCode     ──►  loam daemon       ►  LLM Router        ►  file
-Claude Code* ──►  JSON snapshot        multi-model           github*
+Claude Code  ──►  JSON snapshot        multi-model           github*
 Cursor*      ──►  redaction            multi-distiller       notion*
              ──►  repo context
 
@@ -48,11 +48,11 @@ Cursor*      ──►  redaction            multi-distiller       notion*
 
 ## Current Direction
 
-As of 2026-03-09, Loamlog has moved past the capture-only MVP stage and now has a working multi-provider distill path.
+As of 2026-03-10, Loamlog already has a runnable local-first pipeline for capture, archive, and distill. The repo also contains the second provider family (`claude-code`) on the source side; the main product question is no longer "can the abstractions exist?" but "what is the first flow that creates obvious day-one value?"
 
-- **M3 is complete** — the distill engine can route across OpenAI, Anthropic, DeepSeek, and Ollama without changing distiller code
-- **Current focus is M4** — add the second provider family beyond OpenCode and prove the provider abstraction at the source layer
-- **M5 remains the product expansion phase** — more distillers, external sinks, and approval-oriented workflow on top of the current local-first engine
+- **Shipped today** — capture, archive, redaction, evidence-backed distill, and file-based local output are all present in the repo
+- **Current product focus** — tighten the first killer flow: `AI conversation -> issue draft`, starting with local JSON + Markdown output before any GitHub API delivery
+- **Planned next infrastructure work** — continue hardening multi-source provider support and deferred CLI/docs items without letting them displace the first product loop
 
 ---
 
@@ -64,7 +64,8 @@ loamlog/
 │   ├── core/               # Core types & interface contracts
 │   ├── archive/            # Unified storage (write / redact / fingerprint)
 │   ├── providers/
-│   │   └── opencode/       # OpenCode data source adapter
+│   │   ├── opencode/       # OpenCode data source adapter
+│   │   └── claude-code/    # Claude Code transcript adapter
 │   ├── distill/            # Distill engine + LLM router
 │   ├── distillers/         # Built-in distillers
 │   ├── sinks/              # Output adapters
@@ -83,7 +84,7 @@ loamlog/
 | M1 | Capture layer MVP — auto-archive sessions | ✅ Completed |
 | M2 | Distill platform MVP — pitfall-card distiller | ✅ Completed |
 | M3 | Multi-model LLM routing | ✅ Completed |
-| M4 | Multi-source providers (Claude Code, ...) | ▶ Next |
+| M4 | Multi-source providers (Claude Code, ...) | ◐ Landed in repo, needs follow-up hardening |
 | M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
 
 The capture pipeline is fully runnable end-to-end:
@@ -105,6 +106,12 @@ loam distill --llm openai/gpt-4o-mini
 loam distill --llm anthropic/claude-3-5-haiku-latest
 loam distill --llm deepseek/deepseek-chat
 loam distill --llm ollama/llama3.2:3b
+```
+
+The next product-facing loop being specified is local issue-draft generation:
+
+```text
+AI conversation -> structured evidence -> local issue draft (.json + .md)
 ```
 
 ---
@@ -169,9 +176,7 @@ npm: https://www.npmjs.com/package/opencode-loamlog
 
 ### Browse your archive
 
-```bash
-loam list --repo my-project --last 7d
-```
+`loam list` is planned but not implemented yet. Until then, inspect the archive directly on disk.
 
 Snapshots are organized as:
 
