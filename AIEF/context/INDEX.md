@@ -10,10 +10,11 @@ Project long-term context navigation entry.
 | 文件 / File | 说明 / Description | 状态 / Status |
 |---|---|---|
 | [project-spec.md](business/project-spec.md) | 项目定义、核心价值、问题陈述、成功标准 / Project definition, core value, problem statement, success criteria | 已建立 / Established |
+| [current-focus.md](business/current-focus.md) | 当前产品焦点、活跃 issue 结构、关闭条件 / Current product focus, active issue structure, close conditions | 活跃 / Active |
 | [decisions.md](business/decisions.md) | 架构决策记录（ADR）与依据 / Architecture decision records with rationale | 活跃 / Active |
 | [roadmap.md](business/roadmap.md) | 里程碑、交付物、验收标准 / Milestones, deliverables, acceptance criteria | 活跃 / Active |
 | [m3-execution-plan.md](business/m3-execution-plan.md) | M3 多模型路由执行计划与 OpenCode 手工验证清单 / M3 multi-provider execution plan and OpenCode manual verification checklist | 活跃 / Active |
-| [m4-execution-plan.md](business/m4-execution-plan.md) | M4 Claude Code provider 执行计划与手工验证清单 / M4 Claude Code provider execution plan and manual verification checklist | 活跃 / Active |
+| [m4-execution-plan.md](business/m4-execution-plan.md) | M4 Claude Code provider 执行计划与手工验证清单 / M4 Claude Code provider execution plan and manual verification checklist | 参考 / Reference |
 
 ### tech/ - 架构、集成、契约 | Architecture, integrations, contracts
 
