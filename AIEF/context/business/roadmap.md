@@ -8,15 +8,15 @@
 | M1 | 采集层 MVP — 自动归档会话 | core, archive, providers/opencode, cli | 1–2 days | ✅ 已完成 |
 | M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ✅ 已完成 |
-| M4 | 多数据源接入 | providers/claude-code | 1–2 days | ▶ 下一步 |
+| M4 | 多数据源接入 | providers/claude-code | 1–2 days | ◐ 主路径已落地，待补强 |
 | M5 | 生态化与工作流 | sinks/github, approve-flow, more distillers | Ongoing | ⏳ 规划中 |
 
 ---
 
 ## 当前进度 | Current Progress
 
-截至 2026-03-09，采集链路与多模型萃取链路都已完成可运行闭环。  
-As of 2026-03-09, both the capture pipeline and the multi-provider distill pipeline are runnable end-to-end.
+截至 2026-03-10，采集链路与多模型萃取链路都已完成可运行闭环，且 Claude Code provider 的主路径实现已进入仓库。  
+As of 2026-03-10, both the capture pipeline and the multi-provider distill pipeline are runnable end-to-end, and the main Claude Code provider path has landed in the repository.
 
 已完成项 / Completed items:
 
@@ -31,7 +31,25 @@ As of 2026-03-09, both the capture pipeline and the multi-provider distill pipel
 - CLI 新增 `loam distill` 命令，支持 `--distiller/--llm/--since/--until/--test-session`
 - M3 多 provider LLM 路由已落地：OpenAI / Anthropic / DeepSeek / Ollama
 - CLI 已支持 `--llm-timeout-ms`，Router 支持 fallback 与类型化错误
+- `packages/providers/claude-code` 与 CLI provider wiring 已在仓库落地，验证多源 provider 主路径可行
 - GitHub 工作流治理已补齐：`develop` / `master` 受保护，已开启合并后自动删分支
+
+### 当前产品聚焦说明 | Current Product Focus Note
+
+虽然 M4 的 provider 扩展主路径已经进入仓库，但当前最需要验证的不是继续扩基础设施抽象，而是打穿第一条明确的用户价值闭环：
+
+```text
+AI conversation -> structured evidence -> local issue draft
+```
+
+因此，当前活跃产品议题改为：
+
+- `#7` umbrella：AI 对话自动生成 GitHub Issue
+- `#12`：issue-draft distiller MVP
+- `#13`：file sink 同时输出 `.json` + `.md`
+- `#14`：实现后的用法文档
+
+M4 执行计划仍保留为参考文档，但不再代表当前唯一焦点。
 
 ---
 
@@ -117,6 +135,11 @@ As of 2026-03-09, both the capture pipeline and the multi-provider distill pipel
 4. Claude Code provider 与 OpenCode provider 可并行采集，互不干扰，归档路径结构完全一致
 
 详细执行计划 / Detailed execution plan: `AIEF/context/business/m4-execution-plan.md`
+
+状态说明 / Status note:
+
+- `packages/providers/claude-code` 与 CLI 主路径已进入仓库，说明 M4 不再是“未开始”状态
+- 当前剩余工作更偏验证、补强与文档回收，而不是从零开始设计该阶段
 
 ---
 
