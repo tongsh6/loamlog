@@ -4,7 +4,7 @@
 
 > 像沉积物随时间积累——你的 AI 对话逐渐沉淀为可复用的知识层。
 
-Loamlog 是一个独立平台，自动采集来自多种 AI 编程工具（OpenCode、Claude Code、Cursor……）的会话，并通过可插拔的萃取引擎与多模型路由，将原始对话转化为结构化的可复用资产——Issue 候选、PRD 草稿、知识卡片等。
+Loamlog 是一个独立平台，自动采集来自多种 AI 编程工具（OpenCode、Claude Code、Cursor……）的会话，并通过可插拔的萃取引擎与多模型路由，将原始对话转化为结构化的可复用资产——Issue 草稿、PRD 草稿、知识卡片等。
 
 [English](./README.md) | **中文**
 
@@ -30,7 +30,7 @@ Loamlog 从三个层面打破这一模式：
 AI 工具           采集层                萃取引擎              输出端
 ─────────────     ─────────────────    ─────────────────    ──────────
 OpenCode     ──►  loam daemon       ►  LLM Router        ►  本地文件
-Claude Code* ──►  JSON 快照            多模型                github*
+Claude Code  ──►  JSON 快照            多模型                github*
 Cursor*      ──►  脱敏处理             多 distiller          notion*
              ──►  repo 上下文
 
@@ -48,11 +48,11 @@ Cursor*      ──►  脱敏处理             多 distiller          notion*
 
 ## 当前方向
 
-截至 2026-03-09，Loamlog 已经从“只完成采集 MVP”进入“采集 + 多模型萃取链路可运行”的阶段。
+截至 2026-03-10，Loamlog 已具备本地优先的 capture、archive、distill 可运行闭环。仓库中也已经包含第二类 provider（`claude-code`）的主路径实现；当前真正要回答的问题，不再只是“抽象能否成立”，而是“第一条让用户立刻感知价值的产品闭环是什么”。
 
-- **M3 已完成**：distill 引擎已可在不改 distiller 代码的前提下切换 OpenAI、Anthropic、DeepSeek、Ollama
-- **当前主焦点是 M4**：接入第二类 AI 数据源，验证 source-provider 抽象在 OpenCode 之外也成立
-- **M5 仍是扩展阶段**：更多 distiller、外部 sink、以及带审批的工作流将在当前本地优先引擎之上展开
+- **今天已具备**：采集、归档、脱敏、evidence-backed distill，以及本地文件输出主路径都已在仓库中存在
+- **当前产品焦点**：收敛首个 Killer Flow：`AI conversation -> issue draft`，先做本地 JSON + Markdown 输出，再考虑 GitHub API 自动投递
+- **后续基础设施工作**：继续补强多源 provider 与延期的 CLI/docs 项，但不再让它们盖过第一条产品闭环
 
 ---
 
@@ -64,7 +64,8 @@ loamlog/
 │   ├── core/               # 核心 TypeScript 类型与接口契约
 │   ├── archive/            # 统一存储（写入 / 脱敏 / 指纹）
 │   ├── providers/
-│   │   └── opencode/       # OpenCode 数据源适配器
+│   │   ├── opencode/       # OpenCode 数据源适配器
+│   │   └── claude-code/    # Claude Code transcript 适配器
 │   ├── distill/            # 萃取引擎 + LLM 路由
 │   ├── distillers/         # 内置 distiller
 │   ├── sinks/              # 输出适配器
@@ -83,7 +84,7 @@ loamlog/
 | M1 | 采集层 MVP — 自动归档会话 | ✅ 已完成 |
 | M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | ✅ 已完成 |
-| M4 | 多数据源接入（Claude Code 等） | ▶ 下一步 |
+| M4 | 多数据源接入（Claude Code 等） | ◐ 主路径已落地，需继续补强 |
 | M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
 
 采集管道已可端到端运行：
@@ -105,6 +106,12 @@ loam distill --llm openai/gpt-4o-mini
 loam distill --llm anthropic/claude-3-5-haiku-latest
 loam distill --llm deepseek/deepseek-chat
 loam distill --llm ollama/llama3.2:3b
+```
+
+下一条正在收敛的产品闭环是本地 issue 草稿生成：
+
+```text
+AI conversation -> structured evidence -> local issue draft (.json + .md)
 ```
 
 ---
@@ -169,9 +176,7 @@ npm: https://www.npmjs.com/package/opencode-loamlog
 
 ### 浏览归档
 
-```bash
-loam list --repo my-project --last 7d
-```
+`loam list` 已进入规划，但当前尚未实现；现阶段请直接查看磁盘归档目录。
 
 快照按以下结构组织：
 
