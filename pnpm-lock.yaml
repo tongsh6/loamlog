@@ -35,6 +35,9 @@ importers:
       '@loamlog/distill':
         specifier: workspace:*
         version: link:../distill
+      '@loamlog/provider-claude-code':
+        specifier: workspace:*
+        version: link:../providers/claude-code
       '@loamlog/provider-opencode':
         specifier: workspace:*
         version: link:../providers/opencode
@@ -68,6 +71,12 @@ importers:
       '@loamlog/distiller-sdk':
         specifier: workspace:*
         version: link:../../distiller-sdk
+
+  packages/providers/claude-code:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
 
   packages/providers/opencode:
     dependencies:
