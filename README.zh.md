@@ -188,6 +188,39 @@ $LOAM_DUMP_DIR/
             └── 2026-03-02T00-00-00-000Z-ses_abc123.json
 ```
 
+### 生成本地 issue 草稿
+
+使用内置的 issue-draft distiller 时，请显式指定：
+
+```bash
+loam distill --distiller @loamlog/distiller-issue-draft --llm deepseek/deepseek-chat
+```
+
+如果你希望把它设为默认配置的一部分，可在 `loam.config.ts` 中加入：
+
+```ts
+export default {
+  dump_dir: process.env.LOAM_DUMP_DIR,
+  distillers: ["@loamlog/distiller-issue-draft"],
+  sinks: ["@loamlog/sink-file"],
+};
+```
+
+当成功生成草稿时，Loamlog 会在 `distill/<repo>/pending/` 下同时写出两个文件：
+
+```text
+$LOAM_DUMP_DIR/
+└── distill/
+    └── my-project/
+        └── pending/
+            ├── <result-id>.json
+            └── <result-id>.md
+```
+
+其中 `.json` 保存完整的结构化结果（包括 evidence 和 payload），`.md` 保存来自 `render.markdown` 的 GitHub-ready issue 正文。
+
+当前范围仍然是 local-first：Loamlog 只会写本地草稿文件，暂时不会自动在 GitHub 上创建 issue。
+
 ---
 
 ## 脱敏

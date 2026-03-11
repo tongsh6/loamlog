@@ -6,6 +6,12 @@ function sanitizeRepoName(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
 
+async function writeAtomicFile(filePath: string, content: string): Promise<void> {
+  const tempPath = `${filePath}.tmp`;
+  await writeFile(tempPath, content, "utf8");
+  await rename(tempPath, filePath);
+}
+
 const fileSink: SinkPlugin = {
   id: "@loamlog/sink-file",
   name: "File Sink",
@@ -31,13 +37,16 @@ const fileSink: SinkPlugin = {
     const errors: Array<{ result_index: number; error: string }> = [];
 
     for (const [index, result] of results.entries()) {
-      const filePath = path.join(baseDir, `${result.id}.json`);
-      const tempPath = `${filePath}.tmp`;
-      const payload = `${JSON.stringify(result, null, 2)}\n`;
+      const jsonPath = path.join(baseDir, `${result.id}.json`);
+      const jsonPayload = `${JSON.stringify(result, null, 2)}\n`;
+      const markdown = result.render?.markdown;
 
       try {
-        await writeFile(tempPath, payload, "utf8");
-        await rename(tempPath, filePath);
+        await writeAtomicFile(jsonPath, jsonPayload);
+        if (typeof markdown === "string") {
+          const markdownPath = path.join(baseDir, `${result.id}.md`);
+          await writeAtomicFile(markdownPath, markdown.endsWith("\n") ? markdown : `${markdown}\n`);
+        }
         delivered += 1;
       } catch (error) {
         errors.push({

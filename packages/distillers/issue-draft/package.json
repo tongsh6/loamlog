@@ -1,6 +1,6 @@
 {
-  "name": "@loamlog/distill",
-  "version": "0.2.1",
+  "name": "@loamlog/distiller-issue-draft",
+  "version": "0.1.0",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -16,10 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@loamlog/archive": "workspace:*",
     "@loamlog/core": "workspace:*",
-    "@loamlog/distiller-issue-draft": "workspace:*",
-    "@loamlog/distiller-pitfall-card": "workspace:*",
-    "@loamlog/sink-file": "workspace:*"
+    "@loamlog/distiller-sdk": "workspace:*"
   }
 }
