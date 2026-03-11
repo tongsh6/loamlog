@@ -6,7 +6,7 @@
 
 > Like sediment building up over time — your AI conversations accumulate into layers of reusable knowledge.
 
-Loamlog is a standalone platform that automatically captures sessions from AI coding tools (OpenCode, Claude Code, Cursor, ...) and transforms them into structured, reusable assets — issue candidates, PRD drafts, knowledge cards, and more — through a pluggable distill engine with multi-model routing.
+Loamlog is a standalone platform that automatically captures sessions from AI coding tools (OpenCode, Claude Code, Cursor, ...) and transforms them into structured, reusable assets — issue drafts, PRD drafts, knowledge cards, and more — through a pluggable distill engine with multi-model routing.
 
 ---
 
@@ -30,7 +30,7 @@ Loamlog breaks this pattern across three layers:
 AI Tools          Capture Layer        Distill Engine       Sinks
 ─────────────     ─────────────────    ─────────────────    ──────────
 OpenCode     ──►  loam daemon       ►  LLM Router        ►  file
-Claude Code* ──►  JSON snapshot        multi-model           github*
+Claude Code  ──►  JSON snapshot        multi-model           github*
 Cursor*      ──►  redaction            multi-distiller       notion*
              ──►  repo context
 
@@ -46,6 +46,16 @@ Cursor*      ──►  redaction            multi-distiller       notion*
 
 ---
 
+## Current Direction
+
+As of 2026-03-10, Loamlog already has a runnable local-first pipeline for capture, archive, and distill. The repo also contains the second provider family (`claude-code`) on the source side; the main product question is no longer "can the abstractions exist?" but "what is the first flow that creates obvious day-one value?"
+
+- **Shipped today** — capture, archive, redaction, evidence-backed distill, and file-based local output are all present in the repo
+- **Current product focus** — tighten the first killer flow: `AI conversation -> issue draft`, starting with local JSON + Markdown output before any GitHub API delivery
+- **Planned next infrastructure work** — continue hardening multi-source provider support and deferred CLI/docs items without letting them displace the first product loop
+
+---
+
 ## Project Structure
 
 ```
@@ -54,7 +64,8 @@ loamlog/
 │   ├── core/               # Core types & interface contracts
 │   ├── archive/            # Unified storage (write / redact / fingerprint)
 │   ├── providers/
-│   │   └── opencode/       # OpenCode data source adapter
+│   │   ├── opencode/       # OpenCode data source adapter
+│   │   └── claude-code/    # Claude Code transcript adapter
 │   ├── distill/            # Distill engine + LLM router
 │   ├── distillers/         # Built-in distillers
 │   ├── sinks/              # Output adapters
@@ -72,8 +83,8 @@ loamlog/
 | M0 | Validate OpenCode event/payload pipeline | ✅ Completed |
 | M1 | Capture layer MVP — auto-archive sessions | ✅ Completed |
 | M2 | Distill platform MVP — pitfall-card distiller | ✅ Completed |
-| M3 | Multi-model LLM routing | ⏳ Planned |
-| M4 | Multi-source providers (Claude Code, ...) | ⏳ Planned |
+| M3 | Multi-model LLM routing | ✅ Completed |
+| M4 | Multi-source providers (Claude Code, ...) | ◐ Landed in repo, needs follow-up hardening |
 | M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
 
 The capture pipeline is fully runnable end-to-end:
@@ -86,6 +97,21 @@ The distill pipeline is now runnable end-to-end:
 
 ```bash
 loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek-chat
+```
+
+The current router supports provider/model pairs such as:
+
+```bash
+loam distill --llm openai/gpt-4o-mini
+loam distill --llm anthropic/claude-3-5-haiku-latest
+loam distill --llm deepseek/deepseek-chat
+loam distill --llm ollama/llama3.2:3b
+```
+
+The next product-facing loop being specified is local issue-draft generation:
+
+```text
+AI conversation -> structured evidence -> local issue draft (.json + .md)
 ```
 
 ---
@@ -101,7 +127,7 @@ loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek
 ### Install & Build
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/loamlog.git
+git clone https://github.com/tongsh6/loamlog.git
 cd loamlog
 pnpm install
 pnpm run build
@@ -141,11 +167,16 @@ Add the plugin to your global `~/.config/opencode/opencode.json`:
 
 npm: https://www.npmjs.com/package/opencode-loamlog
 
+### Development workflow
+
+- Branches follow `feature/* -> develop -> master`
+- `develop` is the default PR target; `master` is the stable release branch
+- `develop` and `master` are protected; PRs and green `Test & Typecheck` are required in normal flow
+- Merged branches are auto-deleted on GitHub
+
 ### Browse your archive
 
-```bash
-loam list --repo my-project --last 7d
-```
+`loam list` is planned but not implemented yet. Until then, inspect the archive directly on disk.
 
 Snapshots are organized as:
 
@@ -156,6 +187,39 @@ $LOAM_DUMP_DIR/
         └── sessions/
             └── 2026-03-02T00-00-00-000Z-ses_abc123.json
 ```
+
+### Generate a local issue draft
+
+Run the built-in issue-draft distiller explicitly:
+
+```bash
+loam distill --distiller @loamlog/distiller-issue-draft --llm deepseek/deepseek-chat
+```
+
+If you want to make it part of your default config, add it to `loam.config.ts`:
+
+```ts
+export default {
+  dump_dir: process.env.LOAM_DUMP_DIR,
+  distillers: ["@loamlog/distiller-issue-draft"],
+  sinks: ["@loamlog/sink-file"],
+};
+```
+
+When a draft is produced, Loamlog writes both files into `distill/<repo>/pending/`:
+
+```text
+$LOAM_DUMP_DIR/
+└── distill/
+    └── my-project/
+        └── pending/
+            ├── <result-id>.json
+            └── <result-id>.md
+```
+
+The `.json` file contains the full structured result, including evidence and payload. The `.md` file contains the GitHub-ready draft body from `render.markdown`.
+
+Current scope is still local-first: Loamlog writes local draft files, but does not create GitHub issues automatically yet.
 
 ---
 
@@ -279,6 +343,12 @@ pnpm run typecheck
 ---
 
 ## Roadmap
+
+The unified documentation base directory is `AIEF/`:
+
+- `AIEF/context/` for long-term context, ADRs, roadmap, and retrospectives
+- `AIEF/plans/` for execution plans
+- `AIEF/openspec/` for the lightweight current-change spec layer
 
 See [`AIEF/context/business/roadmap.md`](AIEF/context/business/roadmap.md) for the full milestone breakdown.
 

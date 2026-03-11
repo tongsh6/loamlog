@@ -4,7 +4,7 @@
 
 > 像沉积物随时间积累——你的 AI 对话逐渐沉淀为可复用的知识层。
 
-Loamlog 是一个独立平台，自动采集来自多种 AI 编程工具（OpenCode、Claude Code、Cursor……）的会话，并通过可插拔的萃取引擎与多模型路由，将原始对话转化为结构化的可复用资产——Issue 候选、PRD 草稿、知识卡片等。
+Loamlog 是一个独立平台，自动采集来自多种 AI 编程工具（OpenCode、Claude Code、Cursor……）的会话，并通过可插拔的萃取引擎与多模型路由，将原始对话转化为结构化的可复用资产——Issue 草稿、PRD 草稿、知识卡片等。
 
 [English](./README.md) | **中文**
 
@@ -30,7 +30,7 @@ Loamlog 从三个层面打破这一模式：
 AI 工具           采集层                萃取引擎              输出端
 ─────────────     ─────────────────    ─────────────────    ──────────
 OpenCode     ──►  loam daemon       ►  LLM Router        ►  本地文件
-Claude Code* ──►  JSON 快照            多模型                github*
+Claude Code  ──►  JSON 快照            多模型                github*
 Cursor*      ──►  脱敏处理             多 distiller          notion*
              ──►  repo 上下文
 
@@ -46,6 +46,16 @@ Cursor*      ──►  脱敏处理             多 distiller          notion*
 
 ---
 
+## 当前方向
+
+截至 2026-03-10，Loamlog 已具备本地优先的 capture、archive、distill 可运行闭环。仓库中也已经包含第二类 provider（`claude-code`）的主路径实现；当前真正要回答的问题，不再只是“抽象能否成立”，而是“第一条让用户立刻感知价值的产品闭环是什么”。
+
+- **今天已具备**：采集、归档、脱敏、evidence-backed distill，以及本地文件输出主路径都已在仓库中存在
+- **当前产品焦点**：收敛首个 Killer Flow：`AI conversation -> issue draft`，先做本地 JSON + Markdown 输出，再考虑 GitHub API 自动投递
+- **后续基础设施工作**：继续补强多源 provider 与延期的 CLI/docs 项，但不再让它们盖过第一条产品闭环
+
+---
+
 ## 目录结构
 
 ```
@@ -54,7 +64,8 @@ loamlog/
 │   ├── core/               # 核心 TypeScript 类型与接口契约
 │   ├── archive/            # 统一存储（写入 / 脱敏 / 指纹）
 │   ├── providers/
-│   │   └── opencode/       # OpenCode 数据源适配器
+│   │   ├── opencode/       # OpenCode 数据源适配器
+│   │   └── claude-code/    # Claude Code transcript 适配器
 │   ├── distill/            # 萃取引擎 + LLM 路由
 │   ├── distillers/         # 内置 distiller
 │   ├── sinks/              # 输出适配器
@@ -72,8 +83,8 @@ loamlog/
 | M0 | 验证 OpenCode 事件与 payload 拉取链路 | ✅ 已完成 |
 | M1 | 采集层 MVP — 自动归档会话 | ✅ 已完成 |
 | M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
-| M3 | 多模型 LLM 路由 | ⏳ 规划中 |
-| M4 | 多数据源接入（Claude Code 等） | ⏳ 规划中 |
+| M3 | 多模型 LLM 路由 | ✅ 已完成 |
+| M4 | 多数据源接入（Claude Code 等） | ◐ 主路径已落地，需继续补强 |
 | M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
 
 采集管道已可端到端运行：
@@ -86,6 +97,21 @@ OpenCode 插件 → POST /capture → loam daemon → provider 拉取 → 脱敏
 
 ```bash
 loam distill --distiller @loamlog/distiller-pitfall-card --llm deepseek/deepseek-chat
+```
+
+当前路由器已支持以下 provider/model 组合示例：
+
+```bash
+loam distill --llm openai/gpt-4o-mini
+loam distill --llm anthropic/claude-3-5-haiku-latest
+loam distill --llm deepseek/deepseek-chat
+loam distill --llm ollama/llama3.2:3b
+```
+
+下一条正在收敛的产品闭环是本地 issue 草稿生成：
+
+```text
+AI conversation -> structured evidence -> local issue draft (.json + .md)
 ```
 
 ---
@@ -141,11 +167,16 @@ npm install -g opencode-loamlog
 
 npm: https://www.npmjs.com/package/opencode-loamlog
 
+### 开发工作流
+
+- 分支流转采用 `feature/* -> develop -> master`
+- `develop` 是默认 PR 目标分支，`master` 是稳定发布分支
+- `develop` 和 `master` 当前都受保护，正常流程需要 PR 且 `Test & Typecheck` 为绿色
+- GitHub 已开启已合并分支自动删除
+
 ### 浏览归档
 
-```bash
-loam list --repo my-project --last 7d
-```
+`loam list` 已进入规划，但当前尚未实现；现阶段请直接查看磁盘归档目录。
 
 快照按以下结构组织：
 
@@ -156,6 +187,39 @@ $LOAM_DUMP_DIR/
         └── sessions/
             └── 2026-03-02T00-00-00-000Z-ses_abc123.json
 ```
+
+### 生成本地 issue 草稿
+
+使用内置的 issue-draft distiller 时，请显式指定：
+
+```bash
+loam distill --distiller @loamlog/distiller-issue-draft --llm deepseek/deepseek-chat
+```
+
+如果你希望把它设为默认配置的一部分，可在 `loam.config.ts` 中加入：
+
+```ts
+export default {
+  dump_dir: process.env.LOAM_DUMP_DIR,
+  distillers: ["@loamlog/distiller-issue-draft"],
+  sinks: ["@loamlog/sink-file"],
+};
+```
+
+当成功生成草稿时，Loamlog 会在 `distill/<repo>/pending/` 下同时写出两个文件：
+
+```text
+$LOAM_DUMP_DIR/
+└── distill/
+    └── my-project/
+        └── pending/
+            ├── <result-id>.json
+            └── <result-id>.md
+```
+
+其中 `.json` 保存完整的结构化结果（包括 evidence 和 payload），`.md` 保存来自 `render.markdown` 的 GitHub-ready issue 正文。
+
+当前范围仍然是 local-first：Loamlog 只会写本地草稿文件，暂时不会自动在 GitHub 上创建 issue。
 
 ---
 
@@ -279,6 +343,12 @@ pnpm run typecheck
 ---
 
 ## 路线图
+
+统一文档基目录现已收敛到 `AIEF/`：
+
+- `AIEF/context/`：长期上下文、ADR、路线图、复盘
+- `AIEF/plans/`：执行计划
+- `AIEF/openspec/`：当前变更的轻量规格层
 
 完整里程碑详见 [`AIEF/context/business/roadmap.md`](AIEF/context/business/roadmap.md)。
 

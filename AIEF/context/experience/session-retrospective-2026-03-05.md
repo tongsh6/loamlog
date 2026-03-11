@@ -19,6 +19,9 @@
 - **Test Discovery**: 将 `package.json` 中的 `test` 脚本从 glob 模式改为 `find` 命令：
   `find packages plugins -name '*.test.ts' -not -path '*/node_modules/*' | xargs node --test`
   *经验总结：Node.js 20+ 的 --test 配合 shell 在不同 OS 下对递归通配符的展开行为不一致，使用系统级 `find` 是 CI 环境中最稳健的选择。*
+- **Publish Hardening**: 解决 NPM 在 GitHub Actions 中的 `ENEEDAUTH` 问题。
+  *经验总结：在 Monorepo 中，`npm publish <path>` 往往无法正确读取根目录的 `.npmrc` 认证信息。改用 `pnpm --filter <pkg-name> publish` 能够完美继承环境并解决认证问题。*
+  *项目规范：发布流程现已彻底跑通且自动化机制稳定。确立强制规范：**严禁在本地执行任何 `npm publish` 或 `pnpm publish`**，所有发布操作必须通过合并 `master` 并打 Tag 交由 GitHub Actions 自动化执行。*
 
 ## 架构决策 | Architecture Decisions
 - [ADR-012]: 确立了插件侧的轻量级离线缓冲机制。

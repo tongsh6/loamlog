@@ -35,6 +35,9 @@ importers:
       '@loamlog/distill':
         specifier: workspace:*
         version: link:../distill
+      '@loamlog/provider-claude-code':
+        specifier: workspace:*
+        version: link:../providers/claude-code
       '@loamlog/provider-opencode':
         specifier: workspace:*
         version: link:../providers/opencode
@@ -53,12 +56,30 @@ importers:
       '@loamlog/core':
         specifier: workspace:*
         version: link:../core
+      '@loamlog/distiller-issue-draft':
+        specifier: workspace:*
+        version: link:../distillers/issue-draft
+      '@loamlog/distiller-pitfall-card':
+        specifier: workspace:*
+        version: link:../distillers/pitfall-card
+      '@loamlog/sink-file':
+        specifier: workspace:*
+        version: link:../sinks/file
 
   packages/distiller-sdk:
     dependencies:
       '@loamlog/core':
         specifier: workspace:*
         version: link:../core
+
+  packages/distillers/issue-draft:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@loamlog/distiller-sdk':
+        specifier: workspace:*
+        version: link:../../distiller-sdk
 
   packages/distillers/pitfall-card:
     dependencies:
@@ -68,6 +89,12 @@ importers:
       '@loamlog/distiller-sdk':
         specifier: workspace:*
         version: link:../../distiller-sdk
+
+  packages/providers/claude-code:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
 
   packages/providers/opencode:
     dependencies:

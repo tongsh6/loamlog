@@ -8,6 +8,7 @@
     { "path": "./packages/distillers/pitfall-card" },
     { "path": "./packages/sinks/file" },
     { "path": "./packages/providers/opencode" },
+    { "path": "./packages/providers/claude-code" },
     { "path": "./packages/cli" },
     { "path": "./plugins/opencode" }
   ]

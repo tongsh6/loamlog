@@ -7,6 +7,7 @@ import type { SessionSnapshot } from "@loamlog/core";
 import { writeSessionSnapshot } from "@loamlog/archive";
 import { createDistillEngine } from "./engine.js";
 import { snapshotToArtifact } from "./query.js";
+import { createDistillerRegistry } from "./registry.js";
 import { createDistillerStateKV } from "./state.js";
 
 let tempDir: string | undefined;
@@ -162,5 +163,13 @@ describe("distill package", () => {
     assert.equal(reports.length, 1);
     assert.equal(reports[0].results_produced, 1);
     assert.equal(reports[0].errors.length, 0);
+  });
+
+  test("registry loads issue-draft distiller by package specifier", async () => {
+    const registry = createDistillerRegistry();
+    const plugin = await registry.load("@loamlog/distiller-issue-draft");
+
+    assert.equal(plugin.id, "@loamlog/distiller-issue-draft");
+    assert.equal(plugin.supported_types.includes("issue-draft"), true);
   });
 });

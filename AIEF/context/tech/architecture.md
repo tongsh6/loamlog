@@ -5,21 +5,22 @@
 ```
 Providers        ->  Archive           ->  Distill Engine   ->  Sinks
   opencode            JSON snapshot         LLM Router           file
-  claude-code (*)     + Markdown            multi-model          github (*)
+  claude-code         + Markdown            multi-model          github (*)
   cursor (*)          redact + trace        multi-distiller      notion (*)
 
-(*) = future
+(*) = planned
 ```
 
 ## 模块划分 | Package Layout
 
 ```
-aicapture/
+loamlog/
 ├── packages/
 │   ├── core/              # Types + contracts (DistillerPlugin, DistillResultDraft...)
 │   ├── archive/           # Store + redact + fingerprint
 │   ├── providers/
-│   │   └── opencode/      # OpenCode provider
+│   │   ├── opencode/      # OpenCode provider
+│   │   └── claude-code/   # Claude Code transcript provider
 │   ├── distill/           # Engine + LLM router + registry + metadata injector
 │   ├── distiller-sdk/     # @loamlog/distiller-sdk: defineDistiller, createEvidence, testRunner
 │   ├── distillers/        # Built-in distillers (reference implementations)

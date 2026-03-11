@@ -31,7 +31,7 @@ pnpm run test                     # Run tests
 loam daemon --providers opencode   # Daemon mode (real-time capture)
 loam capture --provider opencode   # Manual capture
 loam distill --distiller pitfall-card --llm deepseek/deepseek-chat # Distill
-loam list --repo xxx --last 7d     # Browse archive
+loam list --repo xxx --last 7d     # Browse archive (planned)
 
 # Docs (AIEF bilingual)
 node AIEF/scripts/check-bilingual-docs.js
@@ -44,10 +44,10 @@ node AIEF/scripts/new-bilingual-doc.js --path "AIEF/context/tech/example.md" --t
 ```
 Providers        ->  Archive           ->  Distill Engine   ->  Sinks
   opencode            JSON snapshot         LLM Router           file
-  claude-code (*)     + Markdown            multi-model          github (*)
+  claude-code         + Markdown            multi-model          github (*)
   cursor (*)          redact + trace        multi-distiller      notion (*)
 
-(*) = future
+(*) = planned
 ```
 
 核心原则 | Core principles:
@@ -65,7 +65,8 @@ loamlog/
 │   ├── core/              # Core types & interface contracts
 │   ├── archive/           # Unified storage (read/write/redact/fingerprint)
 │   ├── providers/
-│   │   └── opencode/      # OpenCode data source adapter
+│   │   ├── opencode/      # OpenCode data source adapter
+│   │   └── claude-code/   # Claude Code transcript adapter
 │   ├── distill/           # Distill engine + LLM router
 │   ├── distillers/        # Built-in distillers
 │   ├── sinks/             # Output adapters
@@ -77,7 +78,8 @@ loamlog/
 
 ## 上下文入口 | Context Entry
 
-- AIEF/context/INDEX.md
+- Unified docs base directory: `AIEF/`
+- Primary context index: `AIEF/context/INDEX.md`
 
 ## 硬性约束 | Hard Constraints
 

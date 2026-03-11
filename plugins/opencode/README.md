@@ -21,7 +21,7 @@ After installation, ensure the plugin is enabled in your global OpenCode configu
 
 ```json
 {
-  "plugin": ["opencode-loamlog@latest"]
+  "plugins": ["opencode-loamlog@latest"]
 }
 ```
 
@@ -61,11 +61,12 @@ Publishing is handled via GitHub Actions:
   ```
 - **Manual**: Go to GitHub Actions -> "Publish OpenCode Plugin" -> "Run workflow". Select the version bump type (patch/minor/major).
 
-#### 2. Manual Release
-If you have the necessary permissions and `NPM_TOKEN` configured locally:
-```bash
-cd plugins/opencode
-npm publish --access public
-```
+#### 2. Local publishing is forbidden
 
-**Note**: Ensure `NPM_TOKEN` is configured in GitHub Repository Secrets for the automated workflow to work.
+Do not run `npm publish` or `pnpm publish` locally for this plugin.
+
+- All plugin releases must go through GitHub Actions
+- Tag-based releases use the `opencode-loamlog@v*` convention
+- Manual releases, if needed, should be triggered from the "Publish OpenCode Plugin" workflow
+
+**Note**: Ensure `NPM_TOKEN` is configured in GitHub repository secrets for the automated workflow to work.

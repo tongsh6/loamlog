@@ -72,8 +72,10 @@ test(archive): add redaction edge-case coverage
 2. **Target branch**: Always `develop` (except hotfixes → `master`)
 3. **PR title**: Must follow commit convention (e.g., `feat(cli): add list command`)
 4. **PR body**: Use the provided template — fill in every section
-5. **CI must pass**: All checks green before merge
-6. **Squash merge**: Prefer squash merge to keep `develop` history clean
+5. **Protected branches**: `develop` and `master` are protected; use PRs instead of direct pushes in normal flow
+6. **CI must pass**: `Test & Typecheck` must be green before merge
+7. **Merge strategy**: Keep history intentional — squash small/noisy branches, or preserve meaningful atomic commits when that makes review and rollback clearer
+8. **Branch cleanup**: Merged branches are auto-deleted by GitHub
 
 For large changes, open an issue first to discuss approach before writing code.
 
@@ -110,6 +112,10 @@ Currently handled manually via `pnpm publish` within each package directory afte
 ### OpenCode Plugin (`opencode-loamlog`) | OpenCode 插件
 The OpenCode plugin has a dedicated CI/CD pipeline:
 OpenCode 插件拥有独立的 CI/CD 流水线：
+
+> **⚠️ IMPORTANT / 重要警告**  
+> Never run `npm publish` or `pnpm publish` locally for the plugin. All releases are strictly automated via GitHub Actions to ensure consistency and proper environment handling.  
+> 严禁在本地为插件执行 `npm publish` 或 `pnpm publish`。所有发布均必须通过 GitHub Actions 严格自动化进行，以确保一致性与正确的环境处理。
 
 1. **Automation | 自动化**: Uses GitHub Actions for NPM publishing. 使用 GitHub Actions 进行 NPM 发布。
 2. **Trigger | 触发机制**:
