@@ -26,6 +26,11 @@ interface LlmEvidenceRef {
   excerpt: string;
 }
 
+interface RawEvidenceRef {
+  message_id?: unknown;
+  excerpt?: unknown;
+}
+
 interface LlmIssueDraft {
   title: string;
   summary: string;
@@ -135,18 +140,28 @@ function buildEvidence(artifact: SessionArtifact, refs: LlmEvidenceRef[] | undef
   const seen = new Set<string>();
   const evidence: DistillResultDraft["evidence"] = [];
 
-  for (const ref of refs ?? []) {
-    const message = findMessage(artifact, ref.message_id);
+  for (const rawRef of refs ?? []) {
+    if (!rawRef || typeof rawRef !== "object") {
+      continue;
+    }
+
+    const ref = rawRef as RawEvidenceRef;
+    if (typeof ref.message_id !== "string" || typeof ref.excerpt !== "string") {
+      continue;
+    }
+
+    const messageId = ref.message_id.trim();
+    const excerpt = ref.excerpt.trim();
+    if (messageId.length === 0 || excerpt.length === 0) {
+      continue;
+    }
+
+    const message = findMessage(artifact, messageId);
     if (!message) {
       continue;
     }
 
-    const excerpt = ref.excerpt.trim();
-    if (excerpt.length === 0) {
-      continue;
-    }
-
-    const key = `${ref.message_id}:${excerpt}`;
+    const key = `${messageId}:${excerpt}`;
     if (seen.has(key)) {
       continue;
     }

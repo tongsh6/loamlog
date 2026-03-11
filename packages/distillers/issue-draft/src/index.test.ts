@@ -488,4 +488,97 @@ describe("issue-draft distiller", () => {
     assert.equal(outputs[0].title, "alpha candidate");
     assert.equal(outputs[0].evidence.length, 2);
   });
+
+  test("ignores malformed evidence refs instead of throwing", async () => {
+    const plugin = factory();
+
+    const outputs = await plugin.run({
+      artifactStore: {
+        async *getUnprocessed() {
+          yield {
+            schema_version: "1.0",
+            meta: {
+              session_id: "ses_issue_6",
+              captured_at: "2026-03-10T00:00:00.000Z",
+              capture_trigger: "session.idle",
+              loam_version: "0.2.1",
+              provider: "opencode",
+            },
+            context: {
+              cwd: "/tmp",
+              worktree: "/tmp",
+            },
+            time_range: {
+              start: "2026-03-10T00:00:00.000Z",
+              end: "2026-03-10T00:00:01.000Z",
+            },
+            session: {},
+            messages: [
+              {
+                id: "msg_safe",
+                role: "user",
+                timestamp: "2026-03-10T00:00:00.000Z",
+                content: "A valid evidence ref exists next to malformed ones.",
+              },
+            ],
+            redacted: {
+              patterns_applied: [],
+              redacted_count: 0,
+            },
+          };
+        },
+        query() {
+          return emptyQuery();
+        },
+      },
+      llm: {
+        route() {
+          return {
+            model: "fake-model",
+            provider: {
+              id: "mock",
+              async complete() {
+                return {
+                  content: JSON.stringify([
+                    {
+                      title: "feat: robust evidence handling",
+                      summary: "Malformed refs should be ignored, not crash the run.",
+                      background: "LLM output can contain partial or invalid ref objects.",
+                      problem: "A malformed evidence entry could throw during trimming.",
+                      proposed_solution: "Skip malformed refs and keep valid ones.",
+                      acceptance_criteria: ["Malformed refs do not crash the distiller"],
+                      confidence: 0.91,
+                      evidence_refs: [
+                        null,
+                        { message_id: "msg_safe" },
+                        { excerpt: "missing message id" },
+                        { message_id: 123, excerpt: "wrong type" },
+                        { message_id: "msg_safe", excerpt: "valid ref" },
+                      ],
+                    },
+                  ]),
+                  tokens: { input: 10, output: 10 },
+                };
+              },
+            },
+          };
+        },
+      },
+      state: {
+        async get() {
+          return undefined;
+        },
+        async set() {
+          return;
+        },
+        async markProcessed() {
+          return;
+        },
+      },
+    });
+
+    assert.equal(outputs.length, 1);
+    assert.equal(outputs[0].evidence.length, 1);
+    assert.equal(outputs[0].evidence[0].excerpt, "valid ref");
+  });
 });
