@@ -188,6 +188,39 @@ $LOAM_DUMP_DIR/
             └── 2026-03-02T00-00-00-000Z-ses_abc123.json
 ```
 
+### Generate a local issue draft
+
+Run the built-in issue-draft distiller explicitly:
+
+```bash
+loam distill --distiller @loamlog/distiller-issue-draft --llm deepseek/deepseek-chat
+```
+
+If you want to make it part of your default config, add it to `loam.config.ts`:
+
+```ts
+export default {
+  dump_dir: process.env.LOAM_DUMP_DIR,
+  distillers: ["@loamlog/distiller-issue-draft"],
+  sinks: ["@loamlog/sink-file"],
+};
+```
+
+When a draft is produced, Loamlog writes both files into `distill/<repo>/pending/`:
+
+```text
+$LOAM_DUMP_DIR/
+└── distill/
+    └── my-project/
+        └── pending/
+            ├── <result-id>.json
+            └── <result-id>.md
+```
+
+The `.json` file contains the full structured result, including evidence and payload. The `.md` file contains the GitHub-ready draft body from `render.markdown`.
+
+Current scope is still local-first: Loamlog writes local draft files, but does not create GitHub issues automatically yet.
+
 ---
 
 ## Redaction
