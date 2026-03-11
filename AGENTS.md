@@ -29,7 +29,7 @@ pnpm run test                     # Run tests
 
 # Runtime
 loam daemon --providers opencode   # Daemon mode (real-time capture)
-loam capture --provider opencode   # Manual capture (planned)
+loam capture --provider opencode   # Manual capture
 loam distill --distiller pitfall-card --llm deepseek/deepseek-chat # Distill
 loam list --repo xxx --last 7d     # Browse archive (planned)
 
@@ -78,7 +78,8 @@ loamlog/
 
 ## 上下文入口 | Context Entry
 
-- AIEF/context/INDEX.md
+- Unified docs base directory: `AIEF/`
+- Primary context index: `AIEF/context/INDEX.md`
 
 ## 硬性约束 | Hard Constraints
 

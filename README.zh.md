@@ -344,6 +344,12 @@ pnpm run typecheck
 
 ## 路线图
 
+统一文档基目录现已收敛到 `AIEF/`：
+
+- `AIEF/context/`：长期上下文、ADR、路线图、复盘
+- `AIEF/plans/`：执行计划
+- `AIEF/openspec/`：当前变更的轻量规格层
+
 完整里程碑详见 [`AIEF/context/business/roadmap.md`](AIEF/context/business/roadmap.md)。
 
 ---

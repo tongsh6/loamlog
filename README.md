@@ -344,6 +344,12 @@ pnpm run typecheck
 
 ## Roadmap
 
+The unified documentation base directory is `AIEF/`:
+
+- `AIEF/context/` for long-term context, ADRs, roadmap, and retrospectives
+- `AIEF/plans/` for execution plans
+- `AIEF/openspec/` for the lightweight current-change spec layer
+
 See [`AIEF/context/business/roadmap.md`](AIEF/context/business/roadmap.md) for the full milestone breakdown.
 
 ---
