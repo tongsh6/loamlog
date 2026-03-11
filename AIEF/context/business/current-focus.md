@@ -10,27 +10,29 @@ The main `claude-code` provider path has also landed in the repository, which me
 
 ## 当前产品问题 | Current Product Question
 
-当前最重要的问题不是继续扩平台，而是验证第一条真正有即时价值的产品闭环：
-The highest-priority question is no longer whether to extend the platform, but whether the first high-value user loop is real.
+当前最重要的问题不再是“能不能把第一条价值闭环做出来”，而是：这条已经合并到 `develop` 的闭环，是否真的会被用户持续使用，并且值得进入下一阶段自动化与产品化。
+The highest-priority question is no longer whether the first high-value loop can be built, but whether the loop now merged into `develop` will produce sustained user value and justify the next phase of automation.
 
 ```text
 AI conversation -> structured evidence -> local issue draft
 ```
 
-## 活跃 Issue 结构 | Active Issue Structure
-
-- `#7` — umbrella：AI 对话自动生成 GitHub Issue
-- `#12` — issue-draft distiller MVP
-- `#13` — file sink 输出 `.json` + `.md`
-- `#14` — 实现后的使用文档
+## 当前活跃议题 | Current Active Threads
 
 - `#5` — umbrella：zero-config discovery 方向
 - `#9` / `#10` / `#11` — 作为后续 discovery 研究与规格拆分
 - `#6` — Auto-Skill Generation，保留为 later-stage idea
 
+当前已不再有围绕首条 issue-draft MVP 的活跃实现 issue；该闭环已完成并合并。
+There are no longer active implementation issues for the first issue-draft MVP loop; that loop is complete and merged.
+
 ## 已关闭议题 | Closed Topic
 
 - `#1` OpenCode plugin reload bug：源码与 npm 发布版本 `opencode-loamlog@0.2.3` 已对齐，因此按“已修复并已发布”关闭
+- `#7` umbrella：AI 对话自动生成 GitHub Issue，已通过 PR #27 合并到 `develop`
+- `#12`：issue-draft distiller MVP，已完成并关闭
+- `#13`：file sink 输出 `.json` + `.md`，已完成并关闭
+- `#14`：issue-draft 用法文档，已完成并关闭
 
 ## 近期非目标 | Near-Term Non-Goals
 
@@ -42,15 +44,13 @@ AI conversation -> structured evidence -> local issue draft
 - repo-specific template mapping
 - discovery / auto-skill 等中长期主题抢占当前主线
 
-## 关闭条件 | Close Conditions
+## 下一阶段判断点 | Next-Phase Decision Points
 
-### `#7` umbrella
+在当前 MVP 已合并后，下一阶段的判断重点是：
 
-在以下子项全部完成后关闭：
-
-- `#12` 完成
-- `#13` 完成
-- `#14` 完成
+- issue-draft 输出是否足够稳定、可复用、可读
+- 用户是否真的会把本地 `.md` 草稿复制进 GitHub
+- 是否已经值得推进 Stage 2 的自动化项（例如 GitHub API sink）
 
 ### `#5` umbrella
 
