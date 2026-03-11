@@ -22,28 +22,31 @@ This means:
 - keep the first loop local-first
 - validate output quality before automating external delivery
 
-## Active Issues
+This first loop is now implemented and merged into `develop`. The current focus is evaluating whether it is strong enough to justify the next stage.
 
-- `#7` umbrella
-- `#12` issue-draft distiller MVP
-- `#13` file sink Markdown output
-- `#14` post-implementation docs
-
-## Deferred Topics
+## Current Active Threads
 
 - `#5` umbrella and `#9/#10/#11` discovery work
 - `#6` auto-skill generation
+
+Completed MVP thread:
+
+- `#7` umbrella — closed
+- `#12` issue-draft distiller MVP — closed
+- `#13` file sink Markdown output — closed
+- `#14` post-implementation docs — closed
+
+## Deferred Topics
+
 - GitHub API delivery
 - approval/review workflow
 - multi-session merge
 
-## Close Conditions
+## Next-Phase Decision Points
 
-Close `#7` only after:
-
-- `#12` is done
-- `#13` is done
-- `#14` is done
+- whether users actually reuse the generated local drafts
+- whether issue quality is strong enough to justify GitHub API delivery
+- whether the next step should be automation, better ranking, or broader discovery work
 
 Close `#5` only after:
 

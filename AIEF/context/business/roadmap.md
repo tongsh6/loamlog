@@ -42,12 +42,14 @@ As of 2026-03-10, both the capture pipeline and the multi-provider distill pipel
 AI conversation -> structured evidence -> local issue draft
 ```
 
-因此，当前活跃产品议题改为：
+因此，当前这条产品闭环已经完成首轮实现并合并到 `develop`：
 
-- `#7` umbrella：AI 对话自动生成 GitHub Issue
-- `#12`：issue-draft distiller MVP
-- `#13`：file sink 同时输出 `.json` + `.md`
-- `#14`：实现后的用法文档
+- `#7` umbrella：已关闭
+- `#12`：已完成并关闭
+- `#13`：已完成并关闭
+- `#14`：已完成并关闭
+
+当前更重要的是评估这条闭环是否已经证明真实价值，以及是否进入下一阶段自动化。
 
 M4 执行计划仍保留为参考文档，但不再代表当前唯一焦点。
 
