@@ -3,7 +3,7 @@
 This directory is the minimal spec layer for the repository's current active change focus.
 
 - It is intentionally lightweight.
-- It does not replace `AIEF/`.
+- It lives under `AIEF/` and does not replace the broader `AIEF/context/` knowledge base.
 - It should only track the currently active product change that needs a sharp boundary.
 
 Current spec:
