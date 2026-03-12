@@ -14,7 +14,10 @@
     "@loamlog/archive": "workspace:*",
     "@loamlog/core": "workspace:*",
     "@loamlog/distill": "workspace:*",
+    "@loamlog/distiller-issue-draft": "workspace:*",
+    "@loamlog/distiller-pitfall-card": "workspace:*",
     "@loamlog/provider-claude-code": "workspace:*",
-    "@loamlog/provider-opencode": "workspace:*"
+    "@loamlog/provider-opencode": "workspace:*",
+    "@loamlog/sink-file": "workspace:*"
   }
 }
