@@ -1,0 +1,122 @@
+name: Milestone Progress
+
+on:
+  schedule:
+    # Run weekly on Monday at 9:00 AM
+    - cron: '0 9 * * 1'
+  workflow_dispatch:
+
+jobs:
+  milestone-report:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Generate milestone progress report
+        uses: actions/github-script@v7
+        with:
+          script: |
+            // Get all milestones
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            
+            let report = '# 📊 里程碑进度报告\n\n';
+            report += `生成时间: ${new Date().toISOString().split('T')[0]}\n\n`;
+            
+            for (const milestone of milestones.data) {
+              const openIssues = milestone.open_issues;
+              const closedIssues = milestone.closed_issues;
+              const total = openIssues + closedIssues;
+              const progress = total > 0 ? Math.round((closedIssues / total) * 100) : 0;
+              
+              // Progress bar
+              const filled = '█'.repeat(Math.round(progress / 5));
+              const empty = '░'.repeat(20 - Math.round(progress / 5));
+              
+              report += `## ${milestone.title}\n`;
+              report += `${filled}${empty} ${progress}%\n`;
+              report += `- 开放 Issues: ${openIssues}\n`;
+              report += `- 已完成: ${closedIssues}\n`;
+              report += `- 总计: ${total}\n`;
+              
+              if (milestone.due_on) {
+                const dueDate = new Date(milestone.due_on);
+                const today = new Date();
+                const daysLeft = Math.ceil((dueDate - today) / (1000 * 60 * 60 * 24));
+                report += `- 截止日期: ${milestone.due_on.split('T')[0]} (${daysLeft > 0 ? '还有 ' + daysLeft + ' 天' : '已逾期 ' + Math.abs(daysLeft) + ' 天'})\n`;
+              }
+              
+              report += '\n';
+              
+              // Get milestone issues
+              const issues = await github.rest.issues.listForRepo({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                milestone: milestone.number,
+                state: 'all'
+              });
+              
+              // Group by status
+              const ready = issues.data.filter(i => i.state === 'open' && i.labels.some(l => l.name === 'status:ready'));
+              const inProgress = issues.data.filter(i => i.state === 'open' && i.assignees && i.assignees.length > 0);
+              const blocked = issues.data.filter(i => i.state === 'open' && i.labels.some(l => l.name === 'status:blocked'));
+              
+              if (ready.length > 0) {
+                report += `**准备就绪 (${ready.length}):**\n`;
+                ready.slice(0, 5).forEach(i => {
+                  report += `- #${i.number} ${i.title.substring(0, 50)}${i.title.length > 50 ? '...' : ''}\n`;
+                });
+                if (ready.length > 5) report += `- ... 还有 ${ready.length - 5} 个\n`;
+                report += '\n';
+              }
+              
+              if (inProgress.length > 0) {
+                report += `**进行中 (${inProgress.length}):**\n`;
+                inProgress.slice(0, 5).forEach(i => {
+                  const assignees = i.assignees.map(a => '@' + a.login).join(', ');
+                  report += `- #${i.number} ${i.title.substring(0, 40)}${i.title.length > 40 ? '...' : ''} (${assignees})\n`;
+                });
+                if (inProgress.length > 5) report += `- ... 还有 ${inProgress.length - 5} 个\n`;
+                report += '\n';
+              }
+              
+              if (blocked.length > 0) {
+                report += `**⚠️ 被阻塞 (${blocked.length}):**\n`;
+                blocked.forEach(i => {
+                  report += `- #${i.number} ${i.title.substring(0, 50)}${i.title.length > 50 ? '...' : ''}\n`;
+                });
+                report += '\n';
+              }
+              
+              report += '---\n\n';
+            }
+            
+            // Create or update milestone tracking issue
+            const trackingIssues = await github.rest.issues.listForRepo({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              labels: 'milestone-tracking',
+              state: 'open'
+            });
+            
+            if (trackingIssues.data.length > 0) {
+              // Update existing
+              await github.rest.issues.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: trackingIssues.data[0].number,
+                body: report
+              });
+            } else {
+              // Create new
+              await github.rest.issues.create({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                title: `📊 里程碑进度报告 - ${new Date().toISOString().split('T')[0]}`,
+                body: report,
+                labels: ['milestone-tracking', 'type:docs']
+              });
+            }
