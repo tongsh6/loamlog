@@ -30,6 +30,7 @@ Project long-term context navigation entry.
 |---|---|---|
 | [opencode-plugin-findings.md](experience/opencode-plugin-findings.md) | OpenCode 内部机制调研与 convodump 对比 / OpenCode internals research and convodump comparison | 参考 / Reference |
 | [session-retrospective-2026-03-02.md](experience/session-retrospective-2026-03-02.md) | 2026-03-02 会话复盘：问题、经验、模板、checklist、最佳实践、自动化脚本 / Session retrospective: problems, learnings, templates, checklists, best practices, automation scripts | 参考 / Reference |
+| [ai-tool-usage-learnings.md](experience/ai-tool-usage-learnings.md) | AI 协作工具使用经验：CLI vs API 选择、命令发现模式、过度工程化反思 / AI collaboration tool usage learnings: CLI vs API decision, command discovery patterns, over-engineering reflection | 活跃 / Active |
 
 ### ../plans/ - 执行计划 | Execution Plans
 
