@@ -9,9 +9,12 @@ import {
   type CaptureRequest,
   type SessionProvider,
   isCaptureRequest,
+  type TriggeredIntelligenceConfig,
 } from "@loamlog/core";
 import { applySnapshotRedaction, parseRedactIgnore } from "@loamlog/sanitizer";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
+import { createTriggeredIntelligencePipeline, type TriggeredIntelligencePipeline } from "@loamlog/trigger";
+import { buildRuntimeDistillConfig, loadAICConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
 
 export interface StartDaemonOptions {
   host?: string;
@@ -21,6 +24,8 @@ export interface StartDaemonOptions {
   onCapture?: (payload: CaptureRequest) => void;
   sessionProvider?: SessionProvider;
   sessionProviders?: Record<string, SessionProvider>;
+  intelligenceConfig?: TriggeredIntelligenceConfig;
+  intelligencePipeline?: TriggeredIntelligencePipeline;
 }
 
 export interface StartedDaemon {
@@ -35,6 +40,7 @@ interface ProcessCaptureOptions {
   onCapture?: (payload: CaptureRequest) => void;
   sessionProvider?: SessionProvider;
   sessionProviders?: Record<string, SessionProvider>;
+  intelligence?: TriggeredIntelligencePipeline;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -106,6 +112,15 @@ export async function processCaptureRequest(
     });
 
     logger(`[loam daemon] snapshot saved path=${persisted.jsonPath} redacted_count=${redacted.redacted_count}`);
+    try {
+      options.intelligence?.enqueue({
+        capture: payload,
+        snapshot: redacted.snapshot,
+        snapshotPath: persisted.jsonPath,
+      });
+    } catch (error) {
+      logger(`[loam daemon] intelligence enqueue failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
     return {
       accepted: true,
       session_id: payload.session_id,
@@ -124,6 +139,18 @@ export async function processCaptureRequest(
 export async function startDaemon(options: StartDaemonOptions = {}): Promise<StartedDaemon> {
   const host = options.host ?? DEFAULT_DAEMON_HOST;
   const port = options.port ?? DEFAULT_DAEMON_PORT;
+  const intelligence =
+    options.intelligencePipeline ??
+    createTriggeredIntelligencePipeline({
+      dumpDir: options.dumpDir ?? process.env.LOAM_DUMP_DIR,
+      config: options.intelligenceConfig,
+      logger: options.logger,
+      loadDistillConfig: async () => {
+        const loaded = await loadAICConfig();
+        const normalized = normalizeBuiltInPluginSpecifiers(loaded);
+        return buildRuntimeDistillConfig(normalized, undefined);
+      },
+    });
 
   const server = createServer(async (req, res) => {
     if (req.method === "POST" && req.url === CAPTURE_PATH) {
@@ -138,7 +165,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
           return;
         }
 
-        const result = await processCaptureRequest(payload, options);
+        const result = await processCaptureRequest(payload, { ...options, intelligence });
         sendJson(res, result.accepted ? 202 : 400, result);
         return;
       } catch (error) {
