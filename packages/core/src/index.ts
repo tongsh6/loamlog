@@ -76,7 +76,20 @@ export interface SessionSnapshot {
   redacted: {
     patterns_applied: string[];
     redacted_count: number;
+    summary?: RedactionSummary;
+    risk_level?: RedactionRiskLevel;
+    sanitized_at?: string;
   };
+}
+
+export type RedactionRiskLevel = "low" | "medium" | "high";
+
+export interface RedactionSummary {
+  total: number;
+  by_type: Record<string, number>;
+  by_placeholder: Record<string, number>;
+  high_risk_types: string[];
+  risk_level: RedactionRiskLevel;
 }
 
 export type ArtifactPart =
@@ -125,6 +138,9 @@ export interface SessionArtifact {
   redacted: {
     patterns_applied: string[];
     redacted_count: number;
+    summary?: RedactionSummary;
+    risk_level?: RedactionRiskLevel;
+    sanitized_at?: string;
   };
 }
 
@@ -395,122 +411,9 @@ export interface RedactionResult {
   snapshot: SessionSnapshot;
   patterns_applied: string[];
   redacted_count: number;
+  summary: RedactionSummary;
+  risk_level: RedactionRiskLevel;
 }
-
-interface RedactionPattern {
-  id: string;
-  regex: RegExp;
-}
-
-const DEFAULT_REDACTION_PATTERNS: RedactionPattern[] = [
-  { id: "openai-token", regex: /sk-[A-Za-z0-9_-]{20,}/g },
-  { id: "github-token", regex: /ghp_[A-Za-z0-9]{20,}/g },
-  { id: "aws-access-key", regex: /\bAKIA[0-9A-Z]{16}\b/g },
-  { id: "bearer-token", regex: /Bearer\s+[A-Za-z0-9._-]+/g },
-  { id: "sensitive-path", regex: /(?:^|[\\/])(auth|credentials|\.env)(?:[\\/]|$)/gi },
-];
-
-function replaceWithCount(text: string, regex: RegExp, replacement: string): { value: string; count: number } {
-  let count = 0;
-  const value = text.replace(regex, () => {
-    count += 1;
-    return replacement;
-  });
-  return { value, count };
-}
-
-function tryCompileRegex(pattern: string): RegExp | undefined {
-  try {
-    if (pattern.startsWith("/") && pattern.lastIndexOf("/") > 0) {
-      const lastSlash = pattern.lastIndexOf("/");
-      const body = pattern.slice(1, lastSlash);
-      const flags = pattern.slice(lastSlash + 1);
-      return new RegExp(body, flags);
-    }
-    return new RegExp(pattern);
-  } catch {
-    return undefined;
-  }
-}
-
-export function parseRedactIgnore(value: string | undefined): RegExp[] {
-  if (!value) {
-    return [];
-  }
-
-  return value
-    .split(/[\n;]+/)
-    .map((item) => item.trim())
-    .filter((item) => item.length > 0)
-    .map((item) => tryCompileRegex(item))
-    .filter((item): item is RegExp => Boolean(item));
-}
-
-function shouldIgnoreText(text: string, ignorePatterns: RegExp[]): boolean {
-  return ignorePatterns.some((pattern) => {
-    pattern.lastIndex = 0;
-    return pattern.test(text);
-  });
-}
-
-function redactStringValue(
-  value: string,
-  ignorePatterns: RegExp[],
-  patternsApplied: Set<string>,
-): { value: string; count: number } {
-  if (shouldIgnoreText(value, ignorePatterns)) {
-    return { value, count: 0 };
-  }
-
-  let result = value;
-  let redactedCount = 0;
-
-  for (const pattern of DEFAULT_REDACTION_PATTERNS) {
-    const replacement = `[REDACTED:${pattern.id}]`;
-    const replaced = replaceWithCount(result, pattern.regex, replacement);
-    if (replaced.count > 0) {
-      patternsApplied.add(pattern.id);
-      redactedCount += replaced.count;
-      result = replaced.value;
-    }
-  }
-
-  return { value: result, count: redactedCount };
-}
-
-function redactUnknownValue(
-  value: unknown,
-  ignorePatterns: RegExp[],
-  patternsApplied: Set<string>,
-): { value: unknown; count: number } {
-  if (typeof value === "string") {
-    return redactStringValue(value, ignorePatterns, patternsApplied);
-  }
-
-  if (Array.isArray(value)) {
-    let count = 0;
-    const next = value.map((item) => {
-      const redacted = redactUnknownValue(item, ignorePatterns, patternsApplied);
-      count += redacted.count;
-      return redacted.value;
-    });
-    return { value: next, count };
-  }
-
-  if (value && typeof value === "object") {
-    let count = 0;
-    const next: Record<string, unknown> = {};
-    for (const [key, current] of Object.entries(value as Record<string, unknown>)) {
-      const redacted = redactUnknownValue(current, ignorePatterns, patternsApplied);
-      count += redacted.count;
-      next[key] = redacted.value;
-    }
-    return { value: next, count };
-  }
-
-  return { value, count: 0 };
-}
-
 export function buildSessionSnapshot(input: CreateSnapshotInput): SessionSnapshot {
   const firstTimestamp = input.pulled.messages[0]?.timestamp ?? input.capture.captured_at;
   const lastTimestamp = input.pulled.messages[input.pulled.messages.length - 1]?.timestamp ?? input.capture.captured_at;
@@ -542,24 +445,15 @@ export function buildSessionSnapshot(input: CreateSnapshotInput): SessionSnapsho
     redacted: {
       patterns_applied: [],
       redacted_count: 0,
+      summary: {
+        total: 0,
+        by_type: {},
+        by_placeholder: {},
+        high_risk_types: [],
+        risk_level: "low",
+      },
+      risk_level: "low",
     },
-  };
-}
-
-export function applySnapshotRedaction(snapshot: SessionSnapshot, ignorePatterns: RegExp[] = []): RedactionResult {
-  const patternsApplied = new Set<string>();
-  const redacted = redactUnknownValue(snapshot, ignorePatterns, patternsApplied);
-  const output = redacted.value as SessionSnapshot;
-
-  output.redacted = {
-    patterns_applied: Array.from(patternsApplied),
-    redacted_count: redacted.count,
-  };
-
-  return {
-    snapshot: output,
-    patterns_applied: output.redacted.patterns_applied,
-    redacted_count: output.redacted.redacted_count,
   };
 }
 
