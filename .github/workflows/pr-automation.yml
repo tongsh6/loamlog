@@ -1,0 +1,119 @@
+name: PR Automation
+
+on:
+  pull_request:
+    types: [opened, reopened, ready_for_review]
+
+jobs:
+  pr-automation:
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+      issues: write
+    steps:
+      - name: Add labels based on PR title
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const title = pr.title.toLowerCase();
+            const labels = [];
+            
+            // Type labels
+            if (title.startsWith('feat:') || title.startsWith('feature:')) {
+              labels.push('type:feature');
+            } else if (title.startsWith('fix:') || title.startsWith('bug:')) {
+              labels.push('type:bug');
+            } else if (title.startsWith('docs:') || title.includes('doc')) {
+              labels.push('type:docs');
+            } else if (title.startsWith('refactor:')) {
+              labels.push('type:refactor');
+            } else if (title.startsWith('chore:')) {
+              labels.push('type:chore');
+            } else if (title.startsWith('security:') || title.includes('security')) {
+              labels.push('type:security');
+            }
+            
+            // Area labels based on files changed
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const filePaths = files.data.map(f => f.filename);
+            
+            if (filePaths.some(f => f.includes('sanitizer'))) {
+              labels.push('area:sanitizer');
+            }
+            if (filePaths.some(f => f.includes('trigger'))) {
+              labels.push('area:trigger');
+            }
+            if (filePaths.some(f => f.includes('rules'))) {
+              labels.push('area:rules');
+            }
+            if (filePaths.some(f => f.includes('evaluation'))) {
+              labels.push('area:evaluation');
+            }
+            if (filePaths.some(f => f.includes('mcp'))) {
+              labels.push('area:mcp');
+            }
+            if (filePaths.some(f => f.includes('provider'))) {
+              labels.push('area:provider');
+            }
+            if (filePaths.some(f => f.includes('distill'))) {
+              labels.push('area:distill');
+            }
+            if (filePaths.some(f => f.includes('cli'))) {
+              labels.push('area:cli');
+            }
+            
+            if (labels.length > 0) {
+              await github.rest.issues.addLabels({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: pr.number,
+                labels: labels
+              });
+            }
+      
+      - name: Comment on PR
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            
+            await github.rest.issues.createComment({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              issue_number: pr.number,
+              body: `👋 感谢提交 PR！\n\n请确保：\n- [ ] 代码通过所有测试\`pnpm run test\`\n- [ ] TypeScript 类型检查通过\`pnpm run typecheck\`\n- [ ] 遵循项目提交规范\n- [ ] 关联相关 Issue（如果有）\n\n维护者会尽快进行代码审查。`
+            });
+      
+      - name: Request reviewers based on area
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const pr = context.payload.pull_request;
+            const files = await github.rest.pulls.listFiles({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: pr.number
+            });
+            
+            const filePaths = files.data.map(f => f.filename);
+            const reviewers = [];
+            
+            // Auto-assign based on code area (customize as needed)
+            if (filePaths.some(f => f.includes('security') || f.includes('sanitizer'))) {
+              // Add security reviewer
+            }
+            
+            if (reviewers.length > 0) {
+              await github.rest.pulls.requestReviewers({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                pull_number: pr.number,
+                reviewers: reviewers
+              });
+            }

@@ -1,0 +1,159 @@
+name: Release Automation
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          registry-url: 'https://registry.npmjs.org'
+      
+      - name: Install dependencies
+        run: npm install -g pnpm && pnpm install
+      
+      - name: Build
+        run: pnpm run build
+      
+      - name: Test
+        run: pnpm run test
+      
+      - name: Extract version
+        id: version
+        run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> $GITHUB_OUTPUT
+      
+      - name: Generate release notes
+        id: notes
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const tag = context.ref.replace('refs/tags/', '');
+            const previousTag = await github.rest.repos.listTags({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              per_page: 2
+            }).then(res => res.data[1]?.name);
+            
+            // Get commits between tags
+            let commits = [];
+            if (previousTag) {
+              const comparison = await github.rest.repos.compareCommits({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                base: previousTag,
+                head: tag
+              });
+              commits = comparison.data.commits;
+            }
+            
+            // Group commits by type
+            const feat = commits.filter(c => c.commit.message.startsWith('feat:') || c.commit.message.startsWith('feature:'));
+            const fix = commits.filter(c => c.commit.message.startsWith('fix:') || c.commit.message.startsWith('bug:'));
+            const docs = commits.filter(c => c.commit.message.startsWith('docs:'));
+            const refactor = commits.filter(c => c.commit.message.startsWith('refactor:'));
+            const other = commits.filter(c => !c.commit.message.match(/^(feat|fix|docs|refactor|chore|test):/));
+            
+            let notes = `# Release ${tag}\n\n`;
+            
+            if (feat.length > 0) {
+              notes += '## ✨ Features\n';
+              feat.forEach(c => {
+                notes += `- ${c.commit.message.split('\n')[0]} (${c.sha.substring(0, 7)})\n`;
+              });
+              notes += '\n';
+            }
+            
+            if (fix.length > 0) {
+              notes += '## 🐛 Bug Fixes\n';
+              fix.forEach(c => {
+                notes += `- ${c.commit.message.split('\n')[0]} (${c.sha.substring(0, 7)})\n`;
+              });
+              notes += '\n';
+            }
+            
+            if (docs.length > 0) {
+              notes += '## 📚 Documentation\n';
+              docs.forEach(c => {
+                notes += `- ${c.commit.message.split('\n')[0]} (${c.sha.substring(0, 7)})\n`;
+              });
+              notes += '\n';
+            }
+            
+            if (refactor.length > 0) {
+              notes += '## ♻️ Refactoring\n';
+              refactor.forEach(c => {
+                notes += `- ${c.commit.message.split('\n')[0]} (${c.sha.substring(0, 7)})\n`;
+              });
+              notes += '\n';
+            }
+            
+            if (other.length > 0) {
+              notes += '## 📝 Other Changes\n';
+              other.slice(0, 10).forEach(c => {
+                notes += `- ${c.commit.message.split('\n')[0].substring(0, 80)} (${c.sha.substring(0, 7)})\n`;
+              });
+              if (other.length > 10) {
+                notes += `- ... and ${other.length - 10} more commits\n`;
+              }
+              notes += '\n';
+            }
+            
+            notes += '## 📦 Packages\n';
+            notes += '```bash\n';
+            notes += '# Install CLI\n';
+            notes += 'npm install -g @loamlog/cli\n\n';
+            notes += '# Or use npx\n';
+            notes += 'npx @loamlog/cli@latest\n';
+            notes += '```\n';
+            
+            return notes;
+      
+      - name: Create Release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ steps.version.outputs.VERSION }}
+          body: ${{ steps.notes.outputs.result }}
+          draft: false
+          prerelease: ${{ contains(github.ref, 'alpha') || contains(github.ref, 'beta') || contains(github.ref, 'rc') }}
+      
+      - name: Close milestone
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const version = '${{ steps.version.outputs.VERSION }}';
+            const milestones = await github.rest.issues.listMilestones({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              state: 'open'
+            });
+            
+            // Find milestone matching version
+            const milestone = milestones.data.find(m => 
+              m.title.includes(version) || 
+              version.includes(m.title.replace(/Milestone\s+/, ''))
+            );
+            
+            if (milestone) {
+              await github.rest.issues.updateMilestone({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                milestone_number: milestone.number,
+                state: 'closed'
+              });
+              console.log(`Closed milestone: ${milestone.title}`);
+            }
