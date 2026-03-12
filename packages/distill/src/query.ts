@@ -1,5 +1,5 @@
 import { readSessionSnapshots, type ReadSessionSnapshotsOptions } from "@loamlog/archive";
-import { applySnapshotRedaction } from "@loamlog/core";
+import { applySnapshotRedaction } from "@loamlog/sanitizer";
 import type {
   ArtifactPart,
   ArtifactQueryClient,

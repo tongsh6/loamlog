@@ -18,6 +18,7 @@
     "@loamlog/distiller-pitfall-card": "workspace:*",
     "@loamlog/provider-claude-code": "workspace:*",
     "@loamlog/provider-opencode": "workspace:*",
+    "@loamlog/sanitizer": "workspace:*",
     "@loamlog/sink-file": "workspace:*"
   }
 }
