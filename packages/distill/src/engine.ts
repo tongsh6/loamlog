@@ -115,6 +115,7 @@ interface DistillRunOptions {
   repo?: string;
   since?: string;
   until?: string;
+   session_ids?: string[];
 }
 
 export function createDistillEngine(options: { dumpDir: string; config: AICConfig }): DistillEngine {
@@ -169,6 +170,7 @@ export function createDistillEngine(options: { dumpDir: string; config: AICConfi
           repo: runOptions?.repo,
           since: runOptions?.since,
           until: runOptions?.until,
+          session_ids: runOptions?.session_ids,
         });
 
         const trackingStore = {

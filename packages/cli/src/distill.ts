@@ -101,7 +101,7 @@ async function loadConfigFromFile(filePath: string): Promise<AICConfig | undefin
   return loaded.default as AICConfig;
 }
 
-async function loadAICConfig(): Promise<AICConfig> {
+export async function loadAICConfig(): Promise<AICConfig> {
   const cwd = process.cwd();
   const candidates = [
     path.join(cwd, "loam.config.ts"),
