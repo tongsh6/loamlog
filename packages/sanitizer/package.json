@@ -1,5 +1,5 @@
 {
-  "name": "@loamlog/distill",
+  "name": "@loamlog/sanitizer",
   "version": "0.3.0",
   "private": true,
   "type": "module",
@@ -16,8 +16,6 @@
     "typecheck": "tsc -p tsconfig.json --noEmit"
   },
   "dependencies": {
-    "@loamlog/archive": "workspace:*",
-    "@loamlog/core": "workspace:*",
-    "@loamlog/sanitizer": "workspace:*"
+    "@loamlog/core": "workspace:*"
   }
 }

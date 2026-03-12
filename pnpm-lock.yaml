@@ -47,6 +47,9 @@ importers:
       '@loamlog/provider-opencode':
         specifier: workspace:*
         version: link:../providers/opencode
+      '@loamlog/sanitizer':
+        specifier: workspace:*
+        version: link:../sanitizer
       '@loamlog/sink-file':
         specifier: workspace:*
         version: link:../sinks/file
@@ -65,6 +68,9 @@ importers:
       '@loamlog/core':
         specifier: workspace:*
         version: link:../core
+      '@loamlog/sanitizer':
+        specifier: workspace:*
+        version: link:../sanitizer
 
   packages/distiller-sdk:
     dependencies:
@@ -101,6 +107,12 @@ importers:
       '@loamlog/core':
         specifier: workspace:*
         version: link:../../core
+
+  packages/sanitizer:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../core
 
   packages/sinks/file:
     dependencies:
