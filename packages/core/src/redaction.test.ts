@@ -39,14 +39,31 @@ function buildSnapshot(content: string): SessionSnapshot {
 }
 
 describe("applySnapshotRedaction", () => {
-  test("redacts tokens by default", () => {
-    const snapshot = buildSnapshot("sk-abcdefghijklmnopqrstuvwxyz and Bearer abc.def.123");
+  test("replaces common secrets with semantic placeholders and summary", () => {
+    const snapshot = buildSnapshot(
+      [
+        "sk-abcdefghijklmnopqrstuvwxyz",
+        "Authorization: Bearer abc.def.123",
+        "Contact user@example.com",
+        "password=abc123",
+        "curl https://api.demo?token=abcd1234&email=test@example.com",
+        "Cookie: sessionid=abc; other=123",
+      ].join("\n"),
+    );
     const result = applySnapshotRedaction(snapshot);
 
-    assert.equal(result.redacted_count >= 2, true);
-    assert.equal(result.patterns_applied.includes("openai-token"), true);
-    assert.equal(result.patterns_applied.includes("bearer-token"), true);
-    assert.equal(result.snapshot.messages[0]?.content?.includes("[REDACTED:openai-token]"), true);
+    const sanitizedContent = result.snapshot.messages[0]?.content ?? "";
+    assert.equal(sanitizedContent.includes("[API_KEY:OPENAI]"), true);
+    assert.equal(sanitizedContent.includes("Authorization: [AUTH_HEADER:BEARER]"), true);
+    assert.equal(sanitizedContent.includes("[EMAIL]"), true);
+    assert.equal(sanitizedContent.includes("password=[PASSWORD]"), true);
+    assert.equal(sanitizedContent.includes("token=[TOKEN]"), true);
+    assert.equal(sanitizedContent.includes("sessionid=[COOKIE:SESSIONID]"), true);
+
+    assert.equal(result.redacted_count >= 10, true);
+    assert.equal((result.summary.by_type.password ?? 0) > 0, true);
+    assert.equal((result.summary.by_type.email ?? 0) >= 3, true);
+    assert.equal(result.summary.risk_level, "high");
   });
 
   test("supports AIC_REDACT_IGNORE style patterns", () => {
@@ -56,5 +73,25 @@ describe("applySnapshotRedaction", () => {
 
     assert.equal(result.redacted_count, 0);
     assert.equal(result.snapshot.messages[0]?.content, "token sk-abcdefghijklmnopqrstuvwxyz");
+  });
+
+  test("sanitizes structured key/value content", () => {
+    const snapshot = buildSnapshot(
+      [
+        "OPENAI_API_KEY=sk-12345678901234567890",
+        "api_key: another-secret",
+        "session: { \"token\": \"abcd\", \"password\": \"p@ss\" }",
+      ].join("\n"),
+    );
+
+    const result = applySnapshotRedaction(snapshot);
+    const content = result.snapshot.messages[0]?.content ?? "";
+
+    assert.equal(content.includes("OPENAI_API_KEY=[API_KEY:OPENAI]"), true);
+    assert.equal(content.includes("api_key=[API_KEY]") || content.includes("api_key: [API_KEY]"), true);
+    assert.equal(content.includes("session=[SESSION_ID]"), true);
+    assert.equal((result.summary.by_type.api_key ?? 0) >= 2, true);
+    assert.equal((result.summary.by_type.token ?? 0) >= 2, true);
+    assert.equal((result.summary.by_type.password ?? 0) >= 2, true);
   });
 });

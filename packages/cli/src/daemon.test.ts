@@ -142,7 +142,7 @@ describe("daemon /capture", () => {
     const snapshotText = await readFile(body.snapshot_path as string, "utf8");
     assert.equal(snapshotText.includes("\"session_id\": \"ses_m1_001\""), true);
     assert.equal(snapshotText.includes("\"redacted\""), true);
-    assert.equal(snapshotText.includes("[REDACTED:openai-token]"), true);
+    assert.equal(snapshotText.includes("[API_KEY:OPENAI]"), true);
   });
 
   test("routes capture by provider id when multiple providers are configured", async () => {

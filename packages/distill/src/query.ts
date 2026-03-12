@@ -1,4 +1,5 @@
 import { readSessionSnapshots, type ReadSessionSnapshotsOptions } from "@loamlog/archive";
+import { applySnapshotRedaction } from "@loamlog/core";
 import type {
   ArtifactPart,
   ArtifactQueryClient,
@@ -94,7 +95,7 @@ export function createArtifactQueryClient(
         until: defaultFilter?.until,
         session_ids: defaultFilter?.session_ids,
       })) {
-        const artifact = snapshotToArtifact(snapshot);
+        const artifact = snapshotToArtifact(applySnapshotRedaction(snapshot).snapshot);
         if (processed[artifact.meta.session_id]) {
           continue;
         }
@@ -122,7 +123,7 @@ export function createArtifactQueryClient(
       };
 
       for await (const snapshot of readSessionSnapshots(options)) {
-        yield snapshotToArtifact(snapshot);
+        yield snapshotToArtifact(applySnapshotRedaction(snapshot).snapshot);
       }
     },
   };
