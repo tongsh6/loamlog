@@ -1,0 +1,2846 @@
+[
+  {
+    "id": "mvp-001",
+    "intent": "bug",
+    "rawInput": "(INC-2101) EU beta user hit 500 on profile save in staging. Stack trace shows address null pointer; feature flag user-profile-rollout is on. Contact iris@example.com. user id user-3200.",
+    "expected": {
+      "primarySignal": "profile-save-500",
+      "signals": [
+        {
+          "key": "profile-save-500",
+          "summary": "Profile save 500 when address missing",
+          "category": "reliability",
+          "severity": "high",
+          "weight": 0.9
+        },
+        {
+          "key": "regression-after-release",
+          "summary": "Failure started after rollout",
+          "category": "release",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix profile save 500 on missing address",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.92
+      },
+      "actions": [
+        {
+          "key": "add-null-guard",
+          "label": "Add null guard for optional address before persistence",
+          "priority": "P0"
+        },
+        {
+          "key": "regression-test-address",
+          "label": "Add regression test for address-less profile save",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Guard optional fields in persistence and DTO validation"
+      },
+      "redaction": {
+        "mustRedact": [
+          "iris@example.com",
+          "sk-live-eu-91",
+          "user-3200"
+        ],
+        "shouldKeep": [
+          "error code 500",
+          "user-profile-rollout"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-002",
+    "intent": "bug",
+    "rawInput": "(INC-2102) enterprise admin hit 500 on profile save in prod. Stack trace shows address null pointer; feature flag user-profile-rollout is on. Contact ops@northwind.com. user id user-3201.",
+    "expected": {
+      "primarySignal": "profile-save-500",
+      "signals": [
+        {
+          "key": "profile-save-500",
+          "summary": "Profile save 500 when address missing",
+          "category": "reliability",
+          "severity": "high",
+          "weight": 0.9
+        },
+        {
+          "key": "regression-after-release",
+          "summary": "Failure started after rollout",
+          "category": "release",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix profile save 500 on missing address",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.92
+      },
+      "actions": [
+        {
+          "key": "add-null-guard",
+          "label": "Add null guard for optional address before persistence",
+          "priority": "P0"
+        },
+        {
+          "key": "regression-test-address",
+          "label": "Add regression test for address-less profile save",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Guard optional fields in persistence and DTO validation"
+      },
+      "redaction": {
+        "mustRedact": [
+          "ops@northwind.com",
+          "sk-prod-441",
+          "user-3201"
+        ],
+        "shouldKeep": [
+          "error code 500",
+          "user-profile-rollout"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-003",
+    "intent": "bug",
+    "rawInput": "(INC-2103) QA lead hit 500 on profile save in preprod. Stack trace shows address null pointer; feature flag user-profile-rollout is on. Contact qa@contoso.dev. user id user-3202.",
+    "expected": {
+      "primarySignal": "profile-save-500",
+      "signals": [
+        {
+          "key": "profile-save-500",
+          "summary": "Profile save 500 when address missing",
+          "category": "reliability",
+          "severity": "high",
+          "weight": 0.9
+        },
+        {
+          "key": "regression-after-release",
+          "summary": "Failure started after rollout",
+          "category": "release",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix profile save 500 on missing address",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.92
+      },
+      "actions": [
+        {
+          "key": "add-null-guard",
+          "label": "Add null guard for optional address before persistence",
+          "priority": "P0"
+        },
+        {
+          "key": "regression-test-address",
+          "label": "Add regression test for address-less profile save",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Guard optional fields in persistence and DTO validation"
+      },
+      "redaction": {
+        "mustRedact": [
+          "qa@contoso.dev",
+          "user-3202"
+        ],
+        "shouldKeep": [
+          "error code 500",
+          "user-profile-rollout"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-004",
+    "intent": "bug",
+    "rawInput": "(INC-2104) partner sandbox hit 500 on profile save in sandbox. Stack trace shows address null pointer; feature flag user-profile-rollout is on. Contact sandbox@acme.io. user id user-3203.",
+    "expected": {
+      "primarySignal": "profile-save-500",
+      "signals": [
+        {
+          "key": "profile-save-500",
+          "summary": "Profile save 500 when address missing",
+          "category": "reliability",
+          "severity": "high",
+          "weight": 0.9
+        },
+        {
+          "key": "regression-after-release",
+          "summary": "Failure started after rollout",
+          "category": "release",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix profile save 500 on missing address",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.92
+      },
+      "actions": [
+        {
+          "key": "add-null-guard",
+          "label": "Add null guard for optional address before persistence",
+          "priority": "P0"
+        },
+        {
+          "key": "regression-test-address",
+          "label": "Add regression test for address-less profile save",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Guard optional fields in persistence and DTO validation"
+      },
+      "redaction": {
+        "mustRedact": [
+          "sandbox@acme.io",
+          "sk-test-88",
+          "user-3203"
+        ],
+        "shouldKeep": [
+          "error code 500",
+          "user-profile-rollout"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-005",
+    "intent": "bug",
+    "rawInput": "(INC-2105) pilot cohort hit 500 on profile save in canary. Stack trace shows address null pointer; feature flag user-profile-rollout is on. Contact pilot@venture.io. user id user-3204.",
+    "expected": {
+      "primarySignal": "profile-save-500",
+      "signals": [
+        {
+          "key": "profile-save-500",
+          "summary": "Profile save 500 when address missing",
+          "category": "reliability",
+          "severity": "high",
+          "weight": 0.9
+        },
+        {
+          "key": "regression-after-release",
+          "summary": "Failure started after rollout",
+          "category": "release",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix profile save 500 on missing address",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.92
+      },
+      "actions": [
+        {
+          "key": "add-null-guard",
+          "label": "Add null guard for optional address before persistence",
+          "priority": "P0"
+        },
+        {
+          "key": "regression-test-address",
+          "label": "Add regression test for address-less profile save",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Guard optional fields in persistence and DTO validation"
+      },
+      "redaction": {
+        "mustRedact": [
+          "pilot@venture.io",
+          "sk-canary-23",
+          "user-3204"
+        ],
+        "shouldKeep": [
+          "error code 500",
+          "user-profile-rollout"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-006",
+    "intent": "performance",
+    "rawInput": "Feed latency spiked to 2.8s P95 in staging for EU beta user. Suspect N+1 on topics; cache miss rate 65%. trace id trace-8800, contact iris@example.com.",
+    "expected": {
+      "primarySignal": "feed-latency-spike",
+      "signals": [
+        {
+          "key": "feed-latency-spike",
+          "summary": "Feed P95 latency regression",
+          "category": "performance",
+          "severity": "high",
+          "weight": 0.8
+        },
+        {
+          "key": "n-plus-one-topics",
+          "summary": "N+1 query in topic enrichment",
+          "category": "performance",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Reduce feed latency by fixing N+1 on topics",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.35
+      },
+      "actions": [
+        {
+          "key": "add-query-batching",
+          "label": "Batch topic fetch in feed resolver",
+          "priority": "P1"
+        },
+        {
+          "key": "add-cache-metrics",
+          "label": "Add cache hit/miss telemetry to feed path",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Enforce pagination and batching on feed queries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "iris@example.com",
+          "trace-8800"
+        ],
+        "shouldKeep": [
+          "P95",
+          "cache miss rate"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-007",
+    "intent": "performance",
+    "rawInput": "Feed latency spiked to 2.8s P95 in prod for enterprise admin. Suspect N+1 on topics; cache miss rate 65%. trace id trace-8801, contact ops@northwind.com.",
+    "expected": {
+      "primarySignal": "feed-latency-spike",
+      "signals": [
+        {
+          "key": "feed-latency-spike",
+          "summary": "Feed P95 latency regression",
+          "category": "performance",
+          "severity": "high",
+          "weight": 0.8
+        },
+        {
+          "key": "n-plus-one-topics",
+          "summary": "N+1 query in topic enrichment",
+          "category": "performance",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Reduce feed latency by fixing N+1 on topics",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.75
+      },
+      "actions": [
+        {
+          "key": "add-query-batching",
+          "label": "Batch topic fetch in feed resolver",
+          "priority": "P1"
+        },
+        {
+          "key": "add-cache-metrics",
+          "label": "Add cache hit/miss telemetry to feed path",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Enforce pagination and batching on feed queries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "ops@northwind.com",
+          "trace-8801"
+        ],
+        "shouldKeep": [
+          "P95",
+          "cache miss rate"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-008",
+    "intent": "performance",
+    "rawInput": "Feed latency spiked to 2.8s P95 in preprod for QA lead. Suspect N+1 on topics; cache miss rate 65%. trace id trace-8802, contact qa@contoso.dev.",
+    "expected": {
+      "primarySignal": "feed-latency-spike",
+      "signals": [
+        {
+          "key": "feed-latency-spike",
+          "summary": "Feed P95 latency regression",
+          "category": "performance",
+          "severity": "high",
+          "weight": 0.8
+        },
+        {
+          "key": "n-plus-one-topics",
+          "summary": "N+1 query in topic enrichment",
+          "category": "performance",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Reduce feed latency by fixing N+1 on topics",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.75
+      },
+      "actions": [
+        {
+          "key": "add-query-batching",
+          "label": "Batch topic fetch in feed resolver",
+          "priority": "P1"
+        },
+        {
+          "key": "add-cache-metrics",
+          "label": "Add cache hit/miss telemetry to feed path",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Enforce pagination and batching on feed queries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "qa@contoso.dev",
+          "trace-8802"
+        ],
+        "shouldKeep": [
+          "P95",
+          "cache miss rate"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-009",
+    "intent": "performance",
+    "rawInput": "Feed latency spiked to 2.8s P95 in sandbox for partner sandbox. Suspect N+1 on topics; cache miss rate 65%. trace id trace-8803, contact sandbox@acme.io.",
+    "expected": {
+      "primarySignal": "feed-latency-spike",
+      "signals": [
+        {
+          "key": "feed-latency-spike",
+          "summary": "Feed P95 latency regression",
+          "category": "performance",
+          "severity": "high",
+          "weight": 0.8
+        },
+        {
+          "key": "n-plus-one-topics",
+          "summary": "N+1 query in topic enrichment",
+          "category": "performance",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Reduce feed latency by fixing N+1 on topics",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.75
+      },
+      "actions": [
+        {
+          "key": "add-query-batching",
+          "label": "Batch topic fetch in feed resolver",
+          "priority": "P1"
+        },
+        {
+          "key": "add-cache-metrics",
+          "label": "Add cache hit/miss telemetry to feed path",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Enforce pagination and batching on feed queries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "sandbox@acme.io",
+          "trace-8803"
+        ],
+        "shouldKeep": [
+          "P95",
+          "cache miss rate"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-010",
+    "intent": "performance",
+    "rawInput": "Feed latency spiked to 2.8s P95 in canary for pilot cohort. Suspect N+1 on topics; cache miss rate 65%. trace id trace-8804, contact pilot@venture.io.",
+    "expected": {
+      "primarySignal": "feed-latency-spike",
+      "signals": [
+        {
+          "key": "feed-latency-spike",
+          "summary": "Feed P95 latency regression",
+          "category": "performance",
+          "severity": "high",
+          "weight": 0.8
+        },
+        {
+          "key": "n-plus-one-topics",
+          "summary": "N+1 query in topic enrichment",
+          "category": "performance",
+          "severity": "medium",
+          "weight": 0.6
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Reduce feed latency by fixing N+1 on topics",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.35
+      },
+      "actions": [
+        {
+          "key": "add-query-batching",
+          "label": "Batch topic fetch in feed resolver",
+          "priority": "P1"
+        },
+        {
+          "key": "add-cache-metrics",
+          "label": "Add cache hit/miss telemetry to feed path",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Enforce pagination and batching on feed queries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "pilot@venture.io",
+          "trace-8804"
+        ],
+        "shouldKeep": [
+          "P95",
+          "cache miss rate"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-011",
+    "intent": "security",
+    "rawInput": "Auth token printed in logs for EU beta user in staging: sk-live-eu-91. Request id req-910, email iris@example.com.",
+    "expected": {
+      "primarySignal": "token-leak-log",
+      "signals": [
+        {
+          "key": "token-leak-log",
+          "summary": "Access token leaked in logs",
+          "category": "security",
+          "severity": "critical",
+          "weight": 0.95
+        },
+        {
+          "key": "redaction-missing",
+          "summary": "Logger lacks token scrubbing",
+          "category": "security",
+          "severity": "high",
+          "weight": 0.8
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Stop leaking tokens in auth logs",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.88
+      },
+      "actions": [
+        {
+          "key": "rotate-keys",
+          "label": "Rotate affected keys and revoke sessions",
+          "priority": "P0"
+        },
+        {
+          "key": "logger-scrubber",
+          "label": "Add token scrubber to auth logger",
+          "priority": "P0"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Redact tokens and IDs in request logs by default"
+      },
+      "redaction": {
+        "mustRedact": [
+          "iris@example.com",
+          "sk-live-eu-91",
+          "req-910"
+        ],
+        "shouldKeep": [
+          "logger name"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-012",
+    "intent": "security",
+    "rawInput": "Auth token printed in logs for enterprise admin in prod: sk-prod-441. Request id req-911, email ops@northwind.com.",
+    "expected": {
+      "primarySignal": "token-leak-log",
+      "signals": [
+        {
+          "key": "token-leak-log",
+          "summary": "Access token leaked in logs",
+          "category": "security",
+          "severity": "critical",
+          "weight": 0.95
+        },
+        {
+          "key": "redaction-missing",
+          "summary": "Logger lacks token scrubbing",
+          "category": "security",
+          "severity": "high",
+          "weight": 0.8
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Stop leaking tokens in auth logs",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.88
+      },
+      "actions": [
+        {
+          "key": "rotate-keys",
+          "label": "Rotate affected keys and revoke sessions",
+          "priority": "P0"
+        },
+        {
+          "key": "logger-scrubber",
+          "label": "Add token scrubber to auth logger",
+          "priority": "P0"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Redact tokens and IDs in request logs by default"
+      },
+      "redaction": {
+        "mustRedact": [
+          "ops@northwind.com",
+          "sk-prod-441",
+          "req-911"
+        ],
+        "shouldKeep": [
+          "logger name"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-013",
+    "intent": "security",
+    "rawInput": "Auth token printed in logs for QA lead in preprod: sk-live-raw-2. Request id req-912, email qa@contoso.dev.",
+    "expected": {
+      "primarySignal": "token-leak-log",
+      "signals": [
+        {
+          "key": "token-leak-log",
+          "summary": "Access token leaked in logs",
+          "category": "security",
+          "severity": "critical",
+          "weight": 0.95
+        },
+        {
+          "key": "redaction-missing",
+          "summary": "Logger lacks token scrubbing",
+          "category": "security",
+          "severity": "high",
+          "weight": 0.8
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Stop leaking tokens in auth logs",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.88
+      },
+      "actions": [
+        {
+          "key": "rotate-keys",
+          "label": "Rotate affected keys and revoke sessions",
+          "priority": "P0"
+        },
+        {
+          "key": "logger-scrubber",
+          "label": "Add token scrubber to auth logger",
+          "priority": "P0"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Redact tokens and IDs in request logs by default"
+      },
+      "redaction": {
+        "mustRedact": [
+          "qa@contoso.dev",
+          "sk-live-raw-2",
+          "req-912"
+        ],
+        "shouldKeep": [
+          "logger name"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-014",
+    "intent": "security",
+    "rawInput": "Auth token printed in logs for partner sandbox in sandbox: sk-test-88. Request id req-913, email sandbox@acme.io.",
+    "expected": {
+      "primarySignal": "token-leak-log",
+      "signals": [
+        {
+          "key": "token-leak-log",
+          "summary": "Access token leaked in logs",
+          "category": "security",
+          "severity": "critical",
+          "weight": 0.95
+        },
+        {
+          "key": "redaction-missing",
+          "summary": "Logger lacks token scrubbing",
+          "category": "security",
+          "severity": "high",
+          "weight": 0.8
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Stop leaking tokens in auth logs",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.88
+      },
+      "actions": [
+        {
+          "key": "rotate-keys",
+          "label": "Rotate affected keys and revoke sessions",
+          "priority": "P0"
+        },
+        {
+          "key": "logger-scrubber",
+          "label": "Add token scrubber to auth logger",
+          "priority": "P0"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Redact tokens and IDs in request logs by default"
+      },
+      "redaction": {
+        "mustRedact": [
+          "sandbox@acme.io",
+          "sk-test-88",
+          "req-913"
+        ],
+        "shouldKeep": [
+          "logger name"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-015",
+    "intent": "security",
+    "rawInput": "Auth token printed in logs for pilot cohort in canary: sk-canary-23. Request id req-914, email pilot@venture.io.",
+    "expected": {
+      "primarySignal": "token-leak-log",
+      "signals": [
+        {
+          "key": "token-leak-log",
+          "summary": "Access token leaked in logs",
+          "category": "security",
+          "severity": "critical",
+          "weight": 0.95
+        },
+        {
+          "key": "redaction-missing",
+          "summary": "Logger lacks token scrubbing",
+          "category": "security",
+          "severity": "high",
+          "weight": 0.8
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Stop leaking tokens in auth logs",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.88
+      },
+      "actions": [
+        {
+          "key": "rotate-keys",
+          "label": "Rotate affected keys and revoke sessions",
+          "priority": "P0"
+        },
+        {
+          "key": "logger-scrubber",
+          "label": "Add token scrubber to auth logger",
+          "priority": "P0"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Redact tokens and IDs in request logs by default"
+      },
+      "redaction": {
+        "mustRedact": [
+          "pilot@venture.io",
+          "sk-canary-23",
+          "req-914"
+        ],
+        "shouldKeep": [
+          "logger name"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-016",
+    "intent": "data-quality",
+    "rawInput": "Retry worker reprocessed same invoice twice in staging; missing idempotency key caused duplicate charge. invoice id order-7800, reported by EU beta user.",
+    "expected": {
+      "primarySignal": "duplicate-charge",
+      "signals": [
+        {
+          "key": "duplicate-charge",
+          "summary": "Duplicate invoice charge due to retries",
+          "category": "data-quality",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "idempotency-missing",
+          "summary": "Idempotency key not enforced on worker",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.7
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Add idempotency guard to invoice retry worker",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.82
+      },
+      "actions": [
+        {
+          "key": "idempotency-key",
+          "label": "Persist idempotency key for retryable jobs",
+          "priority": "P0"
+        },
+        {
+          "key": "unique-constraint",
+          "label": "Add unique constraint on invoice per order",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Make retry handlers idempotent and audit queued jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "order-7800"
+        ],
+        "shouldKeep": [
+          "invoice retry worker"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-017",
+    "intent": "data-quality",
+    "rawInput": "Retry worker reprocessed same invoice twice in prod; missing idempotency key caused duplicate charge. invoice id order-7801, reported by enterprise admin.",
+    "expected": {
+      "primarySignal": "duplicate-charge",
+      "signals": [
+        {
+          "key": "duplicate-charge",
+          "summary": "Duplicate invoice charge due to retries",
+          "category": "data-quality",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "idempotency-missing",
+          "summary": "Idempotency key not enforced on worker",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.7
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Add idempotency guard to invoice retry worker",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.82
+      },
+      "actions": [
+        {
+          "key": "idempotency-key",
+          "label": "Persist idempotency key for retryable jobs",
+          "priority": "P0"
+        },
+        {
+          "key": "unique-constraint",
+          "label": "Add unique constraint on invoice per order",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Make retry handlers idempotent and audit queued jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "order-7801"
+        ],
+        "shouldKeep": [
+          "invoice retry worker"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-018",
+    "intent": "data-quality",
+    "rawInput": "Retry worker reprocessed same invoice twice in preprod; missing idempotency key caused duplicate charge. invoice id order-7802, reported by QA lead.",
+    "expected": {
+      "primarySignal": "duplicate-charge",
+      "signals": [
+        {
+          "key": "duplicate-charge",
+          "summary": "Duplicate invoice charge due to retries",
+          "category": "data-quality",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "idempotency-missing",
+          "summary": "Idempotency key not enforced on worker",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.7
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Add idempotency guard to invoice retry worker",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.82
+      },
+      "actions": [
+        {
+          "key": "idempotency-key",
+          "label": "Persist idempotency key for retryable jobs",
+          "priority": "P0"
+        },
+        {
+          "key": "unique-constraint",
+          "label": "Add unique constraint on invoice per order",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Make retry handlers idempotent and audit queued jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "order-7802"
+        ],
+        "shouldKeep": [
+          "invoice retry worker"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-019",
+    "intent": "data-quality",
+    "rawInput": "Retry worker reprocessed same invoice twice in sandbox; missing idempotency key caused duplicate charge. invoice id order-7803, reported by partner sandbox.",
+    "expected": {
+      "primarySignal": "duplicate-charge",
+      "signals": [
+        {
+          "key": "duplicate-charge",
+          "summary": "Duplicate invoice charge due to retries",
+          "category": "data-quality",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "idempotency-missing",
+          "summary": "Idempotency key not enforced on worker",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.7
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Add idempotency guard to invoice retry worker",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.82
+      },
+      "actions": [
+        {
+          "key": "idempotency-key",
+          "label": "Persist idempotency key for retryable jobs",
+          "priority": "P0"
+        },
+        {
+          "key": "unique-constraint",
+          "label": "Add unique constraint on invoice per order",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Make retry handlers idempotent and audit queued jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "order-7803"
+        ],
+        "shouldKeep": [
+          "invoice retry worker"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-020",
+    "intent": "data-quality",
+    "rawInput": "Retry worker reprocessed same invoice twice in canary; missing idempotency key caused duplicate charge. invoice id order-7804, reported by pilot cohort.",
+    "expected": {
+      "primarySignal": "duplicate-charge",
+      "signals": [
+        {
+          "key": "duplicate-charge",
+          "summary": "Duplicate invoice charge due to retries",
+          "category": "data-quality",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "idempotency-missing",
+          "summary": "Idempotency key not enforced on worker",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.7
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Add idempotency guard to invoice retry worker",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.82
+      },
+      "actions": [
+        {
+          "key": "idempotency-key",
+          "label": "Persist idempotency key for retryable jobs",
+          "priority": "P0"
+        },
+        {
+          "key": "unique-constraint",
+          "label": "Add unique constraint on invoice per order",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Make retry handlers idempotent and audit queued jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "order-7804"
+        ],
+        "shouldKeep": [
+          "invoice retry worker"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-021",
+    "intent": "observability",
+    "rawInput": "Background job in staging lacks trace id propagation; logs show job-6400 without correlation. EU beta user asked how to debug.",
+    "expected": {
+      "primarySignal": "missing-trace-id",
+      "signals": [
+        {
+          "key": "missing-trace-id",
+          "summary": "No trace context for background job",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "debuggability-gap",
+          "summary": "Operators cannot correlate job logs",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Propagate trace context into background workers",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.4
+      },
+      "actions": [
+        {
+          "key": "trace-injection",
+          "label": "Inject trace/span ids when enqueuing jobs",
+          "priority": "P1"
+        },
+        {
+          "key": "log-correlation",
+          "label": "Emit correlation ids in job logs",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Carry trace context across async boundaries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-6400"
+        ],
+        "shouldKeep": [
+          "trace context"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-022",
+    "intent": "observability",
+    "rawInput": "Background job in prod lacks trace id propagation; logs show job-6401 without correlation. enterprise admin asked how to debug.",
+    "expected": {
+      "primarySignal": "missing-trace-id",
+      "signals": [
+        {
+          "key": "missing-trace-id",
+          "summary": "No trace context for background job",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "debuggability-gap",
+          "summary": "Operators cannot correlate job logs",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Propagate trace context into background workers",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.7
+      },
+      "actions": [
+        {
+          "key": "trace-injection",
+          "label": "Inject trace/span ids when enqueuing jobs",
+          "priority": "P1"
+        },
+        {
+          "key": "log-correlation",
+          "label": "Emit correlation ids in job logs",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Carry trace context across async boundaries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-6401"
+        ],
+        "shouldKeep": [
+          "trace context"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-023",
+    "intent": "observability",
+    "rawInput": "Background job in preprod lacks trace id propagation; logs show job-6402 without correlation. QA lead asked how to debug.",
+    "expected": {
+      "primarySignal": "missing-trace-id",
+      "signals": [
+        {
+          "key": "missing-trace-id",
+          "summary": "No trace context for background job",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "debuggability-gap",
+          "summary": "Operators cannot correlate job logs",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Propagate trace context into background workers",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.7
+      },
+      "actions": [
+        {
+          "key": "trace-injection",
+          "label": "Inject trace/span ids when enqueuing jobs",
+          "priority": "P1"
+        },
+        {
+          "key": "log-correlation",
+          "label": "Emit correlation ids in job logs",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Carry trace context across async boundaries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-6402"
+        ],
+        "shouldKeep": [
+          "trace context"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-024",
+    "intent": "observability",
+    "rawInput": "Background job in sandbox lacks trace id propagation; logs show job-6403 without correlation. partner sandbox asked how to debug.",
+    "expected": {
+      "primarySignal": "missing-trace-id",
+      "signals": [
+        {
+          "key": "missing-trace-id",
+          "summary": "No trace context for background job",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "debuggability-gap",
+          "summary": "Operators cannot correlate job logs",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Propagate trace context into background workers",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.4
+      },
+      "actions": [
+        {
+          "key": "trace-injection",
+          "label": "Inject trace/span ids when enqueuing jobs",
+          "priority": "P1"
+        },
+        {
+          "key": "log-correlation",
+          "label": "Emit correlation ids in job logs",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Carry trace context across async boundaries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-6403"
+        ],
+        "shouldKeep": [
+          "trace context"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-025",
+    "intent": "observability",
+    "rawInput": "Background job in canary lacks trace id propagation; logs show job-6404 without correlation. pilot cohort asked how to debug.",
+    "expected": {
+      "primarySignal": "missing-trace-id",
+      "signals": [
+        {
+          "key": "missing-trace-id",
+          "summary": "No trace context for background job",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "debuggability-gap",
+          "summary": "Operators cannot correlate job logs",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Propagate trace context into background workers",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.7
+      },
+      "actions": [
+        {
+          "key": "trace-injection",
+          "label": "Inject trace/span ids when enqueuing jobs",
+          "priority": "P1"
+        },
+        {
+          "key": "log-correlation",
+          "label": "Emit correlation ids in job logs",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Carry trace context across async boundaries"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-6404"
+        ],
+        "shouldKeep": [
+          "trace context"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-026",
+    "intent": "ux",
+    "rawInput": "Billing page copy caused double submit: user clicked twice because button text says \"submit again\". Refund queue saw duplicate charge for account user-5100. EU beta user asked for clearer CTA.",
+    "expected": {
+      "primarySignal": "double-submit-risk",
+      "signals": [
+        {
+          "key": "double-submit-risk",
+          "summary": "CTA leads to double submit",
+          "category": "ux",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "copy-mismatch",
+          "summary": "CTA copy mismatched flow state",
+          "category": "ux",
+          "severity": "low",
+          "weight": 0.45
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix billing CTA to prevent double submit",
+        "type": "bug",
+        "priority": "P1",
+        "actionability": 0.68
+      },
+      "actions": [
+        {
+          "key": "disable-once",
+          "label": "Disable submit after first click",
+          "priority": "P1"
+        },
+        {
+          "key": "rewrite-copy",
+          "label": "Rewrite CTA to reflect processing state",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Disable payment CTAs after submission to avoid duplicates"
+      },
+      "redaction": {
+        "mustRedact": [
+          "user-5100"
+        ],
+        "shouldKeep": [
+          "CTA copy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-027",
+    "intent": "ux",
+    "rawInput": "Billing page copy caused double submit: user clicked twice because button text says \"submit again\". Refund queue saw duplicate charge for account user-5101. enterprise admin asked for clearer CTA.",
+    "expected": {
+      "primarySignal": "double-submit-risk",
+      "signals": [
+        {
+          "key": "double-submit-risk",
+          "summary": "CTA leads to double submit",
+          "category": "ux",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "copy-mismatch",
+          "summary": "CTA copy mismatched flow state",
+          "category": "ux",
+          "severity": "low",
+          "weight": 0.45
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix billing CTA to prevent double submit",
+        "type": "bug",
+        "priority": "P1",
+        "actionability": 0.68
+      },
+      "actions": [
+        {
+          "key": "disable-once",
+          "label": "Disable submit after first click",
+          "priority": "P1"
+        },
+        {
+          "key": "rewrite-copy",
+          "label": "Rewrite CTA to reflect processing state",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Disable payment CTAs after submission to avoid duplicates"
+      },
+      "redaction": {
+        "mustRedact": [
+          "user-5101"
+        ],
+        "shouldKeep": [
+          "CTA copy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-028",
+    "intent": "ux",
+    "rawInput": "Billing page copy caused double submit: user clicked twice because button text says \"submit again\". Refund queue saw duplicate charge for account user-5102. QA lead asked for clearer CTA.",
+    "expected": {
+      "primarySignal": "double-submit-risk",
+      "signals": [
+        {
+          "key": "double-submit-risk",
+          "summary": "CTA leads to double submit",
+          "category": "ux",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "copy-mismatch",
+          "summary": "CTA copy mismatched flow state",
+          "category": "ux",
+          "severity": "low",
+          "weight": 0.45
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix billing CTA to prevent double submit",
+        "type": "bug",
+        "priority": "P1",
+        "actionability": 0.68
+      },
+      "actions": [
+        {
+          "key": "disable-once",
+          "label": "Disable submit after first click",
+          "priority": "P1"
+        },
+        {
+          "key": "rewrite-copy",
+          "label": "Rewrite CTA to reflect processing state",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Disable payment CTAs after submission to avoid duplicates"
+      },
+      "redaction": {
+        "mustRedact": [
+          "user-5102"
+        ],
+        "shouldKeep": [
+          "CTA copy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-029",
+    "intent": "ux",
+    "rawInput": "Billing page copy caused double submit: user clicked twice because button text says \"submit again\". Refund queue saw duplicate charge for account user-5103. partner sandbox asked for clearer CTA.",
+    "expected": {
+      "primarySignal": "double-submit-risk",
+      "signals": [
+        {
+          "key": "double-submit-risk",
+          "summary": "CTA leads to double submit",
+          "category": "ux",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "copy-mismatch",
+          "summary": "CTA copy mismatched flow state",
+          "category": "ux",
+          "severity": "low",
+          "weight": 0.45
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix billing CTA to prevent double submit",
+        "type": "bug",
+        "priority": "P1",
+        "actionability": 0.68
+      },
+      "actions": [
+        {
+          "key": "disable-once",
+          "label": "Disable submit after first click",
+          "priority": "P1"
+        },
+        {
+          "key": "rewrite-copy",
+          "label": "Rewrite CTA to reflect processing state",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Disable payment CTAs after submission to avoid duplicates"
+      },
+      "redaction": {
+        "mustRedact": [
+          "user-5103"
+        ],
+        "shouldKeep": [
+          "CTA copy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-030",
+    "intent": "ux",
+    "rawInput": "Billing page copy caused double submit: user clicked twice because button text says \"submit again\". Refund queue saw duplicate charge for account user-5104. pilot cohort asked for clearer CTA.",
+    "expected": {
+      "primarySignal": "double-submit-risk",
+      "signals": [
+        {
+          "key": "double-submit-risk",
+          "summary": "CTA leads to double submit",
+          "category": "ux",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "copy-mismatch",
+          "summary": "CTA copy mismatched flow state",
+          "category": "ux",
+          "severity": "low",
+          "weight": 0.45
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix billing CTA to prevent double submit",
+        "type": "bug",
+        "priority": "P1",
+        "actionability": 0.68
+      },
+      "actions": [
+        {
+          "key": "disable-once",
+          "label": "Disable submit after first click",
+          "priority": "P1"
+        },
+        {
+          "key": "rewrite-copy",
+          "label": "Rewrite CTA to reflect processing state",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Disable payment CTAs after submission to avoid duplicates"
+      },
+      "redaction": {
+        "mustRedact": [
+          "user-5104"
+        ],
+        "shouldKeep": [
+          "CTA copy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-031",
+    "intent": "docs",
+    "rawInput": "Setup guide still references OLD_API_URL; new env is API_URL. Onboarding for EU beta user in staging failed. Notes sent from iris@example.com.",
+    "expected": {
+      "primarySignal": "docs-outdated-env",
+      "signals": [
+        {
+          "key": "docs-outdated-env",
+          "summary": "Docs use deprecated env var",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.55
+        },
+        {
+          "key": "onboarding-friction",
+          "summary": "New users blocked by wrong config",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.5
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Update setup guide to use API_URL",
+        "type": "doc",
+        "priority": "P2",
+        "actionability": 0.6
+      },
+      "actions": [
+        {
+          "key": "fix-docs",
+          "label": "Replace OLD_API_URL with API_URL in guides",
+          "priority": "P2"
+        },
+        {
+          "key": "sample-env",
+          "label": "Publish sample .env with current keys",
+          "priority": "P3"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Keep onboarding docs aligned with env contracts"
+      },
+      "redaction": {
+        "mustRedact": [
+          "iris@example.com"
+        ],
+        "shouldKeep": [
+          "API_URL",
+          "OLD_API_URL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-032",
+    "intent": "docs",
+    "rawInput": "Setup guide still references OLD_API_URL; new env is API_URL. Onboarding for enterprise admin in prod failed. Notes sent from ops@northwind.com.",
+    "expected": {
+      "primarySignal": "docs-outdated-env",
+      "signals": [
+        {
+          "key": "docs-outdated-env",
+          "summary": "Docs use deprecated env var",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.55
+        },
+        {
+          "key": "onboarding-friction",
+          "summary": "New users blocked by wrong config",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.5
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Update setup guide to use API_URL",
+        "type": "doc",
+        "priority": "P3",
+        "actionability": 0.35
+      },
+      "actions": [
+        {
+          "key": "fix-docs",
+          "label": "Replace OLD_API_URL with API_URL in guides",
+          "priority": "P2"
+        },
+        {
+          "key": "sample-env",
+          "label": "Publish sample .env with current keys",
+          "priority": "P3"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Keep onboarding docs aligned with env contracts"
+      },
+      "redaction": {
+        "mustRedact": [
+          "ops@northwind.com"
+        ],
+        "shouldKeep": [
+          "API_URL",
+          "OLD_API_URL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-033",
+    "intent": "docs",
+    "rawInput": "Setup guide still references OLD_API_URL; new env is API_URL. Onboarding for QA lead in preprod failed. Notes sent from qa@contoso.dev.",
+    "expected": {
+      "primarySignal": "docs-outdated-env",
+      "signals": [
+        {
+          "key": "docs-outdated-env",
+          "summary": "Docs use deprecated env var",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.55
+        },
+        {
+          "key": "onboarding-friction",
+          "summary": "New users blocked by wrong config",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.5
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Update setup guide to use API_URL",
+        "type": "doc",
+        "priority": "P2",
+        "actionability": 0.6
+      },
+      "actions": [
+        {
+          "key": "fix-docs",
+          "label": "Replace OLD_API_URL with API_URL in guides",
+          "priority": "P2"
+        },
+        {
+          "key": "sample-env",
+          "label": "Publish sample .env with current keys",
+          "priority": "P3"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Keep onboarding docs aligned with env contracts"
+      },
+      "redaction": {
+        "mustRedact": [
+          "qa@contoso.dev"
+        ],
+        "shouldKeep": [
+          "API_URL",
+          "OLD_API_URL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-034",
+    "intent": "docs",
+    "rawInput": "Setup guide still references OLD_API_URL; new env is API_URL. Onboarding for partner sandbox in sandbox failed. Notes sent from sandbox@acme.io.",
+    "expected": {
+      "primarySignal": "docs-outdated-env",
+      "signals": [
+        {
+          "key": "docs-outdated-env",
+          "summary": "Docs use deprecated env var",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.55
+        },
+        {
+          "key": "onboarding-friction",
+          "summary": "New users blocked by wrong config",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.5
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Update setup guide to use API_URL",
+        "type": "doc",
+        "priority": "P3",
+        "actionability": 0.35
+      },
+      "actions": [
+        {
+          "key": "fix-docs",
+          "label": "Replace OLD_API_URL with API_URL in guides",
+          "priority": "P2"
+        },
+        {
+          "key": "sample-env",
+          "label": "Publish sample .env with current keys",
+          "priority": "P3"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Keep onboarding docs aligned with env contracts"
+      },
+      "redaction": {
+        "mustRedact": [
+          "sandbox@acme.io"
+        ],
+        "shouldKeep": [
+          "API_URL",
+          "OLD_API_URL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-035",
+    "intent": "docs",
+    "rawInput": "Setup guide still references OLD_API_URL; new env is API_URL. Onboarding for pilot cohort in canary failed. Notes sent from pilot@venture.io.",
+    "expected": {
+      "primarySignal": "docs-outdated-env",
+      "signals": [
+        {
+          "key": "docs-outdated-env",
+          "summary": "Docs use deprecated env var",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.55
+        },
+        {
+          "key": "onboarding-friction",
+          "summary": "New users blocked by wrong config",
+          "category": "docs",
+          "severity": "medium",
+          "weight": 0.5
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Update setup guide to use API_URL",
+        "type": "doc",
+        "priority": "P2",
+        "actionability": 0.6
+      },
+      "actions": [
+        {
+          "key": "fix-docs",
+          "label": "Replace OLD_API_URL with API_URL in guides",
+          "priority": "P2"
+        },
+        {
+          "key": "sample-env",
+          "label": "Publish sample .env with current keys",
+          "priority": "P3"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Keep onboarding docs aligned with env contracts"
+      },
+      "redaction": {
+        "mustRedact": [
+          "pilot@venture.io"
+        ],
+        "shouldKeep": [
+          "API_URL",
+          "OLD_API_URL"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-036",
+    "intent": "reliability",
+    "rawInput": "Cron for nightly cleanup drifted; job ran 90 minutes late in staging, backlog up 18k items. job id job-7200.",
+    "expected": {
+      "primarySignal": "cron-drift-backlog",
+      "signals": [
+        {
+          "key": "cron-drift-backlog",
+          "summary": "Cron drift created backlog",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "missing-alert",
+          "summary": "No alert on schedule drift",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix cron drift and alert on missed runs",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.74
+      },
+      "actions": [
+        {
+          "key": "align-schedule",
+          "label": "Pin cron to monotonic schedule",
+          "priority": "P1"
+        },
+        {
+          "key": "add-alert",
+          "label": "Alert when cron misses SLA window",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Detect and cap drift for scheduled jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-7200"
+        ],
+        "shouldKeep": [
+          "backlog size"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-037",
+    "intent": "reliability",
+    "rawInput": "Cron for nightly cleanup drifted; job ran 90 minutes late in prod, backlog up 18k items. job id job-7201.",
+    "expected": {
+      "primarySignal": "cron-drift-backlog",
+      "signals": [
+        {
+          "key": "cron-drift-backlog",
+          "summary": "Cron drift created backlog",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "missing-alert",
+          "summary": "No alert on schedule drift",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix cron drift and alert on missed runs",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.74
+      },
+      "actions": [
+        {
+          "key": "align-schedule",
+          "label": "Pin cron to monotonic schedule",
+          "priority": "P1"
+        },
+        {
+          "key": "add-alert",
+          "label": "Alert when cron misses SLA window",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Detect and cap drift for scheduled jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-7201"
+        ],
+        "shouldKeep": [
+          "backlog size"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-038",
+    "intent": "reliability",
+    "rawInput": "Cron for nightly cleanup drifted; job ran 90 minutes late in preprod, backlog up 18k items. job id job-7202.",
+    "expected": {
+      "primarySignal": "cron-drift-backlog",
+      "signals": [
+        {
+          "key": "cron-drift-backlog",
+          "summary": "Cron drift created backlog",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "missing-alert",
+          "summary": "No alert on schedule drift",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix cron drift and alert on missed runs",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.74
+      },
+      "actions": [
+        {
+          "key": "align-schedule",
+          "label": "Pin cron to monotonic schedule",
+          "priority": "P1"
+        },
+        {
+          "key": "add-alert",
+          "label": "Alert when cron misses SLA window",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Detect and cap drift for scheduled jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-7202"
+        ],
+        "shouldKeep": [
+          "backlog size"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-039",
+    "intent": "reliability",
+    "rawInput": "Cron for nightly cleanup drifted; job ran 90 minutes late in sandbox, backlog up 18k items. job id job-7203.",
+    "expected": {
+      "primarySignal": "cron-drift-backlog",
+      "signals": [
+        {
+          "key": "cron-drift-backlog",
+          "summary": "Cron drift created backlog",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "missing-alert",
+          "summary": "No alert on schedule drift",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix cron drift and alert on missed runs",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.74
+      },
+      "actions": [
+        {
+          "key": "align-schedule",
+          "label": "Pin cron to monotonic schedule",
+          "priority": "P1"
+        },
+        {
+          "key": "add-alert",
+          "label": "Alert when cron misses SLA window",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Detect and cap drift for scheduled jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-7203"
+        ],
+        "shouldKeep": [
+          "backlog size"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-040",
+    "intent": "reliability",
+    "rawInput": "Cron for nightly cleanup drifted; job ran 90 minutes late in canary, backlog up 18k items. job id job-7204.",
+    "expected": {
+      "primarySignal": "cron-drift-backlog",
+      "signals": [
+        {
+          "key": "cron-drift-backlog",
+          "summary": "Cron drift created backlog",
+          "category": "reliability",
+          "severity": "medium",
+          "weight": 0.65
+        },
+        {
+          "key": "missing-alert",
+          "summary": "No alert on schedule drift",
+          "category": "observability",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Fix cron drift and alert on missed runs",
+        "type": "improvement",
+        "priority": "P1",
+        "actionability": 0.74
+      },
+      "actions": [
+        {
+          "key": "align-schedule",
+          "label": "Pin cron to monotonic schedule",
+          "priority": "P1"
+        },
+        {
+          "key": "add-alert",
+          "label": "Alert when cron misses SLA window",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "checklist",
+        "scope": "Detect and cap drift for scheduled jobs"
+      },
+      "redaction": {
+        "mustRedact": [
+          "job-7204"
+        ],
+        "shouldKeep": [
+          "backlog size"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-041",
+    "intent": "migration",
+    "rawInput": "Mobile clients still call /v1/legacy endpoint in staging; 22% traffic. plan is to deprecate Q4. request id req-1200.",
+    "expected": {
+      "primarySignal": "legacy-endpoint-traffic",
+      "signals": [
+        {
+          "key": "legacy-endpoint-traffic",
+          "summary": "Legacy endpoint still used",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "deprecation-risk",
+          "summary": "Sunset plan blocked by active callers",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": false,
+        "title": "Drive migration off /v1/legacy endpoint",
+        "type": "improvement",
+        "priority": "P3",
+        "actionability": 0.3
+      },
+      "actions": [
+        {
+          "key": "warn-header",
+          "label": "Add deprecation warning header to /v1/legacy",
+          "priority": "P2"
+        },
+        {
+          "key": "migration-plan",
+          "label": "Publish client migration checklist",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Soft-deprecate endpoints with warnings and migration guides"
+      },
+      "redaction": {
+        "mustRedact": [
+          "req-1200"
+        ],
+        "shouldKeep": [
+          "/v1/legacy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-042",
+    "intent": "migration",
+    "rawInput": "Mobile clients still call /v1/legacy endpoint in prod; 22% traffic. plan is to deprecate Q4. request id req-1201.",
+    "expected": {
+      "primarySignal": "legacy-endpoint-traffic",
+      "signals": [
+        {
+          "key": "legacy-endpoint-traffic",
+          "summary": "Legacy endpoint still used",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "deprecation-risk",
+          "summary": "Sunset plan blocked by active callers",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Drive migration off /v1/legacy endpoint",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.58
+      },
+      "actions": [
+        {
+          "key": "warn-header",
+          "label": "Add deprecation warning header to /v1/legacy",
+          "priority": "P2"
+        },
+        {
+          "key": "migration-plan",
+          "label": "Publish client migration checklist",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Soft-deprecate endpoints with warnings and migration guides"
+      },
+      "redaction": {
+        "mustRedact": [
+          "req-1201"
+        ],
+        "shouldKeep": [
+          "/v1/legacy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-043",
+    "intent": "migration",
+    "rawInput": "Mobile clients still call /v1/legacy endpoint in preprod; 22% traffic. plan is to deprecate Q4. request id req-1202.",
+    "expected": {
+      "primarySignal": "legacy-endpoint-traffic",
+      "signals": [
+        {
+          "key": "legacy-endpoint-traffic",
+          "summary": "Legacy endpoint still used",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "deprecation-risk",
+          "summary": "Sunset plan blocked by active callers",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Drive migration off /v1/legacy endpoint",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.58
+      },
+      "actions": [
+        {
+          "key": "warn-header",
+          "label": "Add deprecation warning header to /v1/legacy",
+          "priority": "P2"
+        },
+        {
+          "key": "migration-plan",
+          "label": "Publish client migration checklist",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Soft-deprecate endpoints with warnings and migration guides"
+      },
+      "redaction": {
+        "mustRedact": [
+          "req-1202"
+        ],
+        "shouldKeep": [
+          "/v1/legacy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-044",
+    "intent": "migration",
+    "rawInput": "Mobile clients still call /v1/legacy endpoint in sandbox; 22% traffic. plan is to deprecate Q4. request id req-1203.",
+    "expected": {
+      "primarySignal": "legacy-endpoint-traffic",
+      "signals": [
+        {
+          "key": "legacy-endpoint-traffic",
+          "summary": "Legacy endpoint still used",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "deprecation-risk",
+          "summary": "Sunset plan blocked by active callers",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Drive migration off /v1/legacy endpoint",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.58
+      },
+      "actions": [
+        {
+          "key": "warn-header",
+          "label": "Add deprecation warning header to /v1/legacy",
+          "priority": "P2"
+        },
+        {
+          "key": "migration-plan",
+          "label": "Publish client migration checklist",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Soft-deprecate endpoints with warnings and migration guides"
+      },
+      "redaction": {
+        "mustRedact": [
+          "req-1203"
+        ],
+        "shouldKeep": [
+          "/v1/legacy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-045",
+    "intent": "migration",
+    "rawInput": "Mobile clients still call /v1/legacy endpoint in canary; 22% traffic. plan is to deprecate Q4. request id req-1204.",
+    "expected": {
+      "primarySignal": "legacy-endpoint-traffic",
+      "signals": [
+        {
+          "key": "legacy-endpoint-traffic",
+          "summary": "Legacy endpoint still used",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.6
+        },
+        {
+          "key": "deprecation-risk",
+          "summary": "Sunset plan blocked by active callers",
+          "category": "migration",
+          "severity": "medium",
+          "weight": 0.55
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Drive migration off /v1/legacy endpoint",
+        "type": "improvement",
+        "priority": "P2",
+        "actionability": 0.58
+      },
+      "actions": [
+        {
+          "key": "warn-header",
+          "label": "Add deprecation warning header to /v1/legacy",
+          "priority": "P2"
+        },
+        {
+          "key": "migration-plan",
+          "label": "Publish client migration checklist",
+          "priority": "P2"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "template",
+        "scope": "Soft-deprecate endpoints with warnings and migration guides"
+      },
+      "redaction": {
+        "mustRedact": [
+          "req-1204"
+        ],
+        "shouldKeep": [
+          "/v1/legacy"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-046",
+    "intent": "sanitization",
+    "rawInput": "PII found in analytics payload for EU beta user: email iris@example.com; event shows raw name field. pipeline in staging skips hashing.",
+    "expected": {
+      "primarySignal": "analytics-pii-leak",
+      "signals": [
+        {
+          "key": "analytics-pii-leak",
+          "summary": "Analytics payload contains PII",
+          "category": "sanitization",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "hashing-missing",
+          "summary": "No hashing layer before export",
+          "category": "sanitization",
+          "severity": "medium",
+          "weight": 0.65
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Hash emails before analytics export",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.86
+      },
+      "actions": [
+        {
+          "key": "hash-email",
+          "label": "Hash email before analytics pipeline",
+          "priority": "P0"
+        },
+        {
+          "key": "add-pii-check",
+          "label": "Add automated check for PII fields",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Strip or hash PII before exporting analytics"
+      },
+      "redaction": {
+        "mustRedact": [
+          "iris@example.com"
+        ],
+        "shouldKeep": [
+          "PII",
+          "hashing"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-047",
+    "intent": "sanitization",
+    "rawInput": "PII found in analytics payload for enterprise admin: email ops@northwind.com; event shows raw name field. pipeline in prod skips hashing.",
+    "expected": {
+      "primarySignal": "analytics-pii-leak",
+      "signals": [
+        {
+          "key": "analytics-pii-leak",
+          "summary": "Analytics payload contains PII",
+          "category": "sanitization",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "hashing-missing",
+          "summary": "No hashing layer before export",
+          "category": "sanitization",
+          "severity": "medium",
+          "weight": 0.65
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Hash emails before analytics export",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.86
+      },
+      "actions": [
+        {
+          "key": "hash-email",
+          "label": "Hash email before analytics pipeline",
+          "priority": "P0"
+        },
+        {
+          "key": "add-pii-check",
+          "label": "Add automated check for PII fields",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Strip or hash PII before exporting analytics"
+      },
+      "redaction": {
+        "mustRedact": [
+          "ops@northwind.com"
+        ],
+        "shouldKeep": [
+          "PII",
+          "hashing"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-048",
+    "intent": "sanitization",
+    "rawInput": "PII found in analytics payload for QA lead: email qa@contoso.dev; event shows raw name field. pipeline in preprod skips hashing.",
+    "expected": {
+      "primarySignal": "analytics-pii-leak",
+      "signals": [
+        {
+          "key": "analytics-pii-leak",
+          "summary": "Analytics payload contains PII",
+          "category": "sanitization",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "hashing-missing",
+          "summary": "No hashing layer before export",
+          "category": "sanitization",
+          "severity": "medium",
+          "weight": 0.65
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Hash emails before analytics export",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.86
+      },
+      "actions": [
+        {
+          "key": "hash-email",
+          "label": "Hash email before analytics pipeline",
+          "priority": "P0"
+        },
+        {
+          "key": "add-pii-check",
+          "label": "Add automated check for PII fields",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Strip or hash PII before exporting analytics"
+      },
+      "redaction": {
+        "mustRedact": [
+          "qa@contoso.dev"
+        ],
+        "shouldKeep": [
+          "PII",
+          "hashing"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-049",
+    "intent": "sanitization",
+    "rawInput": "PII found in analytics payload for partner sandbox: email sandbox@acme.io; event shows raw name field. pipeline in sandbox skips hashing.",
+    "expected": {
+      "primarySignal": "analytics-pii-leak",
+      "signals": [
+        {
+          "key": "analytics-pii-leak",
+          "summary": "Analytics payload contains PII",
+          "category": "sanitization",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "hashing-missing",
+          "summary": "No hashing layer before export",
+          "category": "sanitization",
+          "severity": "medium",
+          "weight": 0.65
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Hash emails before analytics export",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.86
+      },
+      "actions": [
+        {
+          "key": "hash-email",
+          "label": "Hash email before analytics pipeline",
+          "priority": "P0"
+        },
+        {
+          "key": "add-pii-check",
+          "label": "Add automated check for PII fields",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Strip or hash PII before exporting analytics"
+      },
+      "redaction": {
+        "mustRedact": [
+          "sandbox@acme.io"
+        ],
+        "shouldKeep": [
+          "PII",
+          "hashing"
+        ]
+      }
+    }
+  },
+  {
+    "id": "mvp-050",
+    "intent": "sanitization",
+    "rawInput": "PII found in analytics payload for pilot cohort: email pilot@venture.io; event shows raw name field. pipeline in canary skips hashing.",
+    "expected": {
+      "primarySignal": "analytics-pii-leak",
+      "signals": [
+        {
+          "key": "analytics-pii-leak",
+          "summary": "Analytics payload contains PII",
+          "category": "sanitization",
+          "severity": "high",
+          "weight": 0.85
+        },
+        {
+          "key": "hashing-missing",
+          "summary": "No hashing layer before export",
+          "category": "sanitization",
+          "severity": "medium",
+          "weight": 0.65
+        }
+      ],
+      "issue": {
+        "shouldIssue": true,
+        "title": "Hash emails before analytics export",
+        "type": "bug",
+        "priority": "P0",
+        "actionability": 0.86
+      },
+      "actions": [
+        {
+          "key": "hash-email",
+          "label": "Hash email before analytics pipeline",
+          "priority": "P0"
+        },
+        {
+          "key": "add-pii-check",
+          "label": "Add automated check for PII fields",
+          "priority": "P1"
+        }
+      ],
+      "knowledge": {
+        "shouldDistill": true,
+        "kind": "best-practice",
+        "scope": "Strip or hash PII before exporting analytics"
+      },
+      "redaction": {
+        "mustRedact": [
+          "pilot@venture.io"
+        ],
+        "shouldKeep": [
+          "PII",
+          "hashing"
+        ]
+      }
+    }
+  }
+]
