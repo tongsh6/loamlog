@@ -196,6 +196,8 @@ $LOAM_DUMP_DIR/
 loam distill --distiller @loamlog/distiller-issue-draft --llm deepseek/deepseek-chat
 ```
 
+内置插件的依赖归属在 `@loamlog/cli`：CLI 保持用户可见的包名（例如 `@loamlog/distiller-issue-draft`、`@loamlog/sink-file`），并在把配置交给通用 distill engine 之前，先将其规范化为可运行时加载的 file URL specifier。
+
 如果你希望把它设为默认配置的一部分，可在 `loam.config.ts` 中加入：
 
 ```ts

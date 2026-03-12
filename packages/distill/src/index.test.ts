@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
+import { pathToFileURL } from "node:url";
 import { afterEach, describe, test } from "node:test";
 import type { SessionSnapshot } from "@loamlog/core";
 import { writeSessionSnapshot } from "@loamlog/archive";
@@ -165,11 +166,28 @@ describe("distill package", () => {
     assert.equal(reports[0].errors.length, 0);
   });
 
-  test("registry loads issue-draft distiller by package specifier", async () => {
-    const registry = createDistillerRegistry();
-    const plugin = await registry.load("@loamlog/distiller-issue-draft");
+  test("registry loads distiller by file URL specifier", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-distill-registry-"));
+    const distillerPath = path.join(tempDir, "registry-distiller.mjs");
 
-    assert.equal(plugin.id, "@loamlog/distiller-issue-draft");
+    await writeFile(
+      distillerPath,
+      [
+        "export default {",
+        "  id: '@test/registry-distiller',",
+        "  name: 'Registry Distiller',",
+        "  version: '0.1.0',",
+        "  supported_types: ['issue-draft'],",
+        "  async run() { return []; }",
+        "};",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const registry = createDistillerRegistry();
+    const plugin = await registry.load(pathToFileURL(distillerPath).href);
+
+    assert.equal(plugin.id, "@test/registry-distiller");
     assert.equal(plugin.supported_types.includes("issue-draft"), true);
   });
 });
