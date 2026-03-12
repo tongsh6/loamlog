@@ -50,6 +50,9 @@ importers:
       '@loamlog/sink-file':
         specifier: workspace:*
         version: link:../sinks/file
+      '@loamlog/trigger':
+        specifier: workspace:*
+        version: link:../trigger
 
   packages/core:
     devDependencies:
@@ -107,6 +110,15 @@ importers:
       '@loamlog/core':
         specifier: workspace:*
         version: link:../../core
+
+  packages/trigger:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../core
+      '@loamlog/distill':
+        specifier: workspace:*
+        version: link:../distill
 
   plugins/opencode:
     dependencies:

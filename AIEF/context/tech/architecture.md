@@ -151,6 +151,7 @@ Each distiller exposes a `DistillerFactory`; the engine calls it and injects dep
 
 ## 触发式智能管线 | Triggered Intelligence Pipeline
 
+- **模块位置**：`packages/trigger/`（intelligence-trigger），CLI 仅作为调用方。  
 - **Collector**：capture 入口追加轻量信号收集，不阻塞写盘。  
 - **Pre-filter**：本地检测严重度关键词（fatal/timeout/denied/rollback）、语义高价值模式、人工 trigger。  
 - **Trigger Engine**：频率阈值（默认 5min/3 次）+ 严重度 + 人工触发组合打分，生成 `triggerReason/triggerScore/processingMode/batchId` 元数据。  

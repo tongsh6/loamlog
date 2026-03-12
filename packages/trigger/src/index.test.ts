@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createTriggeredIntelligencePipeline } from "./intelligence-trigger.js";
 import type { SessionSnapshot } from "@loamlog/core";
+import { createTriggeredIntelligencePipeline } from "./index.js";
 
 function buildSnapshot(sessionId: string, content: string): SessionSnapshot {
   return {

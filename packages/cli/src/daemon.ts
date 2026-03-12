@@ -14,8 +14,8 @@ import {
   type TriggeredIntelligenceConfig,
 } from "@loamlog/core";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
-import { createTriggeredIntelligencePipeline, type TriggeredIntelligencePipeline } from "./intelligence-trigger.js";
-import { loadAICConfig } from "./distill.js";
+import { createTriggeredIntelligencePipeline, type TriggeredIntelligencePipeline } from "@loamlog/trigger";
+import { buildRuntimeDistillConfig, loadAICConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
 
 export interface StartDaemonOptions {
   host?: string;
@@ -146,7 +146,11 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
       dumpDir: options.dumpDir ?? process.env.LOAM_DUMP_DIR,
       config: options.intelligenceConfig,
       logger: options.logger,
-      loadConfig: loadAICConfig,
+      loadDistillConfig: async () => {
+        const loaded = await loadAICConfig();
+        const normalized = normalizeBuiltInPluginSpecifiers(loaded);
+        return buildRuntimeDistillConfig(normalized, undefined);
+      },
     });
 
   const server = createServer(async (req, res) => {

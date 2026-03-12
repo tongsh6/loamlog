@@ -7,22 +7,13 @@ import type {
   TriggeredIntelligenceConfig,
 } from "@loamlog/core";
 import { createDistillEngine } from "@loamlog/distill";
-import { buildRuntimeDistillConfig, loadAICConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
 
 type Logger = (message: string) => void;
 
-interface TriggerSignal {
+export interface TriggerSignal {
   capture: CaptureRequest;
   snapshot?: SessionSnapshot;
   snapshotPath?: string;
-}
-
-interface TriggeredTask extends TriggerSignal {
-  triggerReason: string[];
-  triggerScore: number;
-  processingMode: ProcessingMode;
-  batchKey: string;
-  batchId?: string;
 }
 
 export interface TriggeredBatch {
@@ -35,6 +26,14 @@ export interface TriggeredBatch {
   size: number;
 }
 
+interface TriggeredTask extends TriggerSignal {
+  triggerReason: string[];
+  triggerScore: number;
+  processingMode: ProcessingMode;
+  batchKey: string;
+  batchId?: string;
+}
+
 type DistillRunner = (batch: TriggeredBatch) => Promise<void>;
 
 export interface TriggeredIntelligencePipeline {
@@ -43,11 +42,11 @@ export interface TriggeredIntelligencePipeline {
   stop(): void;
 }
 
-interface TriggeredIntelligenceOptions {
+export interface TriggeredIntelligenceOptions {
   dumpDir?: string;
   config?: TriggeredIntelligenceConfig;
   logger?: Logger;
-  loadConfig?: () => Promise<AICConfig>;
+  loadDistillConfig?: () => Promise<AICConfig | undefined>;
   runDistill?: DistillRunner;
   onBatch?: (batch: TriggeredBatch) => void;
   now?: () => number;
@@ -189,7 +188,7 @@ function shouldProcessInFull(config: ResolvedIntelligenceConfig, queueSize: numb
 
 function createDefaultDistillRunner(
   resolvedConfig: ResolvedIntelligenceConfig,
-  options: { dumpDir?: string; logger: Logger; loadConfig?: () => Promise<AICConfig> },
+  options: { dumpDir?: string; logger: Logger; loadDistillConfig?: () => Promise<AICConfig | undefined> },
 ): DistillRunner {
   let engine: DistillEngine | undefined;
   let cachedConfig: AICConfig | undefined;
@@ -205,18 +204,26 @@ function createDefaultDistillRunner(
       return;
     }
 
+    if (!options.loadDistillConfig) {
+      options.logger("[intel] skip distill: no distill config loader");
+      return;
+    }
+
     try {
       if (!cachedConfig) {
-        const loaded = options.loadConfig ? await options.loadConfig() : await loadAICConfig();
-        const withOverrides: AICConfig = {
+        const loaded = await options.loadDistillConfig();
+        if (!loaded) {
+          options.logger("[intel] skip distill: loader returned empty config");
+          return;
+        }
+
+        cachedConfig = {
           ...loaded,
           dump_dir: loaded.dump_dir ?? options.dumpDir,
           distillers: resolvedConfig.distill.distillers ?? loaded.distillers,
           sinks: resolvedConfig.distill.sinks ?? loaded.sinks,
           llm: resolvedConfig.distill.llm ?? loaded.llm,
         };
-        const normalized = normalizeBuiltInPluginSpecifiers(withOverrides);
-        cachedConfig = buildRuntimeDistillConfig(normalized, undefined);
       }
 
       if (!engine) {
@@ -241,11 +248,13 @@ export function createTriggeredIntelligencePipeline(options: TriggeredIntelligen
   const resolvedConfig = mergeConfig(options.config);
   const logger: Logger = options.logger ?? ((message) => console.log(message));
   const now = options.now ?? Date.now;
-  const runDistill = options.runDistill ?? createDefaultDistillRunner(resolvedConfig, {
-    dumpDir: options.dumpDir,
-    logger,
-    loadConfig: options.loadConfig,
-  });
+  const runDistill =
+    options.runDistill ??
+    createDefaultDistillRunner(resolvedConfig, {
+      dumpDir: options.dumpDir,
+      logger,
+      loadDistillConfig: options.loadDistillConfig,
+    });
 
   const queue: TriggeredTask[] = [];
   const frequencyState = new Map<string, FrequencyState>();
@@ -340,7 +349,7 @@ export function createTriggeredIntelligencePipeline(options: TriggeredIntelligen
     }
     const text = collectSnapshotText(signal.snapshot);
     const signature = buildSignature(signal, text);
-    const hits = findKeywordHits(text, resolvedConfig.thresholds.severityKeywords);
+    const severityHits = findKeywordHits(text, resolvedConfig.thresholds.severityKeywords);
     const semanticHits = findKeywordHits(text, resolvedConfig.thresholds.semanticKeywords);
     const manualHit = resolvedConfig.thresholds.manualTriggers.some((prefix) =>
       signal.capture.trigger.toLowerCase().startsWith(prefix.toLowerCase()),
@@ -350,7 +359,7 @@ export function createTriggeredIntelligencePipeline(options: TriggeredIntelligen
     if (manualHit) {
       reasons.push(`manual:${signal.capture.trigger}`);
     }
-    for (const hit of hits) {
+    for (const hit of severityHits) {
       reasons.push(`severity:${hit}`);
     }
     for (const hit of semanticHits) {
