@@ -5,13 +5,12 @@ import {
   CAPTURE_PATH,
   DEFAULT_DAEMON_HOST,
   DEFAULT_DAEMON_PORT,
-  applySnapshotRedaction,
   buildSessionSnapshot,
-  parseRedactIgnore,
   type CaptureRequest,
   type SessionProvider,
   isCaptureRequest,
 } from "@loamlog/core";
+import { applySnapshotRedaction, parseRedactIgnore } from "@loamlog/sanitizer";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
 
 export interface StartDaemonOptions {

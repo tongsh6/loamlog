@@ -7,7 +7,7 @@ import { afterEach, describe, test } from "node:test";
 import type { SessionSnapshot } from "@loamlog/core";
 import { writeSessionSnapshot } from "@loamlog/archive";
 import { createDistillEngine } from "./engine.js";
-import { snapshotToArtifact } from "./query.js";
+import { createArtifactQueryClient, snapshotToArtifact } from "./query.js";
 import { createDistillerRegistry } from "./registry.js";
 import { createDistillerStateKV } from "./state.js";
 
@@ -62,6 +62,26 @@ describe("distill package", () => {
     const artifact = snapshotToArtifact(buildSnapshot("ses_distill_convert"));
     assert.equal(artifact.meta.loam_version, "0.1.0");
     assert.equal(artifact.meta.session_id, "ses_distill_convert");
+  });
+
+  test("artifact query enforces sanitization gateway", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-distill-sanitize-"));
+    const state = createDistillerStateKV(tempDir, "@test/distiller");
+    const artifactStore = createArtifactQueryClient(tempDir, state, "@test/distiller");
+
+    const snapshot = buildSnapshot("ses_distill_sanitize");
+    snapshot.messages[0].content = "sk-abcdefghijklmnopqrstuvwxyz";
+    await writeSessionSnapshot({ dumpDir: tempDir, snapshot });
+
+    let seen = false;
+    for await (const artifact of artifactStore.getUnprocessed("@test/distiller")) {
+      seen = true;
+      assert.equal(artifact.messages[0]?.content?.includes("[API_KEY:OPENAI]"), true);
+      assert.equal(artifact.redacted.risk_level, "high");
+      assert.equal((artifact.redacted.summary?.total ?? 0) > 0, true);
+    }
+
+    assert.equal(seen, true);
   });
 
   test("state kv stores and marks processed sessions", async () => {
