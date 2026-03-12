@@ -173,11 +173,14 @@ interface CreateOpencodeProviderOptions {
   fetchImpl?: typeof fetch
 }
 
-/** 脱敏策略（当前实现） | Redaction policy (current implementation) */
+/** 脱敏策略（当前实现，实现在 @loamlog/sanitizer）| Redaction policy (current implementation, lives in @loamlog/sanitizer) */
 interface RedactionPolicy {
-  // 默认规则: sk-*, ghp_*, AKIA*, Bearer *, sensitive path segments(auth/credentials/.env)
-  // Default rules: sk-*, ghp_*, AKIA*, Bearer *, sensitive path segments(auth/credentials/.env)
-  replacement_format: "[REDACTED:type]"
+  // 输出语义占位符: [API_KEY:OPENAI] / [AUTH_HEADER:BEARER] / [EMAIL] / [PHONE] / [PASSWORD] / [COOKIE:NAME] / [URL_PARAM:KEY]
+  // Semantic placeholders instead of "***"
+  placeholder_format: "[CATEGORY:SOURCE]"
+
+  // 高频规则覆盖: API Key/Token/Auth Header/Cookie/Session/密码/邮箱/手机号/URL 参数/敏感路径
+  // High-risk categories: api_key/auth_header/password/token/session/cookie
 
   // LOAM_REDACT_IGNORE 支持用分号或换行分隔多个 regex（不使用逗号分隔）
   // LOAM_REDACT_IGNORE supports semicolon/newline-separated regex list (comma is not used)
@@ -189,6 +192,14 @@ function applySnapshotRedaction(snapshot: SessionSnapshot, ignorePatterns?: RegE
   snapshot: SessionSnapshot
   patterns_applied: string[]
   redacted_count: number
+  summary: {
+    total: number
+    by_type: Record<string, number>
+    by_placeholder: Record<string, number>
+    high_risk_types: string[]
+    risk_level: "low" | "medium" | "high"
+  }
+  risk_level: "low" | "medium" | "high"
 }
 ```
 

@@ -360,6 +360,7 @@ export interface DistillEngine {
     repo?: string;
     since?: string;
     until?: string;
+    session_ids?: string[];
   }): Promise<DistillReport[]>;
 }
 
@@ -376,6 +377,50 @@ export interface AICConfig {
     timeout_ms?: number;
     providers?: Record<string, LLMProviderConfig>;
   };
+  intelligence?: TriggeredIntelligenceConfig;
+}
+
+export type ProcessingMode = "full" | "summary-only";
+
+export interface TriggerThresholdConfig {
+  frequency?: {
+    /** Time window in milliseconds for frequency counting. */
+    window_ms?: number;
+    /** Minimum occurrences required within the window to trigger. */
+    threshold?: number;
+  };
+  severity_keywords?: string[];
+  semantic_keywords?: string[];
+  manual_triggers?: string[];
+}
+
+export interface TriggerBatchConfig {
+  max_size?: number;
+  max_wait_ms?: number;
+}
+
+export interface TriggerRateLimitConfig {
+  max_pending?: number;
+}
+
+export interface TriggeredDistillConfig {
+  enabled?: boolean;
+  distillers?: Array<string | { plugin: string; config: Record<string, unknown> }>;
+  sinks?: Array<string | { plugin: string; config: Record<string, unknown> }>;
+  llm?: {
+    default_budget?: LLMBudget;
+    timeout_ms?: number;
+    providers?: Record<string, LLMProviderConfig>;
+  };
+}
+
+export interface TriggeredIntelligenceConfig {
+  enabled?: boolean;
+  processing_mode?: ProcessingMode;
+  thresholds?: TriggerThresholdConfig;
+  batch?: TriggerBatchConfig;
+  rate_limit?: TriggerRateLimitConfig;
+  distill?: TriggeredDistillConfig;
 }
 
 export interface PulledSessionPayload {
@@ -414,6 +459,17 @@ export interface RedactionResult {
   summary: RedactionSummary;
   risk_level: RedactionRiskLevel;
 }
+
+function createEmptySummary(): RedactionSummary {
+  return {
+    total: 0,
+    by_type: {},
+    by_placeholder: {},
+    high_risk_types: [],
+    risk_level: "low",
+  };
+}
+
 export function buildSessionSnapshot(input: CreateSnapshotInput): SessionSnapshot {
   const firstTimestamp = input.pulled.messages[0]?.timestamp ?? input.capture.captured_at;
   const lastTimestamp = input.pulled.messages[input.pulled.messages.length - 1]?.timestamp ?? input.capture.captured_at;
@@ -445,13 +501,7 @@ export function buildSessionSnapshot(input: CreateSnapshotInput): SessionSnapsho
     redacted: {
       patterns_applied: [],
       redacted_count: 0,
-      summary: {
-        total: 0,
-        by_type: {},
-        by_placeholder: {},
-        high_risk_types: [],
-        risk_level: "low",
-      },
+      summary: createEmptySummary(),
       risk_level: "low",
     },
   };

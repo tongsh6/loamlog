@@ -1,4 +1,4 @@
-import assert from "node:assert/strict";
+import assert from "node:assert";
 import { describe, test } from "node:test";
 import { applySnapshotRedaction, parseRedactIgnore } from "./index.js";
 import type { SessionSnapshot } from "@loamlog/core";
@@ -7,34 +7,44 @@ function buildSnapshot(content: string): SessionSnapshot {
   return {
     schema_version: "1.0",
     meta: {
-      session_id: "ses_redact_001",
-      captured_at: "2026-03-02T00:00:00.000Z",
-      capture_trigger: "session.idle",
+      session_id: "ses_001",
+      captured_at: new Date().toISOString(),
+      capture_trigger: "manual",
       aic_version: "0.1.0",
-      provider: "opencode",
+      provider: "test",
     },
     context: {
-      cwd: "D:/demo",
-      worktree: "D:/demo",
+      cwd: "/tmp",
+      worktree: "/tmp",
+      repo: "loamlog",
+      branch: "main",
+      commit: "abc",
+      dirty: false,
     },
     time_range: {
-      start: "2026-03-02T00:00:00.000Z",
-      end: "2026-03-02T00:00:01.000Z",
+      start: new Date().toISOString(),
+      end: new Date().toISOString(),
     },
-    session: {
-      info: content,
-    },
+    session: {},
     messages: [
       {
-        id: "msg-1",
+        id: "msg_1",
         role: "user",
-        timestamp: "2026-03-02T00:00:00.000Z",
+        timestamp: new Date().toISOString(),
         content,
       },
     ],
     redacted: {
       patterns_applied: [],
       redacted_count: 0,
+      summary: {
+        total: 0,
+        by_type: {},
+        by_placeholder: {},
+        high_risk_types: [],
+        risk_level: "low",
+      },
+      risk_level: "low",
     },
   };
 }
@@ -68,8 +78,8 @@ describe("applySnapshotRedaction", () => {
   });
 
   test("supports AIC_REDACT_IGNORE style patterns", () => {
-    const snapshot = buildSnapshot("token sk-abcdefghijklmnopqrstuvwxyz");
     const ignore = parseRedactIgnore("sk-[A-Za-z0-9_-]{20,}");
+    const snapshot = buildSnapshot("token sk-abcdefghijklmnopqrstuvwxyz");
     const result = applySnapshotRedaction(snapshot, ignore);
 
     assert.equal(result.redacted_count, 0);

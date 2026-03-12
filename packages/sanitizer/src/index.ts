@@ -472,16 +472,6 @@ function sanitizeUnknownValue(
   return { value, count: 0 };
 }
 
-function createEmptySummary(): RedactionSummary {
-  return {
-    total: 0,
-    by_type: {},
-    by_placeholder: {},
-    high_risk_types: [],
-    risk_level: "low",
-  };
-}
-
 export function applySnapshotRedaction(snapshot: SessionSnapshot, ignorePatterns: RegExp[] = []): RedactionResult {
   const stats = new SanitizationStats();
   const redacted = sanitizeUnknownValue(snapshot, ignorePatterns, stats);

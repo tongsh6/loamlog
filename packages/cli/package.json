@@ -19,6 +19,7 @@
     "@loamlog/provider-claude-code": "workspace:*",
     "@loamlog/provider-opencode": "workspace:*",
     "@loamlog/sanitizer": "workspace:*",
-    "@loamlog/sink-file": "workspace:*"
+    "@loamlog/sink-file": "workspace:*",
+    "@loamlog/trigger": "workspace:*"
   }
 }
