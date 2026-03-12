@@ -96,6 +96,8 @@ importers:
         specifier: workspace:*
         version: link:../../distiller-sdk
 
+  packages/evaluation-harness: {}
+
   packages/providers/claude-code:
     dependencies:
       '@loamlog/core':

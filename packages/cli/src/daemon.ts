@@ -1,7 +1,15 @@
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
 import { writeSessionSnapshot } from "@loamlog/archive";
-import { CAPTURE_PATH, DEFAULT_DAEMON_HOST, DEFAULT_DAEMON_PORT, buildSessionSnapshot, type CaptureRequest, type SessionProvider, isCaptureRequest } from "@loamlog/core";
+import {
+  CAPTURE_PATH,
+  DEFAULT_DAEMON_HOST,
+  DEFAULT_DAEMON_PORT,
+  buildSessionSnapshot,
+  type CaptureRequest,
+  type SessionProvider,
+  isCaptureRequest,
+} from "@loamlog/core";
 import { applySnapshotRedaction, parseRedactIgnore } from "@loamlog/sanitizer";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
 

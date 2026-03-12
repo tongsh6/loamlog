@@ -1,9 +1,7 @@
 import assert from "node:assert";
 import { describe, test } from "node:test";
-
-import { type SessionSnapshot } from "@loamlog/core";
-
 import { applySnapshotRedaction, parseRedactIgnore } from "./index.js";
+import type { SessionSnapshot } from "@loamlog/core";
 
 function buildSnapshot(content: string): SessionSnapshot {
   return {
