@@ -48,11 +48,17 @@ Cursor*      ──►  redaction            multi-distiller       notion*
 
 ## Current Direction
 
-As of 2026-03-10, Loamlog already has a runnable local-first pipeline for capture, archive, and distill. The repo also contains the second provider family (`claude-code`) on the source side; the main product question is no longer "can the abstractions exist?" but "what is the first flow that creates obvious day-one value?"
+As of 2026-03-13, Loamlog has completed **Milestone A: Trust Infrastructure**, adding three critical capabilities:
 
-- **Shipped today** — capture, archive, redaction, evidence-backed distill, and file-based local output are all present in the repo
-- **Current product focus** — tighten the first killer flow: `AI conversation -> issue draft`, starting with local JSON + Markdown output before any GitHub API delivery
-- **Planned next infrastructure work** — continue hardening multi-source provider support and deferred CLI/docs items without letting them displace the first product loop
+- **Sanitization Gateway** — sensitive data redaction before AI processing
+- **Triggered Intelligence Pipeline** — threshold-based, async, rate-limited distill
+- **Evaluation Harness** — quality metrics for distill accuracy
+
+The main product question is now: "Is the first flow stable enough to justify Stage 2 automation?"
+
+- **Shipped today** — capture, archive, redaction, trigger, evidence-backed distill, evaluation, and file-based local output
+- **Current product focus** — stabilize the first killer flow: `AI conversation -> structured evidence -> local issue draft`
+- **Planned next** — MCP Exposure Layer design (Milestone B) and GitHub API sink (Stage 2)
 
 ---
 
@@ -63,6 +69,9 @@ loamlog/
 ├── packages/
 │   ├── core/               # Core types & interface contracts
 │   ├── archive/            # Unified storage (write / redact / fingerprint)
+│   ├── sanitizer/          # Log sanitization gateway (Milestone A)
+│   ├── trigger/            # Triggered intelligence pipeline (Milestone A)
+│   ├── evaluation-harness/ # Quality evaluation framework (Milestone A)
 │   ├── providers/
 │   │   ├── opencode/       # OpenCode data source adapter
 │   │   └── claude-code/    # Claude Code transcript adapter
@@ -84,6 +93,7 @@ loamlog/
 | M1 | Capture layer MVP — auto-archive sessions | ✅ Completed |
 | M2 | Distill platform MVP — pitfall-card distiller | ✅ Completed |
 | M3 | Multi-model LLM routing | ✅ Completed |
+| **Milestone A** | **Trust Infrastructure** — sanitization, trigger, evaluation | ✅ **Completed** |
 | M4 | Multi-source providers (Claude Code, ...) | ◐ Landed in repo, needs follow-up hardening |
 | M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
 

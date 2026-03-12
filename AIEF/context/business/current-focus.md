@@ -2,10 +2,19 @@
 
 ## 状态总览 | Status Summary
 
-截至 2026-03-10，Loamlog 的 capture、archive、redaction、distill、本地 file sink 主路径都已在仓库中存在并可运行。
-As of 2026-03-10, the capture, archive, redaction, distill, and local file-sink paths all exist in the repository and are runnable.
+截至 2026-03-13，Loamlog 已完成 **Milestone A：可信底盘**，新增了三个关键基础设施：
+As of 2026-03-13, Loamlog has completed **Milestone A: Trust Infrastructure**, adding three critical capabilities:
 
-同时，`claude-code` provider 的主路径实现也已进入仓库，说明“多源 provider 抽象是否成立”这个问题已经拿到初步工程答案。
+1. **Sanitization Gateway** — 日志脱敏硬前置层，确保敏感数据在进入 AI 处理前被安全脱敏
+   Log sanitization gateway ensuring sensitive data is redacted before AI processing
+
+2. **Triggered Intelligence Pipeline** — 阈值触发、异步批处理、性能隔离的智能萃取管道
+   Threshold-based, async, rate-limited intelligence pipeline for efficient distill
+
+3. **Evaluation Harness** — 质量评估框架，验证萃取准确性与行动建议质量
+   Quality evaluation framework validating distill accuracy and action suggestions
+
+同时，`claude-code` provider 的主路径实现也已进入仓库，说明"多源 provider 抽象是否成立"这个问题已经拿到初步工程答案。
 The main `claude-code` provider path has also landed in the repository, which means the project already has an initial engineering answer for whether the multi-source provider abstraction works.
 
 ## 当前产品问题 | Current Product Question
