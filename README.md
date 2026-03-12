@@ -196,6 +196,8 @@ Run the built-in issue-draft distiller explicitly:
 loam distill --distiller @loamlog/distiller-issue-draft --llm deepseek/deepseek-chat
 ```
 
+Built-in plugin ownership lives in `@loamlog/cli`: the CLI keeps user-facing names (for example `@loamlog/distiller-issue-draft` and `@loamlog/sink-file`) and normalizes them to runtime-loadable file URL specifiers before handing config to the generic distill engine.
+
 If you want to make it part of your default config, add it to `loam.config.ts`:
 
 ```ts

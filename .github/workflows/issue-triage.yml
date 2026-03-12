@@ -1,0 +1,27 @@
+name: Issue Triage Automation
+
+on:
+  issues:
+    types: [opened, reopened]
+
+jobs:
+  triage:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Add needs-triage label
+        uses: actions-ecosystem/action-add-labels@v1
+        with:
+          labels: status:needs-triage
+          
+      - name: Add comment with triage instructions
+        uses: actions/github-script@v7
+        with:
+          script: |
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: `👋 感谢提交 Issue！\n\n我们的维护者会尽快进行初始评估。在此期间，你可以：\n- 查看 [路线图](https://github.com/tongsh6/loamlog/blob/master/AIEF/context/business/roadmap.md) 了解项目方向\n- 检查是否有相关的 [开放 Issue](https://github.com/tongsh6/loamlog/issues)\n\n优先级评估标准：\n- **P0**: 安全漏洞/核心功能阻塞\n- **P1**: 重要功能/架构设计\n- **P2**: 用户体验改进\n- **P3**: 优化和增强\n\n请耐心等待，我们会尽快回复！`
+            })

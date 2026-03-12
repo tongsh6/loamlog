@@ -1,6 +1,6 @@
 {
   "name": "@loamlog/distill",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "main": "dist/index.js",
@@ -17,9 +17,6 @@
   },
   "dependencies": {
     "@loamlog/archive": "workspace:*",
-    "@loamlog/core": "workspace:*",
-    "@loamlog/distiller-issue-draft": "workspace:*",
-    "@loamlog/distiller-pitfall-card": "workspace:*",
-    "@loamlog/sink-file": "workspace:*"
+    "@loamlog/core": "workspace:*"
   }
 }

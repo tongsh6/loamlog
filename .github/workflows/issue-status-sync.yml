@@ -1,0 +1,61 @@
+name: Issue Status Sync
+
+on:
+  issues:
+    types: [labeled, unlabeled, assigned, unassigned]
+
+jobs:
+  sync-status:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    steps:
+      - name: Sync status with labels
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+            
+            // If assigned and has priority, mark as ready
+            if (issue.assignees && issue.assignees.length > 0) {
+              if (labels.some(l => l.startsWith('priority:'))) {
+                const hasReady = labels.includes('status:ready');
+                const hasDesign = labels.includes('status:design');
+                
+                if (!hasReady && !hasDesign) {
+                  await github.rest.issues.addLabels({
+                    owner: context.repo.owner,
+                    repo: context.repo.repo,
+                    issue_number: issue.number,
+                    labels: ['status:ready']
+                  });
+                }
+              }
+            }
+            
+            // If priority:p0 or p1 and no milestone, add needs-milestone label
+            if (labels.includes('priority:p0') || labels.includes('priority:p1')) {
+              if (!issue.milestone) {
+                console.log(`Issue #${issue.number} is P0/P1 but has no milestone`);
+                // Could create a comment here
+              }
+            }
+      
+      - name: Comment on high priority issues
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const issue = context.payload.issue;
+            const labels = issue.labels.map(l => l.name);
+            
+            // Only comment when priority:p0 is added
+            if (context.payload.action === 'labeled' && 
+                context.payload.label.name === 'priority:p0') {
+              await github.rest.issues.createComment({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                issue_number: issue.number,
+                body: `🚨 此 Issue 被标记为 **P0 (Critical)**。\n\n这意味着：\n- 需要尽快处理\n- 可能阻塞其他工作\n- 建议立即分配负责人\n\n@tongsh6 请关注此 Issue。`
+              });
+            }
