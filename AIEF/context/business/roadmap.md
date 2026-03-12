@@ -8,6 +8,7 @@
 | M1 | 采集层 MVP — 自动归档会话 | core, archive, providers/opencode, cli | 1–2 days | ✅ 已完成 |
 | M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ✅ 已完成 |
+| **Milestone A** | **可信底盘** — 脱敏、触发控制、质量评估 | sanitizer, trigger, evaluation-harness | 2–3 weeks | ✅ **已完成** |
 | M4 | 多数据源接入 | providers/claude-code | 1–2 days | ◐ 主路径已落地，待补强 |
 | M5 | 生态化与工作流 | sinks/github, approve-flow, more distillers | Ongoing | ⏳ 规划中 |
 
@@ -15,8 +16,13 @@
 
 ## 当前进度 | Current Progress
 
-截至 2026-03-10，采集链路与多模型萃取链路都已完成可运行闭环，且 Claude Code provider 的主路径实现已进入仓库。  
-As of 2026-03-10, both the capture pipeline and the multi-provider distill pipeline are runnable end-to-end, and the main Claude Code provider path has landed in the repository.
+截至 2026-03-13，Loamlog 已完成 **Milestone A：可信底盘**，新增了 sanitizer、trigger、evaluation-harness 三个基础设施包。
+As of 2026-03-13, Loamlog has completed **Milestone A: Trust Infrastructure**, adding three foundational packages: sanitizer, trigger, and evaluation-harness.
+
+Milestone A 通过以下 Issues 和 PRs 完成：
+- Issue #26 (Sanitization Gateway) → PR #39 ✅
+- Issue #22 (Triggered Intelligence Pipeline) → PR #41 ✅
+- Issue #23 (Evaluation Harness MVP) → PR #37 ✅
 
 已完成项 / Completed items:
 
@@ -33,6 +39,13 @@ As of 2026-03-10, both the capture pipeline and the multi-provider distill pipel
 - CLI 已支持 `--llm-timeout-ms`，Router 支持 fallback 与类型化错误
 - `packages/providers/claude-code` 与 CLI provider wiring 已在仓库落地，验证多源 provider 主路径可行
 - GitHub 工作流治理已补齐：`develop` / `master` 受保护，已开启合并后自动删分支
+
+### Milestone A 完成项 (2026-03-13)
+
+- `@loamlog/sanitizer` — 日志脱敏硬前置层，支持 API Key/Token/邮箱/手机号识别与语义占位替换
+- `@loamlog/trigger` — 智能触发管道，支持阈值触发、异步批处理、限流降级
+- `@loamlog/evaluation-harness` — 质量评估框架，支持信号提取与 Issue 草稿质量评测
+- Issue #26, #22, #23 已完成并关闭；PR #39, #41, #37 已合并到 `develop`
 
 ### 当前产品聚焦说明 | Current Product Focus Note
 
@@ -118,6 +131,38 @@ M4 执行计划仍保留为参考文档，但不再代表当前唯一焦点。
 2. provider 不可用时有明确错误提示
 
 详细执行计划 / Detailed execution plan: `AIEF/context/business/m3-execution-plan.md`
+
+---
+
+## Milestone A：可信底盘 | Trust Infrastructure
+
+**目标 / Goal**: 让 Loamlog 能在真实日志上安全运行，建立可验证的质量基准。
+
+**交付 / Deliverables**:
+- `packages/sanitizer` — 日志脱敏硬前置层
+  - 敏感信息识别与语义占位替换
+  - 审计摘要生成（数量、类型分布、风险等级）
+  - 支持 API Key/Token/邮箱/手机号等多种模式
+  
+- `packages/trigger` — 智能触发管道
+  - 阈值触发机制（频率/严重度/语义/人工）
+  - 异步批处理与性能隔离
+  - 限流、降级、熔断基础机制
+  
+- `packages/evaluation-harness` — 质量评估框架
+  - 信号提取准确性评测
+  - Issue 草稿质量评估
+  - 支持不同规则/提示词/模型版本对比
+
+**验收 / Acceptance**:
+1. 原始日志在进入 AI 前已脱敏
+2. AI 分析异步、可限流、可降级
+3. 能用样本集评估提炼质量
+
+**完成状态 / Status**: ✅ 已完成 (2026-03-13)
+- Issue #26 → PR #39 (sanitizer)
+- Issue #22 → PR #41 (trigger)
+- Issue #23 → PR #37 (evaluation-harness)
 
 ---
 

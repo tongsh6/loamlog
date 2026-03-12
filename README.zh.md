@@ -48,11 +48,17 @@ Cursor*      ──►  脱敏处理             多 distiller          notion*
 
 ## 当前方向
 
-截至 2026-03-10，Loamlog 已具备本地优先的 capture、archive、distill 可运行闭环。仓库中也已经包含第二类 provider（`claude-code`）的主路径实现；当前真正要回答的问题，不再只是“抽象能否成立”，而是“第一条让用户立刻感知价值的产品闭环是什么”。
+截至 2026-03-13，Loamlog 已完成 **里程碑 A：可信底盘**，新增三项关键能力：
 
-- **今天已具备**：采集、归档、脱敏、evidence-backed distill，以及本地文件输出主路径都已在仓库中存在
-- **当前产品焦点**：收敛首个 Killer Flow：`AI conversation -> issue draft`，先做本地 JSON + Markdown 输出，再考虑 GitHub API 自动投递
-- **后续基础设施工作**：继续补强多源 provider 与延期的 CLI/docs 项，但不再让它们盖过第一条产品闭环
+- **脱敏网关** — AI 处理前的敏感数据脱敏
+- **智能触发管道** — 基于阈值的异步、限流萃取
+- **评估框架** — 萃取质量指标
+
+当前真正要回答的问题是："第一条产品闭环是否足够稳定，可以进入第二阶段自动化？"
+
+- **今天已具备**：采集、归档、脱敏、触发、evidence-backed distill、评估，以及本地文件输出
+- **当前产品焦点**：稳定首个 Killer Flow：`AI conversation -> structured evidence -> local issue draft`
+- **下一步**：MCP Exposure Layer 设计（里程碑 B）和 GitHub API sink（第二阶段）
 
 ---
 
@@ -63,6 +69,9 @@ loamlog/
 ├── packages/
 │   ├── core/               # 核心 TypeScript 类型与接口契约
 │   ├── archive/            # 统一存储（写入 / 脱敏 / 指纹）
+│   ├── sanitizer/          # 日志脱敏网关（里程碑 A）
+│   ├── trigger/            # 智能触发管道（里程碑 A）
+│   ├── evaluation-harness/ # 质量评估框架（里程碑 A）
 │   ├── providers/
 │   │   ├── opencode/       # OpenCode 数据源适配器
 │   │   └── claude-code/    # Claude Code transcript 适配器
@@ -84,6 +93,7 @@ loamlog/
 | M1 | 采集层 MVP — 自动归档会话 | ✅ 已完成 |
 | M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | ✅ 已完成 |
+| **里程碑 A** | **可信底盘** — 脱敏、触发、评估 | ✅ **已完成** |
 | M4 | 多数据源接入（Claude Code 等） | ◐ 主路径已落地，需继续补强 |
 | M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
 
