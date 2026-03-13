@@ -1,0 +1,23 @@
+{
+  "name": "@loamlog/rules",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json && node --input-type=module -e \"import { copyFileSync, mkdirSync } from 'node:fs'; import path from 'node:path'; const src = path.resolve('src/default.rules.yaml'); const destDir = path.resolve('dist'); mkdirSync(destDir, { recursive: true }); copyFileSync(src, path.join(destDir, 'default.rules.yaml'));\"",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "node --import tsx --test src/index.test.ts"
+  },
+  "dependencies": {
+    "@loamlog/core": "workspace:*",
+    "yaml": "^2.6.1"
+  }
+}
