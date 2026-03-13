@@ -12,7 +12,7 @@
     }
   },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.json && node --input-type=module -e \"import { copyFileSync, mkdirSync } from 'node:fs'; import path from 'node:path'; const src = path.resolve('src/default.rules.yaml'); const destDir = path.resolve('dist'); mkdirSync(destDir, { recursive: true }); copyFileSync(src, path.join(destDir, 'default.rules.yaml'));\"",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "test": "node --import tsx --test src/index.test.ts"
   },
