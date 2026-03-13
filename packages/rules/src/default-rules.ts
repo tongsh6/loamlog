@@ -1,79 +1,9 @@
+import fs from "node:fs";
+import { fileURLToPath } from "node:url";
+
 import { parseRuleConfig } from "./config.js";
 import type { RuleConfig } from "./types.js";
 
-export const DEFAULT_RULES_YAML = `
-version: "0.1"
-rules:
-  - id: repeated_architecture_gap
-    type: signal
-    priority: 80
-    when:
-      signal_type: architecture_gap
-      frequency_gte: 3
-    then:
-      add_signal: architecture_gap.repeat
-      add_tags:
-        - architecture_gap
-        - repeated
-      mark_as_candidate: true
-
-  - id: high_value_action_score
-    type: scoring
-    priority: 60
-    formula:
-      impact: 0.35
-      urgency: 0.2
-      frequency: 0.2
-      confidence: 0.15
-      effort: -0.1
-    bias: 0.1
-
-  - id: must_do_if_blocking_pipeline
-    type: necessity
-    priority: 100
-    when:
-      affects_core_pipeline: true
-    then:
-      level: must_do
-
-  - id: should_do_high_impact
-    type: necessity
-    priority: 50
-    when:
-      impact_gte: 0.6
-    then:
-      level: should_do
-
-  - id: ignore_low_confidence
-    type: filter
-    priority: 90
-    when:
-      confidence_lt: 0.45
-    then:
-      drop: true
-      reason: "confidence below 0.45"
-
-  - id: dedupe_same_title_in_session
-    type: filter
-    priority: 85
-    when:
-      title_duplicates_in_session_gte: 2
-    then:
-      drop: true
-      reason: "duplicate title in session"
-
-  - id: fast_track_blocking
-    type: execution
-    priority: 95
-    when:
-      any:
-        - affects_core_pipeline: true
-        - urgency_gte: 0.8
-          impact_gte: 0.7
-    then:
-      allow: true
-      strategy: fast-track
-      route: immediate
-`.trim();
-
+export const DEFAULT_RULES_PATH = new URL("./default.rules.yaml", import.meta.url);
+export const DEFAULT_RULES_YAML = fs.readFileSync(fileURLToPath(DEFAULT_RULES_PATH), "utf8");
 export const DEFAULT_RULE_CONFIG: RuleConfig = parseRuleConfig(DEFAULT_RULES_YAML, "yaml");

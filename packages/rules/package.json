@@ -17,6 +17,7 @@
     "test": "node --import tsx --test src/index.test.ts"
   },
   "dependencies": {
+    "@loamlog/core": "workspace:*",
     "yaml": "^2.6.1"
   }
 }

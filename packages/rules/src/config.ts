@@ -4,29 +4,21 @@ import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 
 import type { RuleConfig, RuleDefinition } from "./types.js";
+import { isRuleDefinition } from "./validators.js";
 
 export function parseRuleConfig(content: string, format?: "yaml" | "json"): RuleConfig {
-  let parsed: unknown;
-  try {
-    if (format === "json") {
-      parsed = JSON.parse(content);
-    } else if (format === "yaml") {
-      parsed = YAML.parse(content);
-    } else {
-      parsed = JSON.parse(content);
-    }
-  } catch (jsonError) {
-    if (format === "json") {
-      throw jsonError;
-    }
-    try {
-      parsed = YAML.parse(content);
-    } catch (yamlError) {
-      throw yamlError;
-    }
+  if (format === "json") {
+    return normalizeRuleConfig(JSON.parse(content));
+  }
+  if (format === "yaml") {
+    return normalizeRuleConfig(YAML.parse(content));
   }
 
-  return normalizeRuleConfig(parsed);
+  try {
+    return normalizeRuleConfig(JSON.parse(content));
+  } catch {
+    return normalizeRuleConfig(YAML.parse(content));
+  }
 }
 
 export async function loadRuleConfigFromFile(filePath: string | URL): Promise<RuleConfig> {
@@ -44,12 +36,23 @@ export function normalizeRuleConfig(input: unknown): RuleConfig {
 
   const candidate = input as Record<string, unknown>;
   if (Array.isArray(input)) {
-    return { rules: input as RuleDefinition[] };
+    return { rules: validateRules(input) };
   }
 
-  const rules = Array.isArray(candidate.rules) ? (candidate.rules as RuleDefinition[]) : [];
+  const rules = Array.isArray(candidate.rules) ? validateRules(candidate.rules) : [];
   const metadata = typeof candidate.metadata === "object" ? (candidate.metadata as Record<string, unknown>) : undefined;
   const version = typeof candidate.version === "string" ? candidate.version : undefined;
 
   return { version, rules, metadata };
+}
+
+function validateRules(rawRules: unknown[]): RuleDefinition[] {
+  const valid: RuleDefinition[] = [];
+  for (const item of rawRules) {
+    if (!isRuleDefinition(item)) {
+      throw new Error("invalid rule definition");
+    }
+    valid.push(item);
+  }
+  return valid;
 }

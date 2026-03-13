@@ -115,6 +115,9 @@ importers:
 
   packages/rules:
     dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../core
       yaml:
         specifier: ^2.6.1
         version: 2.8.2

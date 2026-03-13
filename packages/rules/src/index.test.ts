@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
 
-import { createRuleEngine, DEFAULT_RULE_CONFIG, loadRuleConfigFromFile } from "./index.js";
+import {
+  createRuleEngine,
+  DEFAULT_RULE_CONFIG,
+  loadRuleConfigFromFile,
+  parseRuleConfig,
+  RuleConfig,
+} from "./index.js";
 
 const DEFAULT_RULE_PATH = new URL("./default.rules.yaml", import.meta.url);
 
@@ -66,5 +72,77 @@ describe("rule engine", () => {
     const after = engine.evaluate(candidate);
     assert.equal(after.filtered, true);
     assert.equal(after.allowExecution, false);
+  });
+
+  it("handles any/not combinators and includes/in operators", () => {
+    const config: RuleConfig = {
+      rules: [
+        {
+          id: "any-hit",
+          type: "signal",
+          priority: 10,
+          when: { any: [{ tags_includes: "core" }, { role_in: ["owner"] }] },
+          then: { add_signal: "core_related" },
+        },
+        {
+          id: "not-low-urgency",
+          type: "filter",
+          priority: 5,
+          when: { not: { urgency_lte: 0.2 } },
+          then: { drop: false },
+        },
+      ],
+    };
+
+    const engine = createRuleEngine(config);
+    const decision = engine.evaluate({
+      tags: ["core", "backend"],
+      attributes: { role: "owner" },
+      metrics: { urgency: 0.3 },
+    });
+
+    assert.equal(decision.filtered, false);
+    assert.ok(decision.signals.includes("core_related"));
+  });
+
+  it("applies add mode and score caps", () => {
+    const config: RuleConfig = {
+      rules: [
+        {
+          id: "base",
+          type: "scoring",
+          priority: 1,
+          formula: { impact: 1 },
+          cap: { max: 0.6 },
+        },
+        {
+          id: "bonus",
+          type: "scoring",
+          priority: 2,
+          mode: "add",
+          formula: { urgency: 1 },
+          bias: 0.1,
+          cap: { max: 1 },
+        },
+      ],
+    };
+    const engine = createRuleEngine(config);
+    const decision = engine.evaluate({ metrics: { impact: 1, urgency: 0.6 } });
+    assert.equal(decision.score, 0.6 /* capped */ + 0.7 /* bias + urgency */);
+  });
+
+  it("evaluateAll works and empty rulesets are no-ops", () => {
+    const engine = createRuleEngine({ rules: [] });
+    const results = engine.evaluateAll([{ id: "a" }, { id: "b" }]);
+    assert.equal(results.length, 2);
+    for (const decision of results) {
+      assert.equal(decision.filtered, false);
+      assert.equal(decision.allowExecution, true);
+      assert.equal(decision.necessity, "should_do");
+    }
+  });
+
+  it("rejects invalid rule definitions early", () => {
+    assert.throws(() => parseRuleConfig(`rules:\n  - id: bad\n    type: banana\n`, "yaml"));
   });
 });

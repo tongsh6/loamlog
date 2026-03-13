@@ -10,6 +10,8 @@ import type {
   ComparisonOperator,
 } from "./types.js";
 
+import { getCandidateValue, toFiniteNumber } from "./value.js";
+
 const COMPARATOR_SUFFIX: Record<string, ComparisonOperator> = {
   _gte: "gte",
   _gt: "gt",
@@ -141,44 +143,11 @@ function buildFieldCondition(key: string, expected: unknown): FieldCondition {
 }
 
 function evaluateFieldCondition(condition: FieldCondition, candidate: ActionCandidate): ConditionEvaluation {
-  const actual = getValue(candidate, condition.field);
+  const actual = getCandidateValue(candidate, condition.field);
   const matched = compare(condition.op, actual, condition.expected);
   const reason = `${condition.field} ${OP_SYMBOL[condition.op]} ${formatValue(condition.expected)} (actual: ${formatValue(actual)})`;
 
   return { matched, reasons: [reason] };
-}
-
-function getValue(candidate: ActionCandidate, field: string): unknown {
-  const direct = (candidate as Record<string, unknown>)[field];
-  if (direct !== undefined) {
-    return direct;
-  }
-
-  if (candidate.metrics && field in candidate.metrics) {
-    return candidate.metrics[field];
-  }
-
-  if (candidate.flags && field in candidate.flags) {
-    return candidate.flags[field];
-  }
-
-  if (candidate.attributes && field in candidate.attributes) {
-    return candidate.attributes[field];
-  }
-
-  if (field.includes(".")) {
-    const parts = field.split(".");
-    let current: unknown = candidate;
-    for (const part of parts) {
-      if (!current || typeof current !== "object") {
-        return undefined;
-      }
-      current = (current as Record<string, unknown>)[part];
-    }
-    return current;
-  }
-
-  return undefined;
 }
 
 function compare(op: ComparisonOperator, actual: unknown, expected: unknown): boolean {
@@ -188,13 +157,13 @@ function compare(op: ComparisonOperator, actual: unknown, expected: unknown): bo
     case "neq":
       return normalize(actual) !== normalize(expected);
     case "gt":
-      return toNumber(actual) > toNumber(expected);
+      return toFiniteNumber(actual) > toFiniteNumber(expected);
     case "gte":
-      return toNumber(actual) >= toNumber(expected);
+      return toFiniteNumber(actual) >= toFiniteNumber(expected);
     case "lt":
-      return toNumber(actual) < toNumber(expected);
+      return toFiniteNumber(actual) < toFiniteNumber(expected);
     case "lte":
-      return toNumber(actual) <= toNumber(expected);
+      return toFiniteNumber(actual) <= toFiniteNumber(expected);
     case "includes":
       if (Array.isArray(actual)) {
         return actual.map(normalize).includes(normalize(expected));
@@ -211,14 +180,6 @@ function compare(op: ComparisonOperator, actual: unknown, expected: unknown): bo
     default:
       return false;
   }
-}
-
-function toNumber(value: unknown): number {
-  if (typeof value === "number") {
-    return value;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
 }
 
 function normalize(value: unknown): unknown {

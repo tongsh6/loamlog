@@ -10,6 +10,7 @@ import type {
   RuleHit,
   ScoringRule,
 } from "./types.js";
+import { getCandidateValue, toFiniteNumber } from "./value.js";
 
 type InternalRule = RuleDefinition & {
   priority: number;
@@ -201,7 +202,7 @@ function computeScore(rule: ScoringRule, candidate: ActionCandidate): { score: n
   const breakdown: string[] = [];
 
   for (const [field, weight] of Object.entries(rule.formula)) {
-    const value = toNumber(resolveValue(candidate, field));
+    const value = toFiniteNumber(getCandidateValue(candidate, field));
     const delta = value * weight;
     total += delta;
     breakdown.push(`${field}(${value.toFixed(2)})*${weight.toFixed(2)}=${delta.toFixed(2)}`);
@@ -214,55 +215,6 @@ function computeScore(rule: ScoringRule, candidate: ActionCandidate): { score: n
   return { score, breakdown };
 }
 
-function resolveValue(candidate: ActionCandidate, field: string): unknown {
-  const direct = (candidate as Record<string, unknown>)[field];
-  if (direct !== undefined) {
-    return direct;
-  }
-
-  if (candidate.metrics && field in candidate.metrics) {
-    return candidate.metrics[field];
-  }
-
-  if (candidate.flags && field in candidate.flags) {
-    return candidate.flags[field];
-  }
-
-  if (candidate.attributes && field in candidate.attributes) {
-    return candidate.attributes[field];
-  }
-
-  if (field.includes(".")) {
-    const parts = field.split(".");
-    let current: unknown = candidate;
-    for (const part of parts) {
-      if (!current || typeof current !== "object") {
-        return undefined;
-      }
-      current = (current as Record<string, unknown>)[part];
-    }
-    return current;
-  }
-
-  return undefined;
-}
-
-function toNumber(value: unknown): number {
-  if (typeof value === "number" && Number.isFinite(value)) {
-    return value;
-  }
-  const parsed = Number(value);
-  return Number.isFinite(parsed) ? parsed : 0;
-}
-
 function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
-}
-
-export function isRuleDefinition(value: unknown): value is RuleDefinition {
-  if (!value || typeof value !== "object") {
-    return false;
-  }
-  const candidate = value as Record<string, unknown>;
-  return typeof candidate.id === "string" && typeof candidate.type === "string";
 }
