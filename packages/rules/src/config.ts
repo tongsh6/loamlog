@@ -1,5 +1,6 @@
 import fs from "node:fs/promises";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import YAML from "yaml";
 
 import type { RuleConfig, RuleDefinition } from "./types.js";
@@ -28,9 +29,10 @@ export function parseRuleConfig(content: string, format?: "yaml" | "json"): Rule
   return normalizeRuleConfig(parsed);
 }
 
-export async function loadRuleConfigFromFile(filePath: string): Promise<RuleConfig> {
-  const content = await fs.readFile(filePath, "utf8");
-  const ext = path.extname(filePath).toLowerCase();
+export async function loadRuleConfigFromFile(filePath: string | URL): Promise<RuleConfig> {
+  const resolvedPath = typeof filePath === "string" ? filePath : fileURLToPath(filePath);
+  const content = await fs.readFile(resolvedPath, "utf8");
+  const ext = path.extname(resolvedPath).toLowerCase();
   const format = ext === ".yaml" || ext === ".yml" ? "yaml" : ext === ".json" ? "json" : undefined;
   return parseRuleConfig(content, format);
 }

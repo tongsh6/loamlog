@@ -3,7 +3,6 @@ import { normalizeRuleConfig } from "./config.js";
 import type {
   ActionCandidate,
   ActionDecision,
-  ComparisonOperator,
   NecessityLevel,
   RuleConfig,
   RuleDefinition,
@@ -12,10 +11,10 @@ import type {
   ScoringRule,
 } from "./types.js";
 
-interface InternalRule extends RuleDefinition {
+type InternalRule = RuleDefinition & {
   priority: number;
   condition?: ReturnType<typeof parseCondition>;
-}
+};
 
 const DEFAULT_PRIORITY = 0;
 
