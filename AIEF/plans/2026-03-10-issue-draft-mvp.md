@@ -1,5 +1,11 @@
 # Issue Draft MVP Implementation Plan
 
+> **Status:** Completed / Reference
+>
+> This plan has already been executed. The local-first issue-draft loop now exists in the repository and the corresponding MVP thread has been closed in GitHub (`#7`, `#12`, `#13`, `#14`).
+>
+> Keep this file as historical implementation context, not as an active execution checklist.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Build the first local-first issue-draft flow so a single archived AI session can produce an evidence-backed GitHub-ready draft as `.json` plus `.md`.

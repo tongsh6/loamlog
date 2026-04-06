@@ -1,5 +1,23 @@
 # M4 执行计划（M3 完成后） | M4 Execution Plan (Post-M3)
 
+> **状态 | Status:** 参考 / 部分落地 | Reference / Partially Landed
+>
+> 本文档已不再是当前项目的主要推进焦点。
+> This document is no longer the active project focus.
+>
+> M4 的主路径已经在仓库中完成落地：
+> The main M4 path has already landed in the repository:
+>
+> - `packages/providers/claude-code` 已在仓库内存在
+> - `packages/providers/claude-code` exists in-tree
+> - 面向多源捕获的 CLI / provider 接线已经完成
+> - CLI/provider wiring for multi-source capture has landed
+> - 当前剩余工作主要是加固、验证与文档恢复，而不是从零开始的新实现
+> - current remaining work is hardening, verification, and documentation recovery rather than greenfield implementation
+>
+> 请将此文件保留为历史执行上下文与验证参考，而不是当前的主要执行清单。
+> Keep this file as historical execution context and validation reference, not as the current primary execution checklist.
+
 ## 背景 | Background
 
 M3（多模型 LLM 路由）已完成并发布，`master` 与 `develop` 已同步。下一阶段进入 M4：多源 Provider 扩展，目标是在不改 capture 层核心逻辑的前提下接入第二个 AI 工具（Claude Code），验证 `ProviderAdapter` 接口的可扩展性。
