@@ -13,7 +13,7 @@ Project long-term context navigation entry.
 | [current-focus.md](business/current-focus.md) | 当前产品焦点、已完成 MVP 状态、下一阶段判断点 / Current product focus, completed MVP state, next-phase decision points | 活跃 / Active |
 | [decisions.md](business/decisions.md) | 架构决策记录（ADR）与依据 / Architecture decision records with rationale | 活跃 / Active |
 | [roadmap.md](business/roadmap.md) | 里程碑、交付物、验收标准 / Milestones, deliverables, acceptance criteria | 活跃 / Active |
-| [m3-execution-plan.md](business/m3-execution-plan.md) | M3 多模型路由执行计划与 OpenCode 手工验证清单 / M3 multi-provider execution plan and OpenCode manual verification checklist | 活跃 / Active |
+| [m3-execution-plan.md](business/m3-execution-plan.md) | M3 多模型路由执行计划与 OpenCode 手工验证清单 / M3 multi-provider execution plan and OpenCode manual verification checklist | 参考 / Reference |
 | [m4-execution-plan.md](business/m4-execution-plan.md) | M4 Claude Code provider 执行计划与手工验证清单 / M4 Claude Code provider execution plan and manual verification checklist | 参考 / Reference |
 
 ### tech/ - 架构、集成、契约 | Architecture, integrations, contracts
@@ -38,7 +38,7 @@ Project long-term context navigation entry.
 | 文件 / File | 说明 / Description | 状态 / Status |
 |---|---|---|
 | [2026-03-10-issue-draft-mvp.md](../plans/2026-03-10-issue-draft-mvp.md) | issue-draft MVP 的分步执行计划 / Step-by-step implementation plan for issue-draft MVP | 参考 / Reference |
-| [2026-03-11-distill-builtins-decoupling.md](../plans/2026-03-11-distill-builtins-decoupling.md) | `@loamlog/distill` 与内置插件解耦计划 / Decoupling plan for `@loamlog/distill` and built-in plugins | 活跃 / Active |
+| [2026-03-11-distill-builtins-decoupling.md](../plans/2026-03-11-distill-builtins-decoupling.md) | `@loamlog/distill` 与内置插件解耦计划 / Decoupling plan for `@loamlog/distill` and built-in plugins | 参考 / Reference |
 
 ### ../openspec/ - 最小规格层 | Minimal Spec Layer
 
@@ -46,3 +46,6 @@ Project long-term context navigation entry.
 |---|---|---|
 | [README.md](../openspec/README.md) | OpenSpec 层说明与使用边界 / OpenSpec purpose and usage boundary | 已建立 / Established |
 | [current-focus.md](../openspec/current-focus.md) | 当前产品焦点、完成态与下一阶段判断点 / Current product focus, completed state, and next-phase decision points | 活跃 / Active |
+| [distill-builtins-boundary.md](../openspec/distill-builtins-boundary.md) | 内置 distiller/sink 与 CLI bootstrap 的边界规格 / Boundary spec for built-in distiller/sink ownership and CLI bootstrap | 活跃 / Active |
+| [issue-draft-module-boundary.md](../openspec/issue-draft-module-boundary.md) | `@loamlog/distiller-issue-draft` 的内部模块拆分边界 / Internal module boundary for `@loamlog/distiller-issue-draft` | 活跃 / Active |
+| [mcp-exposure-layer.md](../openspec/mcp-exposure-layer.md) | Issue #24 的 MCP 暴露层边界规格：先定义 resource/tool/prompt 映射，再决定是否实现服务端 / Boundary spec for Issue #24 MCP exposure: define resource/tool/prompt mapping before any server implementation | 活跃 / Active |
