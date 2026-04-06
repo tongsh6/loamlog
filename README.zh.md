@@ -58,7 +58,7 @@ Cursor*      ──►  脱敏处理             多 distiller          notion*
 
 - **今天已具备**：采集、归档、脱敏、触发、evidence-backed distill、评估，以及本地文件输出
 - **当前产品焦点**：稳定首个 Killer Flow：`AI conversation -> structured evidence -> local issue draft`
-- **下一步**：MCP Exposure Layer 设计（里程碑 B）和 GitHub API sink（第二阶段）
+- **下一步**：MCP Exposure Layer 设计（里程碑 B，边界规格已落在 `AIEF/openspec/mcp-exposure-layer.md`）和 GitHub API sink（第二阶段）
 
 ---
 

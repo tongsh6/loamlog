@@ -58,7 +58,7 @@ The main product question is now: "Is the first flow stable enough to justify St
 
 - **Shipped today** — capture, archive, redaction, trigger, evidence-backed distill, evaluation, and file-based local output
 - **Current product focus** — stabilize the first killer flow: `AI conversation -> structured evidence -> local issue draft`
-- **Planned next** — MCP Exposure Layer design (Milestone B) and GitHub API sink (Stage 2)
+- **Planned next** — MCP Exposure Layer design (Milestone B), now anchored by `AIEF/openspec/mcp-exposure-layer.md`, and GitHub API sink (Stage 2)
 
 ---
 

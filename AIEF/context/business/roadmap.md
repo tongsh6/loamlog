@@ -66,6 +66,16 @@ AI conversation -> structured evidence -> local issue draft
 
 M4 执行计划仍保留为参考文档，但不再代表当前唯一焦点。
 
+同时，Milestone B 的协议化方向已经有了第一份正式边界规格：
+
+- Issue #24（MCP Exposure Layer）已通过 PR #52 落地设计边界文档：`AIEF/openspec/mcp-exposure-layer.md`
+- 当前含义是“先明确 resource/tool/prompt 映射与安全边界”，而不是立即投入完整 MCP Server 实现
+
+At the same time, Milestone B's protocol direction now has its first formal boundary spec:
+
+- Issue #24 (MCP Exposure Layer) now has an in-repo boundary document via PR #52: `AIEF/openspec/mcp-exposure-layer.md`
+- The current meaning is design-first protocol mapping and safety boundaries, not immediate investment in a full MCP server implementation
+
 ---
 
 ## M0：验证阶段 | Validation
@@ -181,7 +191,7 @@ M4 执行计划仍保留为参考文档，但不再代表当前唯一焦点。
 3. 通过 loam capture 或 daemon 触发的 Claude Code 会话，归档 snapshot 的 .meta.provider 字段值为 "claude-code"
 4. Claude Code provider 与 OpenCode provider 可并行采集，互不干扰，归档路径结构完全一致
 
-详细执行计划 / Detailed execution plan: `AIEF/context/business/m4-execution-plan.md`
+参考执行计划 / Reference execution plan: `AIEF/context/business/m4-execution-plan.md`
 
 状态说明 / Status note:
 

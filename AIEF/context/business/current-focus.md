@@ -28,6 +28,8 @@ AI conversation -> structured evidence -> local issue draft
 
 ## 当前活跃议题 | Current Active Threads
 
+- `#24` — MCP Exposure Layer：作为 Milestone B 的设计入口，当前已在 `AIEF/openspec/mcp-exposure-layer.md` 固化 design-first / mapping-first 边界，但尚不进入完整 MCP Server 实现
+- `#24` — MCP Exposure Layer: now has a formal boundary spec at `AIEF/openspec/mcp-exposure-layer.md`; it is an active Milestone B design track, not a full MCP server implementation effort yet
 - `#5` — umbrella：zero-config discovery 方向
 - `#9` / `#10` / `#11` — 作为后续 discovery 研究与规格拆分
 - `#6` — Auto-Skill Generation，保留为 later-stage idea
@@ -60,6 +62,8 @@ There are no longer active implementation issues for the first issue-draft MVP l
 - issue-draft 输出是否足够稳定、可复用、可读
 - 用户是否真的会把本地 `.md` 草稿复制进 GitHub
 - 是否已经值得推进 Stage 2 的自动化项（例如 GitHub API sink）
+- 是否先继续推进 #24 的协议边界细化（例如 request/response shape 与 auth tier），而不是直接重投入服务端实现
+- Whether to continue refining the #24 protocol boundary (for example request/response shapes and auth tiers) before committing to any MCP server implementation
 
 ### `#5` umbrella
 
