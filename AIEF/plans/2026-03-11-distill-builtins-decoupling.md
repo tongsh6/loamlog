@@ -1,5 +1,15 @@
 # Distill Built-ins Decoupling Implementation Plan
 
+> **Status:** Completed / Reference
+>
+> The intended boundary in this plan is already reflected in the current repository state:
+>
+> - `@loamlog/distill` no longer owns direct built-in distiller/sink dependencies
+> - `@loamlog/cli` owns built-in plugin availability for default CLI execution
+> - built-in specifier normalization now happens in the CLI layer
+>
+> Keep this file as historical implementation context. The active architectural boundary now lives in `AIEF/openspec/distill-builtins-boundary.md`.
+
 > **For Claude:** REQUIRED SUB-SKILL: Use superpowers:executing-plans to implement this plan task-by-task.
 
 **Goal:** Decouple `@loamlog/distill` from direct built-in distiller/sink package dependencies while preserving current runtime plugin loading behavior.
