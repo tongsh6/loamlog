@@ -62,7 +62,7 @@ There are no longer active implementation issues for the first issue-draft MVP l
 - issue-draft 输出是否足够稳定、可复用、可读
 - 用户是否真的会把本地 `.md` 草稿复制进 GitHub
 - 是否已经值得推进 Stage 2 的自动化项（例如 GitHub API sink）
-- 是否先继续推进 #24 的协议边界细化（例如 request/response shape 与 auth tier），而不是直接重投入服务端实现
+- 是否先继续推进 #24 的协议边界细化（例如 request/response shapes 与 auth tiers），而不是直接重投入服务端实现
 - Whether to continue refining the #24 protocol boundary (for example request/response shapes and auth tiers) before committing to any MCP server implementation
 
 ### `#5` umbrella

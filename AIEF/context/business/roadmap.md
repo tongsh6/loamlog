@@ -68,12 +68,12 @@ M4 执行计划仍保留为参考文档，但不再代表当前唯一焦点。
 
 同时，Milestone B 的协议化方向已经有了第一份正式边界规格：
 
-- Issue #24（MCP Exposure Layer）已通过 PR #52 落地设计边界文档：`AIEF/openspec/mcp-exposure-layer.md`
+- Issue #24（MCP Exposure Layer）现已形成仓库内设计边界文档：`AIEF/openspec/mcp-exposure-layer.md`
 - 当前含义是“先明确 resource/tool/prompt 映射与安全边界”，而不是立即投入完整 MCP Server 实现
 
 At the same time, Milestone B's protocol direction now has its first formal boundary spec:
 
-- Issue #24 (MCP Exposure Layer) now has an in-repo boundary document via PR #52: `AIEF/openspec/mcp-exposure-layer.md`
+- Issue #24 (MCP Exposure Layer) now has an in-repo boundary document: `AIEF/openspec/mcp-exposure-layer.md`
 - The current meaning is design-first protocol mapping and safety boundaries, not immediate investment in a full MCP server implementation
 
 ---
