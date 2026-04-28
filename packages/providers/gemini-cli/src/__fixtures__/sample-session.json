@@ -1,0 +1,82 @@
+{
+  "sessionId": "test-session-001",
+  "messages": [
+    {
+      "id": "msg-001",
+      "type": "user",
+      "timestamp": "2026-04-29T10:00:00.000Z",
+      "content": {
+        "parts": [{ "text": "帮我重构 packages/core/src/index.ts 里的类型定义" }],
+        "role": "user"
+      }
+    },
+    {
+      "id": "msg-002",
+      "type": "gemini",
+      "timestamp": "2026-04-29T10:00:05.000Z",
+      "model": "gemini-2.5-pro",
+      "content": {
+        "parts": [{ "text": "好的，我先看一下现有的类型定义。" }],
+        "role": "model"
+      },
+      "toolCalls": [
+        {
+          "id": "call-001",
+          "name": "read_file",
+          "args": { "filePath": "/Users/dev/project/packages/core/src/index.ts" },
+          "result": {
+            "parts": [{ "text": "import type { JSONSchema7 } from \"json-schema\";\n\nexport interface CaptureRequest { ... }" }]
+          },
+          "status": "success",
+          "timestamp": "2026-04-29T10:00:03.000Z",
+          "displayName": "Read file"
+        }
+      ],
+      "thoughts": [
+        { "text": "我需要先读取现有文件来了解类型定义的结构。", "timestamp": "2026-04-29T10:00:02.000Z" }
+      ],
+      "tokens": {
+        "input": 1500,
+        "output": 200,
+        "cached": 800,
+        "thoughts": 100,
+        "total": 1700
+      }
+    },
+    {
+      "id": "msg-003",
+      "type": "gemini",
+      "timestamp": "2026-04-29T10:00:20.000Z",
+      "model": "gemini-2.5-pro",
+      "content": {
+        "parts": [{ "text": "我建议将 CaptureRequest 拆分为更小的接口，提高可组合性。" }],
+        "role": "model"
+      },
+      "tokens": {
+        "input": 2000,
+        "output": 350,
+        "cached": 1200,
+        "thoughts": 0,
+        "total": 2350
+      }
+    },
+    {
+      "id": "msg-004",
+      "type": "user",
+      "timestamp": "2026-04-29T10:01:00.000Z",
+      "content": {
+        "parts": [{ "text": "可以，开始重构吧" }],
+        "role": "user"
+      }
+    },
+    {
+      "id": "msg-005",
+      "type": "info",
+      "timestamp": "2026-04-29T10:05:00.000Z",
+      "content": {
+        "parts": [{ "text": "Session auto-saved" }],
+        "role": "system"
+      }
+    }
+  ]
+}

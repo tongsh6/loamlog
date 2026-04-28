@@ -107,6 +107,12 @@ importers:
         specifier: workspace:*
         version: link:../../core
 
+  packages/providers/gemini-cli:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
+
   packages/providers/opencode:
     dependencies:
       '@loamlog/core':
