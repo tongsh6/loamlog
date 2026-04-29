@@ -44,6 +44,9 @@ importers:
       '@loamlog/provider-claude-code':
         specifier: workspace:*
         version: link:../providers/claude-code
+      '@loamlog/provider-codex':
+        specifier: workspace:*
+        version: link:../providers/codex
       '@loamlog/provider-gemini-cli':
         specifier: workspace:*
         version: link:../providers/gemini-cli
@@ -105,6 +108,12 @@ importers:
   packages/evaluation-harness: {}
 
   packages/providers/claude-code:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
+
+  packages/providers/codex:
     dependencies:
       '@loamlog/core':
         specifier: workspace:*

@@ -5,7 +5,9 @@ import { runDistillCommand } from "./distill.js";
 import { runListCommand } from "./list.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
 import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loamlog/provider-claude-code";
+import { pullCodexSessionFromFilePath, startCodexWatcher } from "@loamlog/provider-codex";
 import { pullGeminiCliSessionFromFilePath, startGeminiCliWatcher } from "@loamlog/provider-gemini-cli";
+import { startOpencodeWatcher } from "@loamlog/provider-opencode";
 
 function printUsage(): void {
   console.log("Usage: loam <command> [options]");
@@ -171,6 +173,70 @@ async function main(): Promise<void> {
     });
     watchers.push(watcher);
     console.log("[loam daemon] enabled provider watcher: gemini-cli");
+  }
+
+  if (providerIds.includes("codex")) {
+    const watcher = startCodexWatcher({
+      logger(message) {
+        console.log(message);
+      },
+      onReady: async (event) => {
+        const pulled = await pullCodexSessionFromFilePath(event.filePath);
+        const response = await fetch(`http://${started.host}:${started.port}/capture`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: event.sessionId,
+            trigger: event.trigger,
+            captured_at: new Date().toISOString(),
+            provider: "codex",
+            pulled,
+          }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(
+            `[loam codex] watcher capture failed session_id=${event.sessionId} file_path=${event.filePath} status=${response.status} body=${text}`,
+          );
+        }
+      },
+    });
+    watchers.push(watcher);
+    console.log("[loam daemon] enabled provider watcher: codex");
+  }
+
+  if (providerIds.includes("opencode")) {
+    const watcher = startOpencodeWatcher({
+      logger(message) {
+        console.log(message);
+      },
+      onReady: async (event) => {
+        const response = await fetch(`http://${started.host}:${started.port}/capture`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: event.sessionId,
+            trigger: event.trigger,
+            captured_at: new Date().toISOString(),
+            provider: "opencode",
+          }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(
+            `[loam opencode] watcher capture failed session_id=${event.sessionId} status=${response.status} body=${text}`,
+          );
+        }
+      },
+    });
+    watchers.push(watcher);
+    console.log("[loam daemon] enabled provider watcher: opencode");
   }
 
   const gracefulClose = () => {
