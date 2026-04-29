@@ -2,6 +2,7 @@
 import { startDaemon } from "./daemon.js";
 import { runCaptureCommand } from "./capture.js";
 import { runDistillCommand } from "./distill.js";
+import { runListCommand } from "./list.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
 import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loamlog/provider-claude-code";
 import { pullGeminiCliSessionFromFilePath, startGeminiCliWatcher } from "@loamlog/provider-gemini-cli";
@@ -10,6 +11,7 @@ function printUsage(): void {
   console.log("Usage: loam <command> [options]");
   console.log("Commands:");
   console.log("  daemon  [--port <number>] [--dump-dir <path>] [--providers <list>]");
+  console.log("  list    [--repo <name>] [--since <duration>] [--distill] [--pending] [--limit <n>] [--json] [--dump-dir <path>]");
   console.log("  capture [--provider <name>] [--session-id <id>] [--dump-dir <path>] [--trigger <name>]");
   console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>]");
 }
@@ -67,6 +69,11 @@ async function main(): Promise<void> {
   if (!command) {
     printUsage();
     process.exitCode = 1;
+    return;
+  }
+
+  if (command === "list") {
+    await runListCommand(args);
     return;
   }
 
