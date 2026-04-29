@@ -267,15 +267,6 @@ function formatTable(headers: string[], rows: string[][]): string {
   return lines.join("\n");
 }
 
-function inferRepoFromCwd(): string | undefined {
-  try {
-    const cwd = process.cwd();
-    return path.basename(cwd);
-  } catch {
-    return undefined;
-  }
-}
-
 export async function runListCommand(args: string[]): Promise<void> {
   const dumpDir = getArg(args, "--dump-dir") ?? process.env.LOAM_DUMP_DIR;
   if (!dumpDir) {
@@ -284,7 +275,7 @@ export async function runListCommand(args: string[]): Promise<void> {
     return;
   }
 
-  const repo = getArg(args, "--repo") ?? inferRepoFromCwd();
+  const repo = getArg(args, "--repo");
   const since = getArg(args, "--since");
   const distill = args.includes("--distill");
   const pending = args.includes("--pending");
@@ -317,7 +308,7 @@ export async function runListCommand(args: string[]): Promise<void> {
     }
 
     if (results.length === 0) {
-      console.log(`No distill results found${repo ? ` in ${repo}` : ""}`);
+      console.log(`No distill results found${repo ? ` in ${repo}` : ""}.\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`);
       return;
     }
 
@@ -342,7 +333,7 @@ export async function runListCommand(args: string[]): Promise<void> {
     }
 
     if (sessions.length === 0) {
-      console.log(`No sessions found${repo ? ` in ${repo}` : ""}`);
+      console.log(`No sessions found${repo ? ` in ${repo}` : ""}.\n  Tip: use --repo <name> to filter, or check daemon is running with: lsof -i :37468`);
       return;
     }
 
