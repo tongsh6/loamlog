@@ -273,7 +273,12 @@ async function findSessionFile(
   projectsDir: string,
   readDirImpl: ReadDir,
 ): Promise<string> {
-  const projectEntries = await readDirImpl(projectsDir);
+  let projectEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+  try {
+    projectEntries = await readDirImpl(projectsDir);
+  } catch {
+    throw new Error(`Gemini CLI session file not found for ${sessionId}`);
+  }
 
   for (const entry of projectEntries) {
     if (!entry.isDirectory()) {
