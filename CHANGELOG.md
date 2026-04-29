@@ -5,6 +5,28 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.5.0] - 2026-04-30
+
+### Multi-Provider Active Collection + loam list CLI
+
+This release adds active file-system watchers for all 4 AI tools and a `loam list` command for browsing sessions.
+
+### Added
+
+- **`loam list` command** — browse captured sessions and distill results with filtering (`--repo`, `--since`, `--distill`, `--pending`, `--json`)
+- **Gemini CLI provider** (`@loamlog/provider-gemini-cli`) — file-system watcher for `~/.gemini/tmp/*/chats/session-*.json`
+- **Codex CLI provider** (`@loamlog/provider-codex`) — JSONL session parser + file watcher for `~/.codex/sessions/`
+- **OpenCode SQLite watcher** — active session discovery via `opencode.db`, no plugin required
+
+### Changed
+
+- All 4 providers (opencode, claude-code, gemini-cli, codex) now use active watcher-based collection
+- `loam list` no longer infers repo from current directory; `--repo` flag is explicit
+
+### Fixed
+
+- Suppressed Node.js SQLite experimental warning in `loam` CLI wrapper
+
 ## [0.4.0] - 2026-03-13
 
 ### Milestone A: Trust Infrastructure ✅
