@@ -17,6 +17,8 @@
     "@loamlog/distiller-issue-draft": "workspace:*",
     "@loamlog/distiller-pitfall-card": "workspace:*",
     "@loamlog/provider-claude-code": "workspace:*",
+    "@loamlog/provider-codex": "workspace:*",
+    "@loamlog/provider-gemini-cli": "workspace:*",
     "@loamlog/provider-opencode": "workspace:*",
     "@loamlog/sanitizer": "workspace:*",
     "@loamlog/sink-file": "workspace:*",

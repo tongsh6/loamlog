@@ -1,4 +1,6 @@
+import { DatabaseSync } from "node:sqlite";
 import path from "node:path";
+import { homedir } from "node:os";
 import type {
   PulledSessionPayload,
   SessionArtifactPart,
@@ -276,6 +278,163 @@ export function createOpencodeSessionProvider(
     id: "opencode",
     async pullSession(sessionId: string): Promise<PulledSessionPayload> {
       return fetcher(sessionId);
+    },
+  };
+}
+
+// ── OpenCode Watcher (SQLite-based active discovery) ──
+
+function defaultOpendcodeHome(): string {
+  return process.env.OPENCODE_HOME ?? path.join(homedir(), ".local", "share", "opencode");
+}
+
+function defaultOpencodeDbPath(): string {
+  return path.join(defaultOpendcodeHome(), "opencode.db");
+}
+
+interface OpenCodeSessionRow {
+  id: string;
+  directory: string;
+  time_created: number;
+  time_updated: number;
+}
+
+async function listOpencodeSessionRows(dbPath: string): Promise<OpenCodeSessionRow[]> {
+  const db = new DatabaseSync(dbPath, { readOnly: true });
+  try {
+    const rows = db.prepare(
+      "SELECT id, directory, time_created, time_updated FROM session WHERE parent_id IS NULL AND time_archived IS NULL ORDER BY time_updated DESC",
+    ).all() as unknown as OpenCodeSessionRow[];
+    return rows;
+  } finally {
+    db.close();
+  }
+}
+
+function clampIdleMs(value: number | undefined): number {
+  if (!value || !Number.isFinite(value)) {
+    return 30_000;
+  }
+  return Math.max(5_000, Math.floor(value));
+}
+
+function clampPollIntervalMs(value: number | undefined): number {
+  if (!value || !Number.isFinite(value)) {
+    return 2_000;
+  }
+  return Math.max(500, Math.floor(value));
+}
+
+export interface StartOpencodeWatcherOptions {
+  dbPath?: string;
+  baseUrl?: string;
+  token?: string;
+  idleMs?: number;
+  pollIntervalMs?: number;
+  retryDelayMs?: number;
+  logger?: (message: string) => void;
+  onReady(event: { sessionId: string; trigger: string }): void | Promise<void>;
+}
+
+export interface OpencodeWatcher {
+  close(): void;
+}
+
+export function startOpencodeWatcher(options: StartOpencodeWatcherOptions): OpencodeWatcher {
+  const dbPath = options.dbPath ?? defaultOpencodeDbPath();
+  const logger = options.logger ?? (() => undefined);
+  const idleMs = clampIdleMs(options.idleMs ?? Number(process.env.LOAM_OPENCODE_IDLE_MS));
+  const pollIntervalMs = clampPollIntervalMs(options.pollIntervalMs);
+  const retryDelayMs = clampPollIntervalMs(options.retryDelayMs ?? 5_000);
+  const knownSessions = new Map<string, number>();
+  const timers = new Map<string, ReturnType<typeof setTimeout>>();
+  let stopped = false;
+  let scanning = false;
+
+  const scheduleReady = (sessionId: string, delayMs = idleMs) => {
+    const existing = timers.get(sessionId);
+    if (existing) {
+      clearTimeout(existing);
+    }
+
+    const timer = setTimeout(() => {
+      timers.delete(sessionId);
+      void Promise.resolve(options.onReady({ sessionId, trigger: "session.idle" })).catch((error: unknown) => {
+        const message = error instanceof Error ? error.message : String(error);
+        logger(`[loam opencode] watcher callback failed session_id=${sessionId} error=${message}`);
+        if (!stopped) {
+          scheduleReady(sessionId, retryDelayMs);
+        }
+      });
+    }, delayMs);
+
+    timers.set(sessionId, timer);
+  };
+
+  const scan = async (seedOnly: boolean): Promise<void> => {
+    if (stopped || scanning) {
+      return;
+    }
+
+    scanning = true;
+    try {
+      let rows: OpenCodeSessionRow[];
+      try {
+        rows = await listOpencodeSessionRows(dbPath);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : String(error);
+        logger(`[loam opencode] watcher db scan failed: ${message}`);
+        return;
+      }
+
+      const now = Date.now();
+      const startupWindowMs = Math.max(idleMs, 120_000);
+
+      for (const row of rows) {
+        const sessionId = row.id;
+        const previousUpdated = knownSessions.get(sessionId);
+        knownSessions.set(sessionId, row.time_updated);
+
+        if (seedOnly) {
+          if (previousUpdated !== undefined) {
+            continue;
+          }
+
+          const timeSince = now - row.time_updated;
+          if (timeSince <= startupWindowMs) {
+            const delayMs = Math.max(0, idleMs - timeSince);
+            scheduleReady(sessionId, delayMs);
+          }
+          continue;
+        }
+
+        if (previousUpdated !== undefined && row.time_updated <= previousUpdated) {
+          continue;
+        }
+
+        scheduleReady(sessionId);
+      }
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      logger(`[loam opencode] watcher scan failed: ${message}`);
+    } finally {
+      scanning = false;
+    }
+  };
+
+  void scan(true);
+  const interval = setInterval(() => {
+    void scan(false);
+  }, pollIntervalMs);
+
+  return {
+    close(): void {
+      stopped = true;
+      clearInterval(interval);
+      for (const timer of timers.values()) {
+        clearTimeout(timer);
+      }
+      timers.clear();
     },
   };
 }
