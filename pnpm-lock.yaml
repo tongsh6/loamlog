@@ -44,6 +44,9 @@ importers:
       '@loamlog/provider-claude-code':
         specifier: workspace:*
         version: link:../providers/claude-code
+      '@loamlog/provider-gemini-cli':
+        specifier: workspace:*
+        version: link:../providers/gemini-cli
       '@loamlog/provider-opencode':
         specifier: workspace:*
         version: link:../providers/opencode

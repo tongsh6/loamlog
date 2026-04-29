@@ -1,5 +1,6 @@
 import type { SessionProvider } from "@loamlog/core";
 import { createClaudeCodeSessionProvider } from "@loamlog/provider-claude-code";
+import { createGeminiCliSessionProvider } from "@loamlog/provider-gemini-cli";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
 
 const DEFAULT_PROVIDERS = ["opencode"];
@@ -32,6 +33,11 @@ export function createSessionProviders(providerIds: string[]): Record<string, Se
 
     if (providerId === "claude-code") {
       providers[providerId] = createClaudeCodeSessionProvider();
+      continue;
+    }
+
+    if (providerId === "gemini-cli") {
+      providers[providerId] = createGeminiCliSessionProvider();
       continue;
     }
 

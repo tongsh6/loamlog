@@ -4,6 +4,7 @@ import { runCaptureCommand } from "./capture.js";
 import { runDistillCommand } from "./distill.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
 import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loamlog/provider-claude-code";
+import { pullGeminiCliSessionFromFilePath, startGeminiCliWatcher } from "@loamlog/provider-gemini-cli";
 
 function printUsage(): void {
   console.log("Usage: loam <command> [options]");
@@ -97,43 +98,78 @@ async function main(): Promise<void> {
   });
   console.log(`[loam daemon] listening on http://${started.host}:${started.port}`);
 
-  const watcher = providerIds.includes("claude-code")
-    ? startClaudeCodeWatcher({
-        logger(message) {
-          console.log(message);
-        },
-        onReady: async (event) => {
-          const pulled = await pullClaudeCodeSessionFromFilePath(event.filePath);
-          const response = await fetch(`http://${started.host}:${started.port}/capture`, {
-            method: "POST",
-            headers: {
-              "content-type": "application/json",
-            },
-            body: JSON.stringify({
-              session_id: event.sessionId,
-              trigger: event.trigger,
-              captured_at: new Date().toISOString(),
-              provider: "claude-code",
-              pulled,
-            }),
-          });
+  const watchers: Array<{ close(): void }> = [];
 
-          if (!response.ok) {
-            const text = await response.text();
-            throw new Error(
-              `[loam claude-code] watcher capture failed session_id=${event.sessionId} file_path=${event.filePath} status=${response.status} body=${text}`,
-            );
-          }
-        },
-      })
-    : undefined;
+  if (providerIds.includes("claude-code")) {
+    const watcher = startClaudeCodeWatcher({
+      logger(message) {
+        console.log(message);
+      },
+      onReady: async (event) => {
+        const pulled = await pullClaudeCodeSessionFromFilePath(event.filePath);
+        const response = await fetch(`http://${started.host}:${started.port}/capture`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: event.sessionId,
+            trigger: event.trigger,
+            captured_at: new Date().toISOString(),
+            provider: "claude-code",
+            pulled,
+          }),
+        });
 
-  if (watcher) {
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(
+            `[loam claude-code] watcher capture failed session_id=${event.sessionId} file_path=${event.filePath} status=${response.status} body=${text}`,
+          );
+        }
+      },
+    });
+    watchers.push(watcher);
     console.log("[loam daemon] enabled provider watcher: claude-code");
   }
 
+  if (providerIds.includes("gemini-cli")) {
+    const watcher = startGeminiCliWatcher({
+      logger(message) {
+        console.log(message);
+      },
+      onReady: async (event) => {
+        const pulled = await pullGeminiCliSessionFromFilePath(event.filePath);
+        const response = await fetch(`http://${started.host}:${started.port}/capture`, {
+          method: "POST",
+          headers: {
+            "content-type": "application/json",
+          },
+          body: JSON.stringify({
+            session_id: event.sessionId,
+            trigger: event.trigger,
+            captured_at: new Date().toISOString(),
+            provider: "gemini-cli",
+            pulled,
+          }),
+        });
+
+        if (!response.ok) {
+          const text = await response.text();
+          throw new Error(
+            `[loam gemini-cli] watcher capture failed session_id=${event.sessionId} file_path=${event.filePath} status=${response.status} body=${text}`,
+          );
+        }
+      },
+    });
+    watchers.push(watcher);
+    console.log("[loam daemon] enabled provider watcher: gemini-cli");
+  }
+
   const gracefulClose = () => {
-    watcher?.close();
+    for (const w of watchers) {
+      w.close();
+    }
     started.server.close(() => {
       process.exit(0);
     });
