@@ -21,6 +21,7 @@ Project long-term context navigation entry.
 | 文件 / File | 说明 / Description | 状态 / Status |
 |---|---|---|
 | [architecture.md](tech/architecture.md) | 总体架构、包结构、数据流 / Overall architecture, package layout, data flow | 已建立 / Established |
+| [engineering-principles.md](tech/engineering-principles.md) | 长期工程原则与 AI 开发准则：DRY、开闭、正交、切面、深模块、DAG、垂直切片、性能与业务建模 / Long-term engineering principles and AI development rules: DRY, open-closed design, orthogonality, aspects, deep modules, DAG, vertical slices, performance, and business modeling | 活跃 / Active |
 | [opencode-integration.md](tech/opencode-integration.md) | OpenCode 插件系统调研（事件、SDK、模型）/ OpenCode plugin research (events, SDK, model) | 参考 / Reference |
 | [contracts.md](tech/contracts.md) | 核心接口契约：Provider/Distiller/Sink/LLM / Core contracts: Provider/Distiller/Sink/LLM | 已建立 / Established |
 
@@ -39,6 +40,7 @@ Project long-term context navigation entry.
 |---|---|---|
 | [2026-03-10-issue-draft-mvp.md](../plans/2026-03-10-issue-draft-mvp.md) | issue-draft MVP 的分步执行计划 / Step-by-step implementation plan for issue-draft MVP | 参考 / Reference |
 | [2026-03-11-distill-builtins-decoupling.md](../plans/2026-03-11-distill-builtins-decoupling.md) | `@loamlog/distill` 与内置插件解耦计划 / Decoupling plan for `@loamlog/distill` and built-in plugins | 参考 / Reference |
+| [2026-04-30-architecture-dag-blueprint.md](../plans/2026-04-30-architecture-dag-blueprint.md) | 架构 DAG 蓝图：DRY、开闭、正交、切面、深模块、性能与资产图建模的长期推进事项 / Architecture DAG blueprint for DRY, open-closed design, orthogonality, aspects, deep modules, performance, and asset graph modeling | 活跃 / Active |
 
 ### ../openspec/ - 最小规格层 | Minimal Spec Layer
 
