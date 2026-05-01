@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { readArchiveIndex, type ArchiveIndexEntry } from "@loamlog/archive";
@@ -8,8 +9,19 @@ interface ListOptions {
   since?: string;
   distill?: boolean;
   pending?: boolean;
+  scan?: boolean;
   limit: number;
   json: boolean;
+}
+
+interface ScanReportSummary {
+  runId: string;
+  profile: string;
+  startedAt: string;
+  findings: number;
+  blocking: number;
+  branch: string;
+  dirty: boolean;
 }
 
 interface SessionSummary {
@@ -37,7 +49,9 @@ function sanitizeRepoName(value: string): string {
 function parseDuration(value: string): number {
   const match = value.match(/^(\d+)(h|d|w)$/);
   if (!match) {
-    throw new Error(`invalid duration: ${value}; expected format like 24h, 7d, 30d`);
+    throw new Error(
+      `invalid duration: ${value}; expected format like 24h, 7d, 30d`,
+    );
   }
 
   const num = Number.parseInt(match[1], 10);
@@ -57,7 +71,7 @@ function parseDuration(value: string): number {
 
 async function listRepos(dumpDir: string): Promise<string[]> {
   const reposRoot = path.join(dumpDir, "repos");
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await readdir(reposRoot, { withFileTypes: true });
   } catch (error) {
@@ -86,7 +100,9 @@ async function listSessionsFromIndex(
   dumpDir: string,
   opts: ListOptions,
 ): Promise<SessionSummary[]> {
-  const sinceTs = opts.since ? Date.now() - parseDuration(opts.since) : undefined;
+  const sinceTs = opts.since
+    ? Date.now() - parseDuration(opts.since)
+    : undefined;
   const index = await readArchiveIndex(dumpDir);
 
   const entries = Object.values(index.entries);
@@ -122,7 +138,9 @@ async function listSessionsFromScan(
   opts: ListOptions,
 ): Promise<SessionSummary[]> {
   const results: SessionSummary[] = [];
-  const sinceTs = opts.since ? Date.now() - parseDuration(opts.since) : undefined;
+  const sinceTs = opts.since
+    ? Date.now() - parseDuration(opts.since)
+    : undefined;
 
   const repoDirs = opts.repo
     ? [sanitizeRepoName(opts.repo)]
@@ -130,7 +148,7 @@ async function listSessionsFromScan(
 
   for (const repoDir of repoDirs) {
     const sessionsDir = path.join(dumpDir, "repos", repoDir, "sessions");
-    let entries;
+    let entries: Dirent[];
     try {
       entries = await readdir(sessionsDir, { withFileTypes: true });
     } catch (error) {
@@ -160,7 +178,11 @@ async function listSessionsFromScan(
         continue;
       }
 
-      let parsed: { meta?: Record<string, unknown>; messages?: unknown[]; redacted?: Record<string, unknown> };
+      let parsed: {
+        meta?: Record<string, unknown>;
+        messages?: unknown[];
+        redacted?: Record<string, unknown>;
+      };
       try {
         parsed = JSON.parse(text) as typeof parsed;
       } catch {
@@ -172,7 +194,8 @@ async function listSessionsFromScan(
         continue;
       }
 
-      const capturedAt = typeof meta.captured_at === "string" ? meta.captured_at : "";
+      const capturedAt =
+        typeof meta.captured_at === "string" ? meta.captured_at : "";
 
       if (sinceTs) {
         const capturedTs = Date.parse(capturedAt);
@@ -183,10 +206,15 @@ async function listSessionsFromScan(
 
       results.push({
         session_id: meta.session_id as string,
-        provider: typeof meta.provider === "string" ? (meta.provider as string) : "unknown",
+        provider:
+          typeof meta.provider === "string"
+            ? (meta.provider as string)
+            : "unknown",
         repo: repoDir,
         captured_at: capturedAt,
-        messages_count: Array.isArray(parsed.messages) ? parsed.messages.length : 0,
+        messages_count: Array.isArray(parsed.messages)
+          ? parsed.messages.length
+          : 0,
         redacted_count:
           parsed.redacted && typeof parsed.redacted.redacted_count === "number"
             ? (parsed.redacted.redacted_count as number)
@@ -201,7 +229,7 @@ async function listSessionsFromScan(
 async function countSessionFiles(dumpDir: string): Promise<number> {
   const reposRoot = path.join(dumpDir, "repos");
   let count = 0;
-  let repoEntries;
+  let repoEntries: Dirent[];
   try {
     repoEntries = await readdir(reposRoot, { withFileTypes: true });
   } catch {
@@ -211,8 +239,12 @@ async function countSessionFiles(dumpDir: string): Promise<number> {
     if (!repoEntry.isDirectory()) continue;
     const sessionsDir = path.join(reposRoot, repoEntry.name, "sessions");
     try {
-      const sessionEntries = await readdir(sessionsDir, { withFileTypes: true });
-      count += sessionEntries.filter((e) => e.isFile() && e.name.endsWith(".json")).length;
+      const sessionEntries = await readdir(sessionsDir, {
+        withFileTypes: true,
+      });
+      count += sessionEntries.filter(
+        (e) => e.isFile() && e.name.endsWith(".json"),
+      ).length;
     } catch {
       continue;
     }
@@ -237,7 +269,7 @@ async function listSessions(
 
 async function listDistillRepos(dumpDir: string): Promise<string[]> {
   const distillRoot = path.join(dumpDir, "distill");
-  let entries;
+  let entries: Dirent[];
   try {
     entries = await readdir(distillRoot, { withFileTypes: true });
   } catch (error) {
@@ -256,18 +288,22 @@ async function listDistillResults(
   opts: ListOptions,
 ): Promise<DistillResultSummary[]> {
   const results: DistillResultSummary[] = [];
-  const sinceTs = opts.since ? Date.now() - parseDuration(opts.since) : undefined;
+  const sinceTs = opts.since
+    ? Date.now() - parseDuration(opts.since)
+    : undefined;
 
   const repoDirs = opts.repo
     ? [sanitizeRepoName(opts.repo)]
     : await listDistillRepos(dumpDir);
 
   for (const repoDir of repoDirs) {
-    const typeDirs = opts.pending ? ["pending"] : ["pending", "approved", "rejected"];
+    const typeDirs = opts.pending
+      ? ["pending"]
+      : ["pending", "approved", "rejected"];
 
     for (const typeDir of typeDirs) {
       const resultsDir = path.join(dumpDir, "distill", repoDir, typeDir);
-      let entries;
+      let entries: Dirent[];
       try {
         entries = await readdir(resultsDir, { withFileTypes: true });
       } catch (error) {
@@ -318,8 +354,12 @@ async function listDistillResults(
           id: parsed.id,
           type: typeof parsed.type === "string" ? parsed.type : "unknown",
           title: typeof parsed.title === "string" ? parsed.title : "(untitled)",
-          confidence: typeof parsed.confidence === "number" ? parsed.confidence : 0,
-          distiller_id: typeof parsed.distiller_id === "string" ? parsed.distiller_id : "unknown",
+          confidence:
+            typeof parsed.confidence === "number" ? parsed.confidence : 0,
+          distiller_id:
+            typeof parsed.distiller_id === "string"
+              ? parsed.distiller_id
+              : "unknown",
           repo: repoDir,
         });
       }
@@ -329,9 +369,88 @@ async function listDistillResults(
   return results;
 }
 
+async function listScanReports(
+  opts: ListOptions,
+): Promise<ScanReportSummary[]> {
+  const scanDir = path.join(process.cwd(), "AIEF", "reports", "static-scan");
+  let entries: Dirent[];
+  try {
+    entries = await readdir(scanDir, { withFileTypes: true });
+  } catch {
+    return [];
+  }
+
+  const runs = entries
+    .filter((e) => e.isDirectory())
+    .map((e) => e.name)
+    .sort()
+    .reverse();
+
+  const results: ScanReportSummary[] = [];
+
+  for (const runId of runs) {
+    if (results.length >= opts.limit) break;
+
+    const metaPath = path.join(scanDir, runId, "metadata.json");
+    let text: string;
+    try {
+      text = await readFile(metaPath, "utf8");
+    } catch {
+      continue;
+    }
+
+    let meta: {
+      profile?: string;
+      startedAt?: string;
+      git?: { branch?: string; dirty?: boolean };
+    };
+    try {
+      meta = JSON.parse(text) as typeof meta;
+    } catch {
+      continue;
+    }
+
+    // Count findings from normalized file
+    let findingsCount = 0;
+    let blockingCount = 0;
+    try {
+      const normPath = path.join(scanDir, runId, "scan.normalized.json");
+      const normText = await readFile(normPath, "utf8");
+      const norm = JSON.parse(normText) as { findings?: Array<{ rankScore?: number; severity?: string; category?: string; inChangedFile?: boolean }> };
+      if (Array.isArray(norm.findings)) {
+        findingsCount = norm.findings.length;
+        blockingCount = norm.findings.filter(
+          (f) =>
+            f.severity === "critical" ||
+            f.severity === "high" ||
+            (f.category === "secret" || f.category === "security") &&
+            f.inChangedFile,
+        ).length;
+      }
+    } catch {
+      // Best-effort finding count
+    }
+
+    results.push({
+      runId,
+      profile: meta.profile ?? "fast",
+      startedAt: meta.startedAt ?? "",
+      findings: findingsCount,
+      blocking: blockingCount,
+      branch: meta.git?.branch ?? "unknown",
+      dirty: meta.git?.dirty ?? false,
+    });
+  }
+
+  return results;
+}
+
 function formatTable(headers: string[], rows: string[][]): string {
   const colWidths = headers.map((header, colIdx) => {
-    const maxDataWidth = rows.reduce((max, row) => Math.max(max, (row[colIdx] ?? "").length), 0);
+    const maxDataWidth = rows.reduce(
+      (max, row) => Math.max(max, (row[colIdx] ?? "").length),
+      0,
+    );
     return Math.max(header.length, maxDataWidth);
   });
 
@@ -340,7 +459,9 @@ function formatTable(headers: string[], rows: string[][]): string {
   };
 
   const separator = colWidths.map((w) => "─".repeat(w)).join("  ");
-  const headerLine = headers.map((h, i) => padRight(h, colWidths[i])).join("  ");
+  const headerLine = headers
+    .map((h, i) => padRight(h, colWidths[i]))
+    .join("  ");
 
   const lines = [headerLine, separator];
   for (const row of rows) {
@@ -352,17 +473,7 @@ function formatTable(headers: string[], rows: string[][]): string {
 }
 
 export async function runListCommand(args: string[]): Promise<void> {
-  const dumpDir = getArg(args, "--dump-dir") ?? process.env.LOAM_DUMP_DIR;
-  if (!dumpDir) {
-    console.error("Error: LOAM_DUMP_DIR is not configured. Set env or pass --dump-dir");
-    process.exitCode = 1;
-    return;
-  }
-
-  const repo = getArg(args, "--repo");
-  const since = getArg(args, "--since");
-  const distill = args.includes("--distill");
-  const pending = args.includes("--pending");
+  const scan = args.includes("--scan");
   const json = args.includes("--json");
   const limitRaw = getArg(args, "--limit");
   const limit = limitRaw ? Number.parseInt(limitRaw, 10) : 20;
@@ -373,12 +484,57 @@ export async function runListCommand(args: string[]): Promise<void> {
     return;
   }
 
+  // --scan reads from project directory, does not require LOAM_DUMP_DIR
+  if (scan) {
+    const opts: ListOptions = { dumpDir: "", limit, json, scan: true };
+    const reports = await listScanReports(opts);
+
+    if (json) {
+      console.log(JSON.stringify(reports, null, 2));
+      return;
+    }
+
+    if (reports.length === 0) {
+      console.log("No scan reports found.\n  Run: pnpm run ai:complete");
+      return;
+    }
+
+    const headers = ["Run ID", "Profile", "Findings", "Blocking", "Branch", "Dirty"];
+    const rows = reports.map((r) => [
+      r.runId.slice(0, 22),
+      r.profile,
+      String(r.findings),
+      String(r.blocking),
+      r.branch.slice(0, 15),
+      r.dirty ? "yes" : "no",
+    ]);
+
+    console.log(formatTable(headers, rows));
+    console.log(`${reports.length} scan reports`);
+    return;
+  }
+
+  const dumpDir = getArg(args, "--dump-dir") ?? process.env.LOAM_DUMP_DIR;
+  if (!dumpDir) {
+    console.error(
+      "Error: LOAM_DUMP_DIR is not configured. Set env or pass --dump-dir",
+    );
+    process.exitCode = 1;
+    return;
+  }
+
+  const repo = getArg(args, "--repo");
+  const since = getArg(args, "--since");
+  const distill = args.includes("--distill");
+  const pending = args.includes("--pending");
+
   const opts: ListOptions = {
     dumpDir,
     repo,
     since,
     distill,
     pending,
+    scan,
     limit,
     json,
   };
@@ -392,7 +548,9 @@ export async function runListCommand(args: string[]): Promise<void> {
     }
 
     if (results.length === 0) {
-      console.log(`No distill results found${repo ? ` in ${repo}` : ""}.\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`);
+      console.log(
+        `No distill results found${repo ? ` in ${repo}` : ""}.\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`,
+      );
       return;
     }
 
@@ -417,7 +575,9 @@ export async function runListCommand(args: string[]): Promise<void> {
     }
 
     if (sessions.length === 0) {
-      console.log(`No sessions found${repo ? ` in ${repo}` : ""}.\n  Tip: use --repo <name> to filter, or check daemon is running with: lsof -i :37468`);
+      console.log(
+        `No sessions found${repo ? ` in ${repo}` : ""}.\n  Tip: use --repo <name> to filter, or check daemon is running with: lsof -i :37468`,
+      );
       return;
     }
 
@@ -430,7 +590,9 @@ export async function runListCommand(args: string[]): Promise<void> {
     ]);
 
     console.log(formatTable(headers, rows));
-    console.log(`${sessions.length} sessions${repo ? ` in ${repo}` : ""}${opts.since ? ` (since ${opts.since})` : ""}`);
+    console.log(
+      `${sessions.length} sessions${repo ? ` in ${repo}` : ""}${opts.since ? ` (since ${opts.since})` : ""}`,
+    );
   }
 }
 

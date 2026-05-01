@@ -1,0 +1,35 @@
+---
+description: Loamlog AI completion quality gate — mandatory static scan after code changes
+globs: **/*.ts,**/*.tsx,**/*.js,**/*.json
+alwaysApply: true
+---
+
+# Loamlog Quality Gate
+
+After completing any code implementation, you MUST run the static scan gate:
+
+1. **Run the unified entrypoint**: `pnpm run ai:complete` (default). For security-sensitive changes use `pnpm run ai:complete:security`.
+
+2. **Preserve scan evidence**: Reports are saved under `AIEF/reports/static-scan/<run-id>/` with raw logs, normalized findings, Top N plan, results, and summary.
+
+3. **Handle Top N findings** (default TOP_N=5):
+   - Fix actionable findings
+   - Mark unfixable ones as `deferred`, `false_positive`, `not_actionable`, or `failed` in `topN.results.md`
+
+4. **Rerun verification**: After handling Top N, rerun the same gate and reference the latest report path in the final response.
+
+5. **Definition of incomplete**: Code changes without a scan report, Top N handling record, and rerun note are NOT complete.
+
+## Blocking Policy
+
+- Typecheck failures introduced by changed files → BLOCK
+- Critical/high security or secret findings in changed files → BLOCK
+- Existing unrelated findings → Document as deferred, don't block
+- Always mention remaining failures in the final response
+
+## Project Context
+
+- Language: Chinese for communication, English for code/commands/commits
+- Package manager: pnpm (dev) / bun (runtime)
+- Monorepo: pnpm workspaces
+- Read `AGENTS.md` and `AIEF/context/tech/engineering-principles.md` before design work
