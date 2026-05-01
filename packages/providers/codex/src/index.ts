@@ -46,7 +46,7 @@ interface CodexFunctionCallPayload {
 interface CodexFunctionCallOutputPayload {
   type?: string;
   call_id?: string;
-  output?: CodexContentItem[];
+  output?: CodexContentItem[] | string;
 }
 
 interface PendingCodexTool {
@@ -100,8 +100,17 @@ function parseJsonLines(text: string): CodexJsonLine[] {
   return rows;
 }
 
-function extractTextFromContent(content: CodexContentItem[] | undefined): string {
-  if (!content || content.length === 0) {
+function extractTextFromContent(content: CodexContentItem[] | string | undefined): string {
+  if (!content) {
+    return "";
+  }
+
+  // Codex output can be a plain string or an array of content items
+  if (typeof content === "string") {
+    return content;
+  }
+
+  if (content.length === 0) {
     return "";
   }
 
@@ -363,6 +372,14 @@ async function findSessionFile(
       }
 
       for (const dayEntry of dayEntries) {
+        // Check files directly under day directory (newer Codex format)
+        if (dayEntry.isFile() && dayEntry.name.startsWith("rollout-") && dayEntry.name.endsWith(".jsonl")) {
+          if (dayEntry.name.includes(sessionId)) {
+            return path.join(dayDir, dayEntry.name);
+          }
+          continue;
+        }
+
         if (!dayEntry.isDirectory() || !/^\d{2}$/.test(dayEntry.name)) {
           continue;
         }
@@ -428,6 +445,12 @@ async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Prom
       }
 
       for (const dayEntry of dayEntries) {
+        // Handle files directly under day directory (newer Codex format)
+        if (dayEntry.isFile() && dayEntry.name.startsWith("rollout-") && dayEntry.name.endsWith(".jsonl")) {
+          files.push(path.join(dayDir, dayEntry.name));
+          continue;
+        }
+
         if (!dayEntry.isDirectory() || !/^\d{2}$/.test(dayEntry.name)) {
           continue;
         }
