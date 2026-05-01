@@ -41,6 +41,13 @@ describe("distill cli helpers", () => {
     assert.equal(parsed.llm, "deepseek/deepseek-chat");
     assert.equal(parsed.llmTimeoutMs, 1234);
     assert.equal(parsed.dumpDir, "/tmp/loam");
+    assert.equal(parsed.dag, false);
+    assert.equal(parsed.legacy, false);
+  });
+
+  test("parseArgs detects --legacy flag", () => {
+    const parsed = parseArgs(["--legacy"]);
+    assert.equal(parsed.legacy, true);
   });
 
   test("applyLlmOverride moves selected provider to highest priority", () => {
