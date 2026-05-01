@@ -57,6 +57,11 @@ const DEFAULT_MODELS: Record<string, Record<LLMBudget, string>> = {
     standard: "llama3.1:8b",
     premium: "llama3.1:70b",
   },
+  lmstudio: {
+    cheap: "qwen/qwen3.6-27b",
+    standard: "qwen/qwen3.6-27b",
+    premium: "qwen/qwen3.6-35b-a3b",
+  },
 };
 
 function getProviderEntries(config?: AICConfig["llm"]): Array<[string, LLMProviderConfig]> {
