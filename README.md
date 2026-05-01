@@ -30,11 +30,9 @@ Loamlog breaks this pattern across three layers:
 AI Tools          Capture Layer        Distill Engine       Sinks
 ─────────────     ─────────────────    ─────────────────    ──────────
 OpenCode     ──►  loam daemon       ►  LLM Router        ►  file
-Claude Code  ──►  JSON snapshot        multi-model           github*
-Cursor*      ──►  redaction            multi-distiller       notion*
-             ──►  repo context
-
-                                    (* = planned)
+Claude Code  ──►  JSON snapshot        multi-model           github
+Gemini CLI   ──►  redaction            multi-distiller       notion
+Codex        ──►  repo context
 ```
 
 **Core principles:**
@@ -48,20 +46,17 @@ Cursor*      ──►  redaction            multi-distiller       notion*
 
 ## Current Direction
 
-As of 2026-05, Loamlog v0.5.0 ships with **4 active providers** (OpenCode, Claude Code, Gemini CLI, Codex) and a `loam list` command for browsing captured sessions.
+As of 2026-05, Loamlog v0.5.0 ships with **4 active providers** (OpenCode, Claude Code, Gemini CLI, Codex), **5 distillers** (pitfall-card, issue-draft, knowledge-card, prd-draft), **3 sinks** (file, GitHub, Notion), and a **DAG-based execution engine** with approval gates and audit trails.
 
-The completed infrastructure layers:
+Key features:
 
-- **Sanitization Gateway** — sensitive data redaction before AI processing (Milestone A)
+- **Sanitization Gateway** — sensitive data redaction with config file support (Milestone A)
 - **Triggered Intelligence Pipeline** — threshold-based, async, rate-limited distill (Milestone A)
 - **Evaluation Harness** — quality metrics for distill accuracy (Milestone A)
+- **DAG Pipeline Executor** — typed DAG runtime with asset graph modeling and approval gates
 - **Multi-Provider Active Collection** — file-system watchers for all 4 AI tools (v0.5.0)
-
-The main product question is now: "Is the first flow stable enough to justify Stage 2 automation?"
-
-- **Shipped today** — capture (4 providers), archive, redaction, trigger, evidence-backed distill, evaluation, `loam list`, and file-based local output
-- **Current product focus** — dogfooding validation: accumulate real sessions, evaluate distill quality, decide on GitHub sink
-- **Planned next** — MCP Exposure Layer design (Milestone B), anchored by `AIEF/openspec/mcp-exposure-layer.md`, and GitHub API sink (Stage 2)
+- **CI Quality Gate** — `pnpm run ai:complete` static scan with Top N ranking and rerun verification
+- **Review Workflow** — `loam review` approve/reject with audit records
 
 ---
 
@@ -81,10 +76,11 @@ loamlog/
 │   │   ├── claude-code/    # Claude Code transcript watcher
 │   │   ├── gemini-cli/     # Gemini CLI session watcher
 │   │   └── codex/          # Codex JSONL session watcher
-│   ├── distill/            # Distill engine + LLM router
-│   ├── distillers/         # Built-in distillers (pitfall-card, issue-draft)
-│   ├── sinks/              # Output adapters (file)
-│   └── cli/                # CLI entry point (loam)
+│   ├── pipeline/           # Typed DAG executor
+│   ├── distill/            # Distill engine + LLM router + DAG runner
+│   ├── distillers/         # Built-in distillers (pitfall-card, issue-draft, knowledge-card, prd-draft)
+│   ├── sinks/              # Output adapters (file, github, notion)
+│   └── cli/                # CLI entry point (loam daemon/capture/distill/list/review)
 └── plugins/
     └── opencode/           # Thin OpenCode bridge plugin (event forwarding only)
 ```
@@ -101,7 +97,7 @@ loamlog/
 | M3 | Multi-model LLM routing | ✅ Completed |
 | **Milestone A** | **Trust Infrastructure** — sanitization, trigger, evaluation | ✅ **Completed** |
 | M4 | Multi-source providers (OpenCode, Claude Code, Gemini CLI, Codex) | ✅ Completed |
-| M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
+| M5 | Ecosystem — sinks, approve flow, more distillers | ✅ Completed |
 
 The capture pipeline is fully runnable end-to-end:
 
@@ -201,6 +197,14 @@ loam list --repo my-project --since 7d
 
 # List distill results
 loam list --distill --pending
+
+# Browse static scan reports
+loam list --scan
+
+# Review and approve/reject distill results
+loam review --list
+loam review --approve <result-id>
+loam review --reject <result-id>
 ```
 
 Snapshots are organized as:
@@ -246,27 +250,34 @@ $LOAM_DUMP_DIR/
 
 The `.json` file contains the full structured result, including evidence and payload. The `.md` file contains the GitHub-ready draft body from `render.markdown`.
 
-Current scope is still local-first: Loamlog writes local draft files, but does not create GitHub issues automatically yet.
+GitHub and Notion sinks are available behind explicit opt-in (`allowExternal: true`). The approval gate and audit trail ensure no result leaves local review without evidence and quality checks.
 
 ---
 
 ## Redaction
 
-Sensitive data is redacted **by default** before any snapshot is written:
+Sensitive data is redacted **by default** before any snapshot is written. Built-in patterns cover API keys, tokens, emails, phones, auth headers, cookies, and sensitive paths.
 
-| Pattern | Replacement |
-|---------|-------------|
-| `sk-...` (OpenAI keys) | `[REDACTED:openai-token]` |
-| `ghp_...` (GitHub tokens) | `[REDACTED:github-token]` |
-| `AKIA...` (AWS keys) | `[REDACTED:aws-key]` |
-| `Bearer ...` headers | `[REDACTED:bearer-token]` |
-| Paths containing `auth`, `credentials`, `.env` | `[REDACTED:sensitive-path]` |
+Fine-grained control via `redaction.config.json`:
 
-To opt out of specific patterns:
+```json
+{
+  "patterns": [
+    { "id": "custom-jwt", "regex": "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}", "placeholder": "[JWT]", "category": "token" }
+  ],
+  "ignore_patterns": ["sk-test-"],
+  "disabled_categories": ["email"],
+  "warn_risk_level": "medium"
+}
+```
+
+Or use the env var for quick ignores:
 
 ```bash
 export LOAM_REDACT_IGNORE="my-safe-pattern;another-pattern"
 ```
+
+See `redaction.config.example.json` for the full schema.
 
 ---
 
@@ -276,6 +287,10 @@ export LOAM_REDACT_IGNORE="my-safe-pattern;another-pattern"
 |----------|---------|-------------|
 | `LOAM_DUMP_DIR` | — | **Required.** Directory where snapshots are written. No writes if unset. |
 | `LOAM_REDACT_IGNORE` | — | Semicolon-separated regex patterns to exclude from redaction. |
+| `LOAM_REDACTION_CONFIG` | `./redaction.config.json` | Path to redaction config file. |
+| `NOTION_TOKEN` | — | Notion integration token for Notion sink. |
+| `NOTION_DATABASE_ID` | — | Target Notion database ID for Notion sink. |
+| `GITHUB_TOKEN` | — | GitHub personal access token for GitHub sink. |
 | `OPENCODE_SERVER_URL` | `http://127.0.0.1:4096` | OpenCode HTTP API base URL. |
 | `OPENCODE_SERVER_TOKEN` | — | Bearer token for OpenCode API auth. |
 | `OPENCODE_DIRECTORY` | — | Working directory hint for OpenCode. |
@@ -340,21 +355,35 @@ pnpm install
 # Build all packages
 pnpm run build
 
-# Run tests
+# Run tests (154 tests across 22 packages)
 pnpm run test
 
 # Typecheck
 pnpm run typecheck
+
+# Static scan quality gate (typecheck + lint + audit)
+pnpm run ai:complete
+pnpm run ai:complete:security  # includes Gitleaks + Semgrep
+
+# View scan history
+loam list --scan
 ```
 
 ### Package structure
 
 | Package | Description |
 |---------|-------------|
-| `@loamlog/core` | Core TypeScript types and interface contracts |
-| `@loamlog/archive` | Session snapshot writer with atomic writes and redaction |
-| `@loamlog/provider-opencode` | Fetches sessions from OpenCode's local HTTP API |
-| `@loamlog/cli` | CLI entry point (`loam` command) |
+| `@loamlog/core` | Core TypeScript types, interface contracts, asset graph models |
+| `@loamlog/archive` | Session snapshot writer with atomic writes, index, and redaction |
+| `@loamlog/sanitizer` | Log sanitization gateway with configurable patterns |
+| `@loamlog/pipeline` | Typed DAG executor with validation and execution reports |
+| `@loamlog/distill` | Distill engine, LLM router, DAG runner, state KV |
+| `@loamlog/distiller-sdk` | `defineDistiller` + `createEvidence` for distiller authors |
+| `@loamlog/cli` | CLI entry point (`loam daemon/capture/distill/list/review`) |
+| `@loamlog/provider-opencode` | OpenCode SQLite watcher + HTTP adapter |
+| `@loamlog/provider-claude-code` | Claude Code transcript file watcher |
+| `@loamlog/provider-gemini-cli` | Gemini CLI session file watcher |
+| `@loamlog/provider-codex` | Codex JSONL session file watcher |
 | `@loamlog/plugin-opencode` | Thin bridge plugin — forwards OpenCode idle events to daemon |
 
 ---
@@ -365,7 +394,7 @@ pnpm run typecheck
 - **Redaction is ON by default** — tokens, keys, and sensitive paths are auto-replaced
 - **No writes without `LOAM_DUMP_DIR`** — explicit opt-in required
 - **No external delivery without evidence** — `DistillResult` without evidence backlinks cannot enter external sinks
-- **Phase 1: local file output only** — external sinks require explicit opt-in
+- **External sinks require explicit opt-in** — GitHub and Notion delivery is gated behind `allowExternal: true` and approval checks
 
 ---
 
