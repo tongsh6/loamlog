@@ -4,6 +4,15 @@ import { createCodexSessionProvider } from "@loamlog/provider-codex";
 import { createGeminiCliSessionProvider } from "@loamlog/provider-gemini-cli";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
 
+type ProviderFactory = () => SessionProvider;
+
+const registry = new Map<string, ProviderFactory>([
+  ["opencode", createOpencodeSessionProvider],
+  ["claude-code", createClaudeCodeSessionProvider],
+  ["gemini-cli", createGeminiCliSessionProvider],
+  ["codex", createCodexSessionProvider],
+]);
+
 const DEFAULT_PROVIDERS = ["opencode"];
 
 export function parseProviderList(raw: string | undefined): string[] {
@@ -27,27 +36,11 @@ export function createSessionProviders(providerIds: string[]): Record<string, Se
   const providers: Record<string, SessionProvider> = {};
 
   for (const providerId of providerIds) {
-    if (providerId === "opencode") {
-      providers[providerId] = createOpencodeSessionProvider();
-      continue;
+    const factory = registry.get(providerId);
+    if (!factory) {
+      throw new Error(`unknown provider: ${providerId}`);
     }
-
-    if (providerId === "claude-code") {
-      providers[providerId] = createClaudeCodeSessionProvider();
-      continue;
-    }
-
-    if (providerId === "gemini-cli") {
-      providers[providerId] = createGeminiCliSessionProvider();
-      continue;
-    }
-
-    if (providerId === "codex") {
-      providers[providerId] = createCodexSessionProvider();
-      continue;
-    }
-
-    throw new Error(`unknown provider: ${providerId}`);
+    providers[providerId] = factory();
   }
 
   return providers;

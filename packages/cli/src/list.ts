@@ -1,5 +1,6 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
+import { readArchiveIndex, type ArchiveIndexEntry } from "@loamlog/archive";
 
 interface ListOptions {
   dumpDir: string;
@@ -70,7 +71,53 @@ async function listRepos(dumpDir: string): Promise<string[]> {
   return entries.filter((e) => e.isDirectory()).map((e) => e.name);
 }
 
-async function listSessions(
+function entryToSummary(entry: ArchiveIndexEntry): SessionSummary {
+  return {
+    session_id: entry.session_id,
+    provider: entry.provider,
+    repo: entry.repo,
+    captured_at: entry.captured_at,
+    messages_count: entry.messages_count,
+    redacted_count: entry.redacted_count,
+  };
+}
+
+async function listSessionsFromIndex(
+  dumpDir: string,
+  opts: ListOptions,
+): Promise<SessionSummary[]> {
+  const sinceTs = opts.since ? Date.now() - parseDuration(opts.since) : undefined;
+  const index = await readArchiveIndex(dumpDir);
+
+  const entries = Object.values(index.entries);
+
+  // Sort by captured_at descending (newest first)
+  entries.sort((a, b) => b.captured_at.localeCompare(a.captured_at));
+
+  const results: SessionSummary[] = [];
+  for (const entry of entries) {
+    if (results.length >= opts.limit) {
+      break;
+    }
+
+    if (opts.repo && entry.repo !== sanitizeRepoName(opts.repo)) {
+      continue;
+    }
+
+    if (sinceTs) {
+      const capturedTs = Date.parse(entry.captured_at);
+      if (!Number.isNaN(capturedTs) && capturedTs < sinceTs) {
+        continue;
+      }
+    }
+
+    results.push(entryToSummary(entry));
+  }
+
+  return results;
+}
+
+async function listSessionsFromScan(
   dumpDir: string,
   opts: ListOptions,
 ): Promise<SessionSummary[]> {
@@ -149,6 +196,17 @@ async function listSessions(
   }
 
   return results;
+}
+
+async function listSessions(
+  dumpDir: string,
+  opts: ListOptions,
+): Promise<SessionSummary[]> {
+  const index = await readArchiveIndex(dumpDir);
+  if (Object.keys(index.entries).length > 0) {
+    return listSessionsFromIndex(dumpDir, opts);
+  }
+  return listSessionsFromScan(dumpDir, opts);
 }
 
 async function listDistillRepos(dumpDir: string): Promise<string[]> {

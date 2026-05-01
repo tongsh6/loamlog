@@ -2,6 +2,29 @@ import { mkdir, readdir, readFile, rename, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { SessionSnapshot } from "@loamlog/core";
 
+export interface ArchiveIndexEntry {
+  session_id: string;
+  provider: string;
+  repo: string;
+  captured_at: string;
+  messages_count: number;
+  redacted_count: number;
+  snapshot_path: string;
+}
+
+interface ArchiveIndex {
+  version: "1";
+  entries: Record<string, ArchiveIndexEntry>;
+}
+
+function indexFilePath(dumpDir: string): string {
+  return path.join(dumpDir, "index.json");
+}
+
+function emptyIndex(): ArchiveIndex {
+  return { version: "1", entries: {} };
+}
+
 export interface WriteSessionSnapshotInput {
   dumpDir: string;
   snapshot: SessionSnapshot;
@@ -144,6 +167,36 @@ async function* readSnapshotsFromDir(dir: string): AsyncGenerator<SessionSnapsho
   }
 }
 
+export async function readArchiveIndex(dumpDir: string): Promise<ArchiveIndex> {
+  const indexPath = indexFilePath(dumpDir);
+  try {
+    const text = await readFile(indexPath, "utf8");
+    const parsed = JSON.parse(text) as ArchiveIndex;
+    if (parsed.version === "1" && parsed.entries && typeof parsed.entries === "object") {
+      return parsed;
+    }
+    return emptyIndex();
+  } catch (error) {
+    const code = (error as NodeJS.ErrnoException).code;
+    if (code === "ENOENT") {
+      return emptyIndex();
+    }
+    throw error;
+  }
+}
+
+async function appendArchiveIndex(dumpDir: string, entry: ArchiveIndexEntry): Promise<void> {
+  const indexPath = indexFilePath(dumpDir);
+  await mkdir(dumpDir, { recursive: true });
+
+  const index = await readArchiveIndex(dumpDir);
+  index.entries[entry.session_id] = entry;
+
+  const tempPath = `${indexPath}.tmp`;
+  await writeFile(tempPath, JSON.stringify(index, null, 2), "utf8");
+  await rename(tempPath, indexPath);
+}
+
 export async function writeSessionSnapshot(input: WriteSessionSnapshotInput): Promise<WriteSessionSnapshotResult> {
   const baseDir = buildBaseDir(input.dumpDir, input.snapshot);
   await mkdir(baseDir, { recursive: true });
@@ -155,6 +208,18 @@ export async function writeSessionSnapshot(input: WriteSessionSnapshotInput): Pr
 
   await writeFile(tempPath, payload, "utf8");
   await rename(tempPath, finalPath);
+
+  const repo = input.snapshot.context.repo || "_global";
+  const relativePath = path.relative(input.dumpDir, finalPath);
+  await appendArchiveIndex(input.dumpDir, {
+    session_id: input.snapshot.meta.session_id,
+    provider: input.snapshot.meta.provider,
+    repo,
+    captured_at: input.snapshot.meta.captured_at,
+    messages_count: input.snapshot.messages.length,
+    redacted_count: input.snapshot.redacted?.redacted_count ?? 0,
+    snapshot_path: relativePath,
+  });
 
   return { jsonPath: finalPath };
 }
