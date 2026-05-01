@@ -15,7 +15,7 @@ permissions:
 
 jobs:
   quality:
-    name: Quality Gate
+    name: Test & Typecheck
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
