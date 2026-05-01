@@ -31,7 +31,7 @@ pnpm run test                     # Run tests
 loam daemon --providers opencode   # Daemon mode (real-time capture)
 loam capture --provider opencode   # Manual capture
 loam distill --distiller pitfall-card --llm deepseek/deepseek-chat # Distill
-loam list --repo xxx --last 7d     # Browse archive (planned)
+loam list --repo xxx --since 7d     # Browse archive
 
 # Docs (AIEF bilingual)
 node AIEF/scripts/check-bilingual-docs.js

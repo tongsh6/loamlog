@@ -48,17 +48,20 @@ Cursor*      ──►  redaction            multi-distiller       notion*
 
 ## Current Direction
 
-As of 2026-03-13, Loamlog has completed **Milestone A: Trust Infrastructure**, adding three critical capabilities:
+As of 2026-05, Loamlog v0.5.0 ships with **4 active providers** (OpenCode, Claude Code, Gemini CLI, Codex) and a `loam list` command for browsing captured sessions.
 
-- **Sanitization Gateway** — sensitive data redaction before AI processing
-- **Triggered Intelligence Pipeline** — threshold-based, async, rate-limited distill
-- **Evaluation Harness** — quality metrics for distill accuracy
+The completed infrastructure layers:
+
+- **Sanitization Gateway** — sensitive data redaction before AI processing (Milestone A)
+- **Triggered Intelligence Pipeline** — threshold-based, async, rate-limited distill (Milestone A)
+- **Evaluation Harness** — quality metrics for distill accuracy (Milestone A)
+- **Multi-Provider Active Collection** — file-system watchers for all 4 AI tools (v0.5.0)
 
 The main product question is now: "Is the first flow stable enough to justify Stage 2 automation?"
 
-- **Shipped today** — capture, archive, redaction, trigger, evidence-backed distill, evaluation, and file-based local output
-- **Current product focus** — stabilize the first killer flow: `AI conversation -> structured evidence -> local issue draft`
-- **Planned next** — MCP Exposure Layer design (Milestone B), now anchored by `AIEF/openspec/mcp-exposure-layer.md`, and GitHub API sink (Stage 2)
+- **Shipped today** — capture (4 providers), archive, redaction, trigger, evidence-backed distill, evaluation, `loam list`, and file-based local output
+- **Current product focus** — dogfooding validation: accumulate real sessions, evaluate distill quality, decide on GitHub sink
+- **Planned next** — MCP Exposure Layer design (Milestone B), anchored by `AIEF/openspec/mcp-exposure-layer.md`, and GitHub API sink (Stage 2)
 
 ---
 
@@ -72,12 +75,15 @@ loamlog/
 │   ├── sanitizer/          # Log sanitization gateway (Milestone A)
 │   ├── trigger/            # Triggered intelligence pipeline (Milestone A)
 │   ├── evaluation-harness/ # Quality evaluation framework (Milestone A)
+│   ├── rules/              # Rule engine for signal/scoring/filter/execution
 │   ├── providers/
-│   │   ├── opencode/       # OpenCode data source adapter
-│   │   └── claude-code/    # Claude Code transcript adapter
+│   │   ├── opencode/       # OpenCode SQLite watcher + HTTP adapter
+│   │   ├── claude-code/    # Claude Code transcript watcher
+│   │   ├── gemini-cli/     # Gemini CLI session watcher
+│   │   └── codex/          # Codex JSONL session watcher
 │   ├── distill/            # Distill engine + LLM router
-│   ├── distillers/         # Built-in distillers
-│   ├── sinks/              # Output adapters
+│   ├── distillers/         # Built-in distillers (pitfall-card, issue-draft)
+│   ├── sinks/              # Output adapters (file)
 │   └── cli/                # CLI entry point (loam)
 └── plugins/
     └── opencode/           # Thin OpenCode bridge plugin (event forwarding only)
@@ -94,7 +100,7 @@ loamlog/
 | M2 | Distill platform MVP — pitfall-card distiller | ✅ Completed |
 | M3 | Multi-model LLM routing | ✅ Completed |
 | **Milestone A** | **Trust Infrastructure** — sanitization, trigger, evaluation | ✅ **Completed** |
-| M4 | Multi-source providers (Claude Code, ...) | ◐ Landed in repo, needs follow-up hardening |
+| M4 | Multi-source providers (OpenCode, Claude Code, Gemini CLI, Codex) | ✅ Completed |
 | M5 | Ecosystem — sinks, approve flow, more distillers | ⏳ Planned |
 
 The capture pipeline is fully runnable end-to-end:
@@ -186,7 +192,16 @@ npm: https://www.npmjs.com/package/opencode-loamlog
 
 ### Browse your archive
 
-`loam list` is planned but not implemented yet. Until then, inspect the archive directly on disk.
+```bash
+# List recent sessions
+loam list --limit 10
+
+# Filter by repo and time range
+loam list --repo my-project --since 7d
+
+# List distill results
+loam list --distill --pending
+```
 
 Snapshots are organized as:
 

@@ -9,35 +9,46 @@
 | M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ✅ 已完成 |
 | **Milestone A** | **可信底盘** — 脱敏、触发控制、质量评估 | sanitizer, trigger, evaluation-harness | 2–3 weeks | ✅ **已完成** |
-| M4 | 多数据源接入 | providers/claude-code | 1–2 days | ◐ 主路径已落地，待补强 |
+| M4 | 多数据源接入 | providers/opencode, claude-code, gemini-cli, codex | 1–2 days | ✅ 已完成 |
 | M5 | 生态化与工作流 | sinks/github, approve-flow, more distillers | Ongoing | ⏳ 规划中 |
 
 ---
 
 ## 当前进度 | Current Progress
 
-截至 2026-03-13，Loamlog 已完成 **Milestone A：可信底盘**，新增了 sanitizer、trigger、evaluation-harness 三个基础设施包。
-As of 2026-03-13, Loamlog has completed **Milestone A: Trust Infrastructure**, adding three foundational packages: sanitizer, trigger, and evaluation-harness.
+截至 2026-05，Loamlog v0.5.0 已完成 **M4：多数据源接入**，现支持 4 个 AI 工具的主动采集。
+As of 2026-05, Loamlog v0.5.0 has completed **M4: Multi-source Providers** with active watchers for 4 AI tools.
 
 Milestone A 通过以下 Issues 和 PRs 完成：
 - Issue #26 (Sanitization Gateway) → PR #39 ✅
 - Issue #22 (Triggered Intelligence Pipeline) → PR #41 ✅
 - Issue #23 (Evaluation Harness MVP) → PR #37 ✅
 
+M4 通过以下工作完成：
+- Issue #48 (Codex provider + OpenCode SQLite watcher) ✅
+- Issue #49 (Gemini CLI provider) ✅
+- Issue #50 (loam list 命令) ✅
+
 已完成项 / Completed items:
 
 - OpenCode 薄插件转发 `session.idle/session.status:idle` 到 `POST /capture`
 - daemon 按 `LOAM_DUMP_DIR` 规则控制写入（未配置不写）
-- `@loamlog/provider-opencode` 使用本地 HTTP API 拉取 session/messages/path/vcs
+- `@loamlog/provider-opencode` SQLite 主动发现 + HTTP API 拉取 session/messages/path/vcs
+- `@loamlog/provider-claude-code` JSONL 文件系统 watcher
+- `@loamlog/provider-gemini-cli` session JSON 文件系统 watcher
+- `@loamlog/provider-codex` JSONL session 文件系统 watcher
 - 默认脱敏规则接入（`sk-*`, `ghp_*`, `AKIA*`, `Bearer *`, `auth/credentials/.env`）
-- 测试覆盖包含 provider mapping、redaction、daemon 落盘与端到端链路
+- 测试覆盖 79 个测试（含 4 个 provider 的单元测试）、redaction、daemon 落盘与端到端链路
 - `@loamlog/distill` 落地：plugin registry、state、query、metadata、LLM router、engine
 - `@loamlog/distiller-sdk` 落地：`defineDistiller`、`createEvidence`
-- `@loamlog/distiller-pitfall-card` 与 `@loamlog/sink-file` 落地，支持本地候选输出
+- `@loamlog/distiller-pitfall-card` 与 `@loamlog/distiller-issue-draft` 落地
+- `@loamlog/sink-file` 落地，支持本地候选输出 + Markdown 渲染
 - CLI 新增 `loam distill` 命令，支持 `--distiller/--llm/--since/--until/--test-session`
+- CLI 新增 `loam list` 命令，支持 `--repo/--since/--distill/--pending/--limit/--json`
 - M3 多 provider LLM 路由已落地：OpenAI / Anthropic / DeepSeek / Ollama
 - CLI 已支持 `--llm-timeout-ms`，Router 支持 fallback 与类型化错误
-- `packages/providers/claude-code` 与 CLI provider wiring 已在仓库落地，验证多源 provider 主路径可行
+- Provider Registry 已用 Map 注册表替代 if/else 链
+- Archive 元数据索引 (`index.json`) 已落地，`loam list` 优先读索引
 - GitHub 工作流治理已补齐：`develop` / `master` 受保护，已开启合并后自动删分支
 
 ### Milestone A 完成项 (2026-03-13)
@@ -178,25 +189,25 @@ At the same time, Milestone B's protocol direction now has its first formal boun
 
 ## M4：多数据源接入 | Multi-source Providers
 
-**目标 / Goal**: 接入第二个 AI 工具，验证 ProviderAdapter 接口可扩展性。
+**目标 / Goal**: 接入多个 AI 工具，验证 ProviderAdapter 接口可扩展性。
 
 **交付 / Deliverables**:
 - `packages/providers/claude-code`（Claude Code 文件系统监听 provider）
-- `loam capture` 命令（手动触发单次采集，不启动 daemon）
-- daemon `--providers` flag 实际解析（修复当前只在 usage 文本中存在的问题）
+- `packages/providers/gemini-cli`（Gemini CLI session watcher）
+- `packages/providers/codex`（Codex JSONL session watcher）
+- `packages/providers/opencode` SQLite 主动发现（opencode.db 监听）
+- `loam list` 命令（会话和蒸馏结果浏览）
+- daemon `--providers` flag 实际解析（支持 4 个 provider）
 
 **验收 / Acceptance**:
-1. pnpm run test 全部通过（含 @loamlog/provider-claude-code 单元测试，使用 fixture JSONL 文件）
-2. loam daemon --providers opencode,claude-code 启动后日志中同时出现两个 provider 的确认信息
-3. 通过 loam capture 或 daemon 触发的 Claude Code 会话，归档 snapshot 的 .meta.provider 字段值为 "claude-code"
-4. Claude Code provider 与 OpenCode provider 可并行采集，互不干扰，归档路径结构完全一致
+1. pnpm run test 全部通过（79 个测试，含 4 个 provider 的单元测试）
+2. `loam daemon --providers opencode,claude-code,gemini-cli,codex` 启动后日志中同时出现 4 个 provider 的确认信息
+3. 所有 provider 可并行采集，互不干扰，归档路径结构完全一致
+4. `loam list` 可按 repo、时间范围浏览会话和蒸馏结果
+
+**完成状态 / Status**: ✅ 已完成 (2026-04-30, v0.5.0)
 
 参考执行计划 / Reference execution plan: `AIEF/context/business/m4-execution-plan.md`
-
-状态说明 / Status note:
-
-- `packages/providers/claude-code` 与 CLI 主路径已进入仓库，说明 M4 不再是“未开始”状态
-- 当前剩余工作更偏验证、补强与文档回收，而不是从零开始设计该阶段
 
 ---
 
@@ -215,7 +226,7 @@ At the same time, Milestone B's protocol direction now has its first formal boun
 
 | 子阶段 | 目标 | 关键交付 | 解锁条件 |
 |--------|------|----------|----------|
-| M5.0 | `loam list` 命令 + 细粒度 redaction 配置 | CLI `list`、redaction config file | M4 完成 |
+| M5.0 | `loam list` 命令 + 细粒度 redaction 配置 | ~~CLI `list`~~（✅ 已完成）、redaction config file | M4 完成 |
 | M5.1 | GitHub sink | `@loamlog/sink-github`（创建 Issue/PR） | M4 + evidence 质量评分机制就绪 |
 | M5.2 | 人工审批流 | `loam review` 命令、approved/rejected 目录 | M5.1 完成 |
 | M5.3 | 更多内置萃取器 | issue-candidate、prd-draft、knowledge-card distillers | M5.1 完成 |
@@ -233,8 +244,8 @@ The following items were marked "planned in next phase" in M1/M2 and are now for
 | Markdown transcript 输出（JSON 已有，MD 待实现）| architecture.md M2 Status | M4（P3+，视 P0-P2 完成情况）|
 | OpenCode HTTP 不可用时 SDK fallback | architecture.md M2 Status | M4（P3+，Out of Scope 若资源不足）|
 | 细粒度 redaction 规则配置文件 | architecture.md M2 Status | M5.0 |
-| `loam list` 命令 | AGENTS.md、README（已文档化，未实现）| M5.0 |
-| `loam capture` 手动采集命令 | AGENTS.md（已文档化，未实现）| M4 P3 |
+| `loam list` 命令 | AGENTS.md、README | ✅ 已完成 (v0.5.0) |
+| `loam capture` 手动采集命令 | AGENTS.md（已文档化，未实现）| M5.1 |
 
 ## 非目标 | Non-Goals
 

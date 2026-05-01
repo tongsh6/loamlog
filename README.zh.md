@@ -94,7 +94,7 @@ loamlog/
 | M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | ✅ 已完成 |
 | **里程碑 A** | **可信底盘** — 脱敏、触发、评估 | ✅ **已完成** |
-| M4 | 多数据源接入（Claude Code 等） | ◐ 主路径已落地，需继续补强 |
+| M4 | 多数据源接入（OpenCode、Claude Code、Gemini CLI、Codex） | ✅ 已完成 |
 | M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
 
 采集管道已可端到端运行：
@@ -186,7 +186,16 @@ npm: https://www.npmjs.com/package/opencode-loamlog
 
 ### 浏览归档
 
-`loam list` 已进入规划，但当前尚未实现；现阶段请直接查看磁盘归档目录。
+```bash
+# 列出最近的会话
+loam list --limit 10
+
+# 按仓库和时间范围过滤
+loam list --repo my-project --since 7d
+
+# 列出蒸馏结果
+loam list --distill --pending
+```
 
 快照按以下结构组织：
 
