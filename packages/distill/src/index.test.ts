@@ -98,6 +98,23 @@ describe("distill package", () => {
     assert.equal(typeof processed?.["ses-2"], "string");
   });
 
+  test("state kv update is atomic under concurrent writes", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-distill-concurrent-"));
+    const state = createDistillerStateKV(tempDir, "@test/distiller");
+
+    await state.set("counter", 0);
+
+    const count = 20;
+    const increments = Array.from({ length: count }, () =>
+      state.update<number>("counter", (current) => (current ?? 0) + 1),
+    );
+
+    await Promise.all(increments);
+
+    const final = await state.get<number>("counter");
+    assert.equal(final, count, `expected ${count}, got ${final}`);
+  });
+
   test("engine runs distiller and sink end-to-end", async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "loam-distill-engine-"));
     process.env.OPENAI_API_KEY = "test-key";

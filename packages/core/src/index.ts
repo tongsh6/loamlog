@@ -339,6 +339,8 @@ export interface ArtifactQueryClient {
 export interface DistillerStateKV {
   get<V>(key: string): Promise<V | undefined>;
   set<V>(key: string, value: V): Promise<void>;
+  /** Atomically read, transform, and write a value under the state lock. */
+  update<V>(key: string, fn: (current: V | undefined) => V): Promise<void>;
   markProcessed(distillerId: string, sessionIds: string[]): Promise<void>;
 }
 

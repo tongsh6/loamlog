@@ -54,19 +54,81 @@ async function writeStateFile(filePath: string, doc: DistillerStateDocument): Pr
   await rename(tempPath, filePath);
 }
 
+type MutexRelease = () => void;
+
+function createMutex(): { acquire: () => Promise<MutexRelease> } {
+  let locked = false;
+  const queue: Array<(release: MutexRelease) => void> = [];
+
+  function release(): void {
+    const next = queue.shift();
+    if (next) {
+      next(release);
+    } else {
+      locked = false;
+    }
+  }
+
+  return {
+    acquire(): Promise<MutexRelease> {
+      if (!locked) {
+        locked = true;
+        return Promise.resolve(release);
+      }
+      return new Promise<MutexRelease>((resolve) => {
+        queue.push(resolve);
+      });
+    },
+  };
+}
+
+const fileMutexes = new Map<string, { acquire: () => Promise<MutexRelease> }>();
+
+function getFileMutex(filePath: string): { acquire: () => Promise<MutexRelease> } {
+  let mutex = fileMutexes.get(filePath);
+  if (!mutex) {
+    mutex = createMutex();
+    fileMutexes.set(filePath, mutex);
+  }
+  return mutex;
+}
+
 export function createDistillerStateKV(stateDir: string, distillerId: string): DistillerStateKV {
   const filePath = createStateFilePath(stateDir, distillerId);
+  const mutex = getFileMutex(filePath);
 
   return {
     async get<V>(key: string): Promise<V | undefined> {
-      const doc = await readStateFile(filePath);
-      return doc.kv[key] as V | undefined;
+      const release = await mutex.acquire();
+      try {
+        const doc = await readStateFile(filePath);
+        return doc.kv[key] as V | undefined;
+      } finally {
+        release();
+      }
     },
 
     async set<V>(key: string, value: V): Promise<void> {
-      const doc = await readStateFile(filePath);
-      doc.kv[key] = value;
-      await writeStateFile(filePath, doc);
+      const release = await mutex.acquire();
+      try {
+        const doc = await readStateFile(filePath);
+        doc.kv[key] = value;
+        await writeStateFile(filePath, doc);
+      } finally {
+        release();
+      }
+    },
+
+    async update<V>(key: string, fn: (current: V | undefined) => V): Promise<void> {
+      const release = await mutex.acquire();
+      try {
+        const doc = await readStateFile(filePath);
+        const current = doc.kv[key] as V | undefined;
+        doc.kv[key] = fn(current);
+        await writeStateFile(filePath, doc);
+      } finally {
+        release();
+      }
     },
 
     async markProcessed(targetDistillerId: string, sessionIds: string[]): Promise<void> {
@@ -74,19 +136,24 @@ export function createDistillerStateKV(stateDir: string, distillerId: string): D
         return;
       }
 
-      const now = new Date().toISOString();
-      const processedKey = `processed:${targetDistillerId}`;
-      const doc = await readStateFile(filePath);
-      const currentProcessed =
-        (doc.kv[processedKey] as Record<string, string> | undefined) ?? Object.create(null) as Record<string, string>;
+      const release = await mutex.acquire();
+      try {
+        const now = new Date().toISOString();
+        const processedKey = `processed:${targetDistillerId}`;
+        const doc = await readStateFile(filePath);
+        const currentProcessed =
+          (doc.kv[processedKey] as Record<string, string> | undefined) ?? Object.create(null) as Record<string, string>;
 
-      for (const sessionId of sessionIds) {
-        currentProcessed[sessionId] = now;
+        for (const sessionId of sessionIds) {
+          currentProcessed[sessionId] = now;
+        }
+
+        doc.kv[processedKey] = currentProcessed;
+        doc.kv.watermark = now;
+        await writeStateFile(filePath, doc);
+      } finally {
+        release();
       }
-
-      doc.kv[processedKey] = currentProcessed;
-      doc.kv.watermark = now;
-      await writeStateFile(filePath, doc);
     },
   };
 }
