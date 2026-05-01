@@ -309,6 +309,139 @@ export interface DistillResult<T = Record<string, unknown>> {
   };
 }
 
+// ── Asset graph domain types (Phase 4) ──
+
+export interface EvidenceSpan {
+  session_id: string;
+  message_id: string;
+  excerpt: string;
+  position?: { start: number; end: number };
+}
+
+export interface Signal {
+  id: string;
+  signal_type: string;
+  confidence: number;
+  evidence: EvidenceSpan[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface AssetCandidate {
+  id: string;
+  fingerprint: string;
+  candidate_type: string;
+  title: string;
+  summary: string;
+  confidence: number;
+  tags: string[];
+  distiller_id: string;
+  signals: Signal[];
+  evidence: EvidenceSpan[];
+  payload: Record<string, unknown>;
+  render?: { markdown?: string; html?: string };
+}
+
+export type DecisionType = "approved" | "rejected" | "deferred";
+
+export interface Decision {
+  candidate_id: string;
+  decision: DecisionType;
+  reason?: string;
+  decided_at: string;
+}
+
+export interface AssetDelivery {
+  candidate_id: string;
+  sink_id: string;
+  status: "pending" | "delivered" | "failed";
+  delivered_at?: string;
+  external_url?: string;
+  error?: string;
+}
+
+export interface QualityReport {
+  passed: boolean;
+  checks: QualityCheck[];
+}
+
+export interface QualityCheck {
+  name: string;
+  passed: boolean;
+  reason?: string;
+}
+
+export function mapDistillResultToCandidate(result: DistillResult): AssetCandidate {
+  const evidence: EvidenceSpan[] = result.evidence.map((e) => ({
+    session_id: e.session_id,
+    message_id: e.message_id,
+    excerpt: e.excerpt,
+    position: e.position,
+  }));
+
+  const signal: Signal = {
+    id: `${result.id}:signal`,
+    signal_type: result.type,
+    confidence: result.confidence,
+    evidence,
+    metadata: { distiller_id: result.distiller_id, tags: result.tags },
+  };
+
+  return {
+    id: result.id,
+    fingerprint: result.fingerprint,
+    candidate_type: result.type,
+    title: result.title,
+    summary: result.summary,
+    confidence: result.confidence,
+    tags: result.tags,
+    distiller_id: result.distiller_id,
+    signals: [signal],
+    evidence,
+    payload: result.payload,
+    render: result.render,
+  };
+}
+
+export function validateAssetCandidate(
+  candidate: AssetCandidate,
+  options?: { minConfidence?: number; requireEvidence?: boolean },
+): QualityReport {
+  const minConfidence = options?.minConfidence ?? 0.5;
+  const requireEvidence = options?.requireEvidence ?? true;
+  const checks: QualityCheck[] = [];
+
+  checks.push({
+    name: "has_evidence",
+    passed: !requireEvidence || candidate.evidence.length > 0,
+    reason: !requireEvidence || candidate.evidence.length > 0 ? undefined : "no evidence spans",
+  });
+
+  checks.push({
+    name: "confidence_threshold",
+    passed: candidate.confidence >= minConfidence,
+    reason: candidate.confidence >= minConfidence
+      ? undefined
+      : `confidence ${candidate.confidence} below threshold ${minConfidence}`,
+  });
+
+  checks.push({
+    name: "has_title",
+    passed: candidate.title.length > 0,
+    reason: candidate.title.length > 0 ? undefined : "empty title",
+  });
+
+  checks.push({
+    name: "has_summary",
+    passed: candidate.summary.length > 0,
+    reason: candidate.summary.length > 0 ? undefined : "empty summary",
+  });
+
+  return {
+    passed: checks.every((c) => c.passed),
+    checks,
+  };
+}
+
 export interface DeliveryReport {
   delivered: number;
   failed: number;
