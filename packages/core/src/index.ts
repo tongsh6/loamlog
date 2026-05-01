@@ -442,6 +442,101 @@ export function validateAssetCandidate(
   };
 }
 
+// ── Approval gate & audit (Phase 5) ──
+
+export interface AuditRecord {
+  id: string;
+  candidate_id: string;
+  session_id?: string;
+  distiller_id: string;
+  candidate_type: string;
+  candidate_title: string;
+  quality_passed: boolean;
+  decision: DecisionType;
+  decision_reason?: string;
+  sink_id: string;
+  delivery_status: "pending" | "delivered" | "failed";
+  delivery_error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function createAuditRecord(
+  candidate: AssetCandidate,
+  decision: Decision,
+  quality: QualityReport,
+  sinkId: string,
+): AuditRecord {
+  return {
+    id: `audit-${candidate.id}-${Date.now()}`,
+    candidate_id: candidate.id,
+    session_id: candidate.evidence[0]?.session_id,
+    distiller_id: candidate.distiller_id,
+    candidate_type: candidate.candidate_type,
+    candidate_title: candidate.title,
+    quality_passed: quality.passed,
+    decision: decision.decision,
+    decision_reason: decision.reason,
+    sink_id: sinkId,
+    delivery_status: "pending",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function auditRecordDelivered(record: AuditRecord): AuditRecord {
+  return {
+    ...record,
+    delivery_status: "delivered",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function auditRecordFailed(record: AuditRecord, error: string): AuditRecord {
+  return {
+    ...record,
+    delivery_status: "failed",
+    delivery_error: error,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export interface ApprovalResult {
+  allowed: boolean;
+  reason?: string;
+  requires_explicit_optin?: boolean;
+}
+
+export function approvalGate(
+  candidate: AssetCandidate,
+  decision: Decision,
+  quality: QualityReport,
+  options?: { allowExternal?: boolean },
+): ApprovalResult {
+  // Gate 1: quality must pass
+  if (!quality.passed) {
+    const failed = quality.checks.filter((c) => !c.passed).map((c) => c.name);
+    return { allowed: false, reason: `quality gate failed: ${failed.join(", ")}` };
+  }
+
+  // Gate 2: decision must be "approved"
+  if (decision.decision !== "approved") {
+    return { allowed: false, reason: `decision is '${decision.decision}', not 'approved'` };
+  }
+
+  // Gate 3: evidence required for external sinks
+  if (candidate.evidence.length === 0) {
+    return { allowed: false, reason: "evidence is required for delivery" };
+  }
+
+  // Gate 4: external sinks require explicit opt-in
+  if (!options?.allowExternal) {
+    return { allowed: false, reason: "external delivery not enabled", requires_explicit_optin: true };
+  }
+
+  return { allowed: true };
+}
+
 export interface DeliveryReport {
   delivered: number;
   failed: number;

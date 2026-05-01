@@ -2,10 +2,15 @@ import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
   LLMAuthError,
+  approvalGate,
   buildSessionSnapshot,
+  createAuditRecord,
+  auditRecordDelivered,
+  auditRecordFailed,
   mapDistillResultToCandidate,
   validateAssetCandidate,
   type AICConfig,
+  type AssetCandidate,
   type DistillResult,
   type DistillResultDraft,
 } from "./index.js";
@@ -164,5 +169,158 @@ describe("asset candidate quality gate", () => {
     assert.equal(report.checks.length, 4);
     const failed = report.checks.filter((c) => !c.passed);
     assert.equal(failed.length, 2); // evidence + confidence
+  });
+});
+
+describe("approval gate", () => {
+  function makeCandidate(): AssetCandidate {
+    return {
+      id: "cand-1",
+      fingerprint: "fp-1",
+      candidate_type: "issue-draft",
+      title: "Fix bug",
+      summary: "A bug needs fixing.",
+      confidence: 0.85,
+      tags: ["bug"],
+      distiller_id: "@test/distiller",
+      signals: [],
+      evidence: [{ session_id: "ses_1", message_id: "msg_1", excerpt: "the bug is..." }],
+      payload: {},
+    };
+  }
+
+  test("allows delivery when all gates pass", () => {
+    const quality = validateAssetCandidate(makeCandidate());
+    const result = approvalGate(
+      makeCandidate(),
+      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      quality,
+      { allowExternal: true },
+    );
+    assert.equal(result.allowed, true);
+  });
+
+  test("blocks delivery when quality gate fails", () => {
+    const candidate = makeCandidate();
+    candidate.evidence = [];
+    const quality = validateAssetCandidate(candidate);
+    const result = approvalGate(
+      candidate,
+      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      quality,
+      { allowExternal: true },
+    );
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason?.includes("quality gate failed"));
+  });
+
+  test("blocks delivery when decision is rejected", () => {
+    const quality = validateAssetCandidate(makeCandidate());
+    const result = approvalGate(
+      makeCandidate(),
+      { candidate_id: "cand-1", decision: "rejected", decided_at: new Date().toISOString(), reason: "not needed" },
+      quality,
+      { allowExternal: true },
+    );
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason?.includes("rejected"));
+  });
+
+  test("blocks delivery when decision is deferred", () => {
+    const quality = validateAssetCandidate(makeCandidate());
+    const result = approvalGate(
+      makeCandidate(),
+      { candidate_id: "cand-1", decision: "deferred", decided_at: new Date().toISOString() },
+      quality,
+      { allowExternal: true },
+    );
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason?.includes("deferred"));
+  });
+
+  test("blocks external delivery when allowExternal is not set", () => {
+    const quality = validateAssetCandidate(makeCandidate());
+    const result = approvalGate(
+      makeCandidate(),
+      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      quality,
+    );
+    assert.equal(result.allowed, false);
+    assert.equal(result.requires_explicit_optin, true);
+    assert.ok(result.reason?.includes("external delivery not enabled"));
+  });
+
+  test("blocks delivery when candidate has no evidence", () => {
+    const candidate = makeCandidate();
+    candidate.evidence = [];
+    const quality = { passed: true, checks: [] }; // bypass quality
+    const result = approvalGate(
+      candidate,
+      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      quality,
+      { allowExternal: true },
+    );
+    assert.equal(result.allowed, false);
+    assert.ok(result.reason?.includes("evidence"));
+  });
+});
+
+describe("audit records", () => {
+  test("creates audit record with candidate and decision details", () => {
+    const candidate: AssetCandidate = {
+      id: "cand-1",
+      fingerprint: "fp-1",
+      candidate_type: "issue-draft",
+      title: "Fix login bug",
+      summary: "...",
+      confidence: 0.9,
+      tags: ["bug"],
+      distiller_id: "@test/distiller",
+      signals: [],
+      evidence: [{ session_id: "ses_001", message_id: "msg_1", excerpt: "login broken" }],
+      payload: {},
+    };
+    const decision = { candidate_id: "cand-1", decision: "approved" as const, decided_at: "2026-05-01T12:00:00Z" };
+    const quality = { passed: true, checks: [] };
+
+    const record = createAuditRecord(candidate, decision, quality, "file");
+
+    assert.equal(record.candidate_id, "cand-1");
+    assert.equal(record.session_id, "ses_001");
+    assert.equal(record.distiller_id, "@test/distiller");
+    assert.equal(record.decision, "approved");
+    assert.equal(record.delivery_status, "pending");
+    assert.equal(record.sink_id, "file");
+    assert.ok(record.id.startsWith("audit-"));
+    assert.ok(record.created_at.length > 0);
+  });
+
+  test("transitions audit record to delivered and failed states", () => {
+    const record = createAuditRecord(
+      {
+        id: "c-1",
+        fingerprint: "fp",
+        candidate_type: "issue-draft",
+        title: "T",
+        summary: "S",
+        confidence: 1,
+        tags: [],
+        distiller_id: "@t/d",
+        signals: [],
+        evidence: [{ session_id: "s1", message_id: "m1", excerpt: "e" }],
+        payload: {},
+      },
+      { candidate_id: "c-1", decision: "approved", decided_at: new Date().toISOString() },
+      { passed: true, checks: [] },
+      "github",
+    );
+
+    const delivered = auditRecordDelivered(record);
+    assert.equal(delivered.delivery_status, "delivered");
+    assert.ok(delivered.updated_at >= record.updated_at);
+
+    const failed = auditRecordFailed(record, "network timeout");
+    assert.equal(failed.delivery_status, "failed");
+    assert.equal(failed.delivery_error, "network timeout");
   });
 });
