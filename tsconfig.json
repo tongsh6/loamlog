@@ -6,11 +6,16 @@
     { "path": "./packages/distiller-sdk" },
     { "path": "./packages/distill" },
     { "path": "./packages/distillers/pitfall-card" },
+    { "path": "./packages/distillers/knowledge-card" },
+    { "path": "./packages/distillers/prd-draft" },
     { "path": "./packages/sinks/file" },
+    { "path": "./packages/sinks/github" },
+    { "path": "./packages/sinks/notion" },
     { "path": "./packages/providers/opencode" },
     { "path": "./packages/providers/claude-code" },
     { "path": "./packages/providers/gemini-cli" },
     { "path": "./packages/providers/codex" },
+    { "path": "./packages/pipeline" },
     { "path": "./packages/cli" },
     { "path": "./plugins/opencode" }
   ]

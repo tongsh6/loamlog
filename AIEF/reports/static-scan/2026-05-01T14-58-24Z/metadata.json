@@ -1,0 +1,96 @@
+{
+  "runId": "2026-05-01T14-58-24Z",
+  "startedAt": "2026-05-01T14:58:24.655Z",
+  "completedAt": "2026-05-01T14:58:37.534Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "2df3990",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "github/workflows/ci.yml",
+      "gitignore",
+      "GENTS.md",
+      "IEF/context/INDEX.md",
+      "IEF/context/business/current-focus.md",
+      "IEF/context/business/roadmap.md",
+      "IEF/openspec/current-focus.md",
+      "IEF/plans/2026-04-30-architecture-dag-blueprint.md",
+      "ackage.json",
+      "ackages/archive/src/index.test.ts",
+      "ackages/archive/src/index.ts",
+      "ackages/cli/src/distill.test.ts",
+      "ackages/cli/src/distill.ts",
+      "ackages/cli/src/index.ts",
+      "ackages/cli/src/list.ts",
+      "ackages/core/src/index.ts",
+      "ackages/distill/package.json",
+      "ackages/distill/src/index.test.ts",
+      "ackages/distill/src/index.ts",
+      "ackages/distill/src/state.ts",
+      "ackages/distiller-sdk/src/index.test.ts",
+      "ackages/distiller-sdk/src/index.ts",
+      "ackages/distillers/pitfall-card/src/index.test.ts",
+      "ackages/evaluation-harness/src/baseline.ts",
+      "ackages/pipeline/src/index.test.ts",
+      "ackages/rules/package.json",
+      "ackages/sanitizer/src/index.test.ts",
+      "ackages/sanitizer/src/index.ts",
+      "npm-lock.yaml",
+      "sconfig.json",
+      ".cursor/",
+      ".github/copilot-instructions.md",
+      "AIEF/plans/2026-05-01-ai-completion-static-scan-gate.md",
+      "AIEF/reports/",
+      "AIEF/scripts/ai-complete.ts",
+      "CODEX.md",
+      "biome.json",
+      "packages/cli/src/review.test.ts",
+      "packages/cli/src/review.ts",
+      "packages/distill/src/dag-runner.test.ts",
+      "packages/distill/src/dag-runner.ts",
+      "packages/distillers/knowledge-card/",
+      "packages/distillers/prd-draft/",
+      "packages/sinks/github/",
+      "packages/sinks/notion/",
+      "redaction.config.example.json",
+      "tasks/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 1
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

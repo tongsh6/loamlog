@@ -1,6 +1,6 @@
 import assert from "node:assert";
 import { describe, test } from "node:test";
-import { applySnapshotRedaction, parseRedactIgnore } from "./index.js";
+import { applySnapshotRedaction, applySnapshotRedactionWithConfig, parseRedactIgnore, resolveRedactionConfig } from "./index.js";
 import type { SessionSnapshot } from "@loamlog/core";
 
 function buildSnapshot(content: string): SessionSnapshot {
@@ -104,5 +104,79 @@ describe("applySnapshotRedaction", () => {
     assert.equal((result.summary.by_type.api_key ?? 0) >= 2, true);
     assert.equal((result.summary.by_type.token ?? 0) >= 2, true);
     assert.equal((result.summary.by_type.password ?? 0) >= 2, true);
+  });
+});
+
+describe("resolveRedactionConfig", () => {
+  test("returns empty config for empty input", () => {
+    const resolved = resolveRedactionConfig({});
+    assert.equal(resolved.extraPatterns.length, 0);
+    assert.equal(resolved.ignorePatterns.length, 0);
+    assert.equal(resolved.disabledCategories.size, 0);
+    assert.equal(resolved.warnRiskLevel, "medium");
+  });
+
+  test("resolves custom patterns with compiled regex", () => {
+    const resolved = resolveRedactionConfig({
+      patterns: [
+        { id: "custom-jwt", regex: "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}", placeholder: "[JWT]", category: "token" },
+      ],
+    });
+    assert.equal(resolved.extraPatterns.length, 1);
+    assert.equal(resolved.extraPatterns[0].id, "custom-jwt");
+    assert.equal(resolved.extraPatterns[0].placeholder, "[JWT]");
+    assert.equal(resolved.extraPatterns[0].category, "token");
+  });
+
+  test("resolves ignore patterns as compiled regex", () => {
+    const resolved = resolveRedactionConfig({
+      ignore_patterns: ["sk-test-", "example\\.com"],
+    });
+    assert.equal(resolved.ignorePatterns.length, 2);
+  });
+
+  test("resolves disabled categories", () => {
+    const resolved = resolveRedactionConfig({
+      disabled_categories: ["email", "phone"],
+    });
+    assert.equal(resolved.disabledCategories.has("email"), true);
+    assert.equal(resolved.disabledCategories.has("phone"), true);
+  });
+});
+
+describe("applySnapshotRedactionWithConfig", () => {
+  test("applies custom patterns from config", () => {
+    const snapshot = buildSnapshot("JWT token: eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dozjgNGlj0L3T8L5L5HAVA");
+    const resolved = resolveRedactionConfig({
+      patterns: [
+        { id: "custom-jwt", regex: "eyJ[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}\\.[A-Za-z0-9_-]{10,}", placeholder: "[JWT]", category: "token" },
+      ],
+    });
+    const result = applySnapshotRedactionWithConfig(snapshot, resolved);
+    assert.equal(result.snapshot.messages[0]?.content?.includes("[JWT]"), true);
+    assert.equal((result.summary.by_type.token ?? 0) >= 1, true);
+  });
+
+  test("disabled categories skip built-in patterns", () => {
+    const snapshot = buildSnapshot("Contact user@example.com and call 123-456-7890");
+    const resolved = resolveRedactionConfig({
+      disabled_categories: ["email"],
+    });
+    const result = applySnapshotRedactionWithConfig(snapshot, resolved);
+    const content = result.snapshot.messages[0]?.content ?? "";
+    // email should be preserved
+    assert.equal(content.includes("user@example.com"), true);
+    // phone should still be redacted
+    assert.equal(content.includes("[PHONE]"), true);
+  });
+
+  test("merged ignore patterns skip redaction", () => {
+    const snapshot = buildSnapshot("Test token: sk-test-not-a-real-key-12345");
+    const resolved = resolveRedactionConfig({
+      ignore_patterns: ["sk-test-"],
+    });
+    const result = applySnapshotRedactionWithConfig(snapshot, resolved);
+    const content = result.snapshot.messages[0]?.content ?? "";
+    assert.equal(content.includes("sk-test-"), true);
   });
 });

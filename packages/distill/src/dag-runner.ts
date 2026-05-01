@@ -1,0 +1,401 @@
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import type {
+  AssetCandidate,
+  AuditRecord,
+  DistillResult,
+  DistillResultDraft,
+  DistillerPlugin,
+  LLMRouter,
+  QualityReport,
+  SessionArtifact,
+} from "@loamlog/core";
+import {
+  approvalGate,
+  createAuditRecord,
+  auditRecordDelivered,
+  auditRecordFailed,
+  mapDistillResultToCandidate,
+  validateAssetCandidate,
+} from "@loamlog/core";
+import type { DAGDefinition, ExecutionReport, PipelineNode } from "@loamlog/pipeline";
+import { executeDAG, validateDAG } from "@loamlog/pipeline";
+import { createArtifactQueryClient } from "./query.js";
+import type { DistillerStateKV } from "@loamlog/core";
+import { injectMetadata } from "./metadata.js";
+import { runSinks, type ConfiguredSink } from "./sink-runner.js";
+
+export interface DistillDAGOptions {
+  distiller: DistillerPlugin;
+  distillerConfig?: Record<string, unknown>;
+  llm: LLMRouter;
+  state: DistillerStateKV;
+  sinks: ConfiguredSink[];
+  dumpDir: string;
+  repo?: string;
+  since?: string;
+  until?: string;
+  session_ids?: string[];
+  /** Allow delivery to external sinks (e.g. GitHub). Default: false. */
+  allowExternal?: boolean;
+}
+
+export interface DistillDAGResult {
+  report: ExecutionReport;
+  results: DistillResult[];
+  candidates: AssetCandidate[];
+  qualityReports: QualityReport[];
+  audit: AuditRecord[];
+  skipped: number;
+  errors: Array<{ message: string; session_id?: string }>;
+  artifactsProcessed: number;
+}
+
+interface DistillAccumulator {
+  results: DistillResult[];
+  candidates: AssetCandidate[];
+  qualityReports: QualityReport[];
+  audit: AuditRecord[];
+  skipped: number;
+  errors: Array<{ message: string; session_id?: string }>;
+  artifactsProcessed: number;
+}
+
+/**
+ * Create a DAG definition for the distill pipeline.
+ *
+ * DAG shape:
+ *   query_artifacts -> run_distiller -> process_results -> deliver_to_sinks
+ *
+ * Phase 3 (asset graph): process_results maps DistillResult → AssetCandidate
+ * and runs validateAssetCandidate().
+ *
+ * Phase 4 (approval gate): deliver_to_sinks runs approvalGate(),
+ * generates AuditRecords, and writes them to distill/{repo}/audit/.
+ * Local file sink always delivers; external sinks require approval.
+ */
+export function createDistillDAG(
+  options: DistillDAGOptions,
+  acc: DistillAccumulator,
+): DAGDefinition {
+  const { distiller, distillerConfig, llm, state, sinks, dumpDir, repo, since, until, session_ids } =
+    options;
+
+  const artifactStore = createArtifactQueryClient(dumpDir, state, distiller.id, {
+    repo,
+    since,
+    until,
+    session_ids,
+  });
+
+  // ── Node 1: query_artifacts ──
+  const queryNode: PipelineNode<Record<string, never>, SessionArtifact[]> = {
+    id: "query_artifacts",
+    async run(_input, ctx) {
+      const artifacts: SessionArtifact[] = [];
+      for await (const a of artifactStore.getUnprocessed(distiller.id)) {
+        artifacts.push(a);
+      }
+      ctx.logger.info(`[dag:query] distiller=${distiller.id} count=${artifacts.length}`);
+      return artifacts;
+    },
+  };
+
+  // ── Node 2: run_distiller ──
+  const distillNode: PipelineNode<
+    Record<string, unknown>,
+    { drafts: DistillResultDraft[]; processedSessionIds: string[] }
+  > = {
+    id: "run_distiller",
+    timeoutMs: 120_000,
+    async run(input, ctx) {
+      const artifacts = (input as Record<string, unknown>).query_artifacts as
+        | SessionArtifact[]
+        | undefined;
+      if (!artifacts || artifacts.length === 0) {
+        ctx.logger.info(`[dag:distill] distiller=${distiller.id} no artifacts, skipping`);
+        return { drafts: [], processedSessionIds: [] };
+      }
+
+      const processedSessionIds = new Set<string>();
+      const trackingStore = {
+        async *getUnprocessed(_targetId: string, _limit?: number) {
+          for (const a of artifacts) {
+            processedSessionIds.add(a.meta.session_id);
+            yield a;
+          }
+        },
+        query: artifactStore.query.bind(artifactStore),
+      };
+
+      const drafts = await distiller.run({
+        artifactStore: trackingStore,
+        llm,
+        state,
+        config: distillerConfig,
+        distiller_id: distiller.id,
+        distiller_version: distiller.version,
+      });
+
+      ctx.logger.info(
+        `[dag:distill] drafts=${drafts.length} sessions=${processedSessionIds.size}`,
+      );
+      return { drafts, processedSessionIds: [...processedSessionIds] };
+    },
+  };
+
+  // ── Node 3: process_results (validate + metadata + dedup + asset graph) ──
+  const processNode: PipelineNode<
+    Record<string, unknown>,
+    { results: DistillResult[]; skipped: number; errors: Array<{ message: string; session_id?: string }> }
+  > = {
+    id: "process_results",
+    async run(input, ctx) {
+      const upstream = (input as Record<string, unknown>).run_distiller as
+        | { drafts: DistillResultDraft[]; processedSessionIds: string[] }
+        | undefined;
+      const drafts = upstream?.drafts ?? [];
+      const processedSessionIds = upstream?.processedSessionIds ?? [];
+
+      if (drafts.length === 0) {
+        ctx.logger.info("[dag:process] no drafts to process");
+        return { results: [], skipped: 0, errors: [] };
+      }
+
+      const knownFingerprints =
+        (await state.get<Record<string, true>>("fingerprints")) ?? {};
+      const results: DistillResult[] = [];
+      const candidates: AssetCandidate[] = [];
+      const qualityReports: QualityReport[] = [];
+      const errors: Array<{ message: string; session_id?: string }> = [];
+      let skipped = 0;
+
+      for (const draft of drafts) {
+        const validationError = validateDraft(draft);
+        if (validationError) {
+          errors.push({ message: validationError, session_id: draft.evidence[0]?.session_id });
+          continue;
+        }
+
+        const sessionId = draft.evidence[0]?.session_id ?? "unknown";
+        const result = injectMetadata(draft, distiller, sessionId);
+
+        if (knownFingerprints[result.fingerprint]) {
+          skipped += 1;
+          continue;
+        }
+
+        knownFingerprints[result.fingerprint] = true;
+        results.push(result);
+
+        // Phase 3: Convert to AssetCandidate and run quality gate
+        const candidate = mapDistillResultToCandidate(result);
+        const quality = validateAssetCandidate(candidate);
+        candidates.push(candidate);
+        qualityReports.push(quality);
+
+        if (!quality.passed) {
+          ctx.logger.warn(
+            `[dag:process] quality gate failed for ${result.id}: ${quality.checks.filter((c) => !c.passed).map((c) => c.name).join(", ")}`,
+          );
+        }
+      }
+
+      await state.set("fingerprints", knownFingerprints);
+      await state.markProcessed(distiller.id, processedSessionIds);
+
+      // Phase 3: expose asset graph data via accumulator
+      acc.results = results;
+      acc.candidates = candidates;
+      acc.qualityReports = qualityReports;
+      acc.skipped = skipped;
+      acc.errors = errors;
+
+      ctx.logger.info(
+        `[dag:process] results=${results.length} skipped=${skipped} errors=${errors.length} qualityPassed=${qualityReports.filter((q) => q.passed).length}/${qualityReports.length}`,
+      );
+      return { results, skipped, errors };
+    },
+  };
+
+  // ── Node 4: deliver_to_sinks (approval gate + audit trail + sink delivery) ──
+  const sinkNode: PipelineNode<
+    Record<string, unknown>,
+    { delivered: number; failed: number; sinkErrors: Array<{ message: string }> }
+  > = {
+    id: "deliver_to_sinks",
+    async run(input, ctx) {
+      const upstream = (input as Record<string, unknown>).process_results as
+        | { results: DistillResult[]; skipped: number; errors: Array<{ message: string; session_id?: string }> }
+        | undefined;
+      const results = upstream?.results ?? [];
+
+      if (results.length === 0) {
+        ctx.logger.info("[dag:sink] no results to deliver");
+        return { delivered: 0, failed: 0, sinkErrors: [] };
+      }
+
+      // Phase 4: Run approval gate for each result
+      const approvedResults: DistillResult[] = [];
+      const auditRecords: AuditRecord[] = [];
+      const allowExt = options.allowExternal;
+      const hasFileSink = sinks.some((s) => s.plugin.id === "@loamlog/sink-file");
+
+      for (let i = 0; i < results.length; i++) {
+        const result = results[i];
+        const candidate = acc.candidates[i];
+        const quality = acc.qualityReports[i];
+
+        if (candidate && quality) {
+          const decision = { candidate_id: candidate.id, decision: "approved" as const, decided_at: new Date().toISOString() };
+
+          // Only apply external gate when user explicitly sets allowExternal
+          if (allowExt === undefined) {
+            // No external delivery preference — deliver all (default local-first)
+            approvedResults.push(result);
+          } else {
+            const approval = approvalGate(candidate, decision, quality, { allowExternal: allowExt });
+
+            if (approval.allowed) {
+              approvedResults.push(result);
+            } else if (approval.requires_explicit_optin && hasFileSink) {
+              // External blocked, file sink available — deliver locally
+              ctx.logger.info(`[dag:sink] file sink delivery for ${result.id} (external blocked: ${approval.reason})`);
+              approvedResults.push(result);
+            } else {
+              ctx.logger.warn(`[dag:sink] blocked: ${result.id} reason=${approval.reason}`);
+            }
+          }
+
+          // Generate audit record
+          const audit = createAuditRecord(candidate, decision, quality, sinks[0]?.plugin.id ?? "unknown");
+          auditRecords.push(audit);
+        } else {
+          // No candidate/quality data, deliver without gate check
+          approvedResults.push(result);
+        }
+      }
+
+      if (approvedResults.length === 0) {
+        ctx.logger.info("[dag:sink] all results blocked by approval gate");
+        acc.audit = auditRecords;
+        return { delivered: 0, failed: 0, sinkErrors: [] };
+      }
+
+      const sinkReports = await runSinks(sinks, approvedResults, {
+        dump_dir: dumpDir,
+        repo: repo ?? "_global",
+      });
+
+      let delivered = 0;
+      let failed = 0;
+      const sinkErrors: Array<{ message: string }> = [];
+
+      for (const report of sinkReports) {
+        delivered += report.delivered;
+        failed += report.failed;
+        for (const e of report.errors ?? []) {
+          sinkErrors.push({ message: e.error });
+        }
+      }
+
+      // Update audit records with delivery status
+      const finalAudit = auditRecords.map((a, idx) => {
+        if (idx < delivered) {
+          return auditRecordDelivered(a);
+        }
+        return auditRecordFailed(a, sinkErrors[idx - delivered]?.message ?? "delivery failed");
+      });
+
+      // Write audit records to distill/{repo}/audit/
+      await writeAuditRecords(dumpDir, repo ?? "_global", finalAudit);
+
+      for (const se of sinkErrors) {
+        acc.errors.push({ message: se.message });
+      }
+      acc.artifactsProcessed = delivered;
+      acc.audit = finalAudit;
+
+      ctx.logger.info(`[dag:sink] delivered=${delivered} failed=${failed} audit=${finalAudit.length}`);
+      return { delivered, failed, sinkErrors };
+    },
+  };
+
+  return {
+    nodes: [queryNode, distillNode, processNode, sinkNode],
+    edges: [
+      ["query_artifacts", "run_distiller"],
+      ["run_distiller", "process_results"],
+      ["process_results", "deliver_to_sinks"],
+    ],
+  };
+}
+
+function validateDraft(draft: DistillResultDraft): string | undefined {
+  if (!draft.type || !draft.title || !draft.summary) {
+    return "missing required draft fields";
+  }
+  if (!Array.isArray(draft.evidence) || draft.evidence.length === 0) {
+    return "evidence is required";
+  }
+  return undefined;
+}
+
+async function writeAuditRecords(
+  dumpDir: string,
+  repo: string,
+  records: AuditRecord[],
+): Promise<void> {
+  if (records.length === 0) return;
+  const dir = path.join(dumpDir, "distill", repo.replace(/[^a-zA-Z0-9._-]/g, "_"), "audit");
+  await mkdir(dir, { recursive: true });
+
+  for (const record of records) {
+    const filePath = path.join(dir, `${record.id}.json`);
+    await writeFile(filePath, `${JSON.stringify(record, null, 2)}\n`, "utf8");
+  }
+}
+
+/**
+ * Run the distill DAG and return a normalized result.
+ * This is the DAG-based alternative to DistillEngine.run() for a single distiller.
+ */
+export async function runDistillDAG(
+  options: DistillDAGOptions,
+  dagOptions?: { concurrency?: number },
+): Promise<DistillDAGResult> {
+  const acc: DistillAccumulator = {
+    results: [],
+    candidates: [],
+    qualityReports: [],
+    audit: [],
+    skipped: 0,
+    errors: [],
+    artifactsProcessed: 0,
+  };
+
+  const dag = createDistillDAG(options, acc);
+
+  const validationErrors = validateDAG(dag);
+  if (validationErrors.length > 0) {
+    throw new Error(`Invalid distill DAG: ${validationErrors.join("; ")}`);
+  }
+
+  const { createExecutionContext } = await import("@loamlog/core");
+  const ctx = createExecutionContext();
+
+  const report = await executeDAG(dag, ctx, {
+    concurrency: dagOptions?.concurrency,
+  });
+
+  return {
+    report,
+    results: acc.results,
+    candidates: acc.candidates,
+    qualityReports: acc.qualityReports,
+    audit: acc.audit,
+    skipped: acc.skipped,
+    errors: acc.errors,
+    artifactsProcessed: acc.artifactsProcessed,
+  };
+}

@@ -5,3 +5,5 @@ export { createLLMRouter } from "./llm-router.js";
 export { runSinks, type ConfiguredSink } from "./sink-runner.js";
 export { createArtifactQueryClient, snapshotToArtifact } from "./query.js";
 export { createDistillEngine } from "./engine.js";
+export { createDistillDAG, runDistillDAG } from "./dag-runner.js";
+export type { DistillDAGOptions, DistillDAGResult } from "./dag-runner.js";

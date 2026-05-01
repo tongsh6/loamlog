@@ -44,6 +44,27 @@ describe("daemon /capture", () => {
       logger: () => {
         return;
       },
+      sessionProvider: {
+        id: "opencode",
+        async pullSession(sessionId) {
+          return {
+            session: { id: sessionId, source: "test" },
+            messages: [
+              {
+                id: "msg-1",
+                role: "user",
+                timestamp: "2026-03-02T00:00:00.000Z",
+                content: "hello",
+              },
+            ],
+            context: {
+              cwd: "/tmp",
+              worktree: "/tmp",
+              repo: "test",
+            },
+          };
+        },
+      },
       onCapture: (payload) => {
         captured.push(payload.session_id);
       },

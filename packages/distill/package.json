@@ -18,6 +18,7 @@
   "dependencies": {
     "@loamlog/archive": "workspace:*",
     "@loamlog/core": "workspace:*",
+    "@loamlog/pipeline": "workspace:*",
     "@loamlog/sanitizer": "workspace:*"
   }
 }

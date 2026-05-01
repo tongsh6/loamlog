@@ -3,6 +3,7 @@ import { startDaemon } from "./daemon.js";
 import { runCaptureCommand } from "./capture.js";
 import { runDistillCommand } from "./distill.js";
 import { runListCommand } from "./list.js";
+import { runReviewCommand } from "./review.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
 import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loamlog/provider-claude-code";
 import { pullCodexSessionFromFilePath, startCodexWatcher } from "@loamlog/provider-codex";
@@ -13,9 +14,10 @@ function printUsage(): void {
   console.log("Usage: loam <command> [options]");
   console.log("Commands:");
   console.log("  daemon  [--port <number>] [--dump-dir <path>] [--providers <list>]");
-  console.log("  list    [--repo <name>] [--since <duration>] [--distill] [--pending] [--limit <n>] [--json] [--dump-dir <path>]");
+  console.log("  list    [--repo <name>] [--since <duration>] [--distill] [--pending] [--scan] [--limit <n>] [--json] [--dump-dir <path>]");
   console.log("  capture [--provider <name>] [--session-id <id>] [--dump-dir <path>] [--trigger <name>]");
-  console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>]");
+  console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>] [--legacy]");
+  console.log("  review  [--list] [--repo <name>] [--approve <id> | --reject <id>] [--dump-dir <path>] [--limit <n>]");
 }
 
 function parsePort(args: string[]): number | undefined {
@@ -81,6 +83,11 @@ async function main(): Promise<void> {
 
   if (command === "distill") {
     await runDistillCommand(args);
+    return;
+  }
+
+  if (command === "review") {
+    await runReviewCommand(args);
     return;
   }
 

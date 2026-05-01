@@ -8,7 +8,9 @@ Keep the repository aligned around the current product question without pretendi
 
 - Capture, archive, redaction, and local file-based distill already exist in the repository
 - Multi-model LLM routing already exists
-- The Claude Code provider path also exists in the repository, so multi-source provider abstraction is no longer purely theoretical
+- Claude Code, Gemini CLI, Codex providers all exist — multi-source abstraction validated
+- Architecture DAG Blueprint Phase 0-5 code committed (pipeline, asset graph, approval gate)
+- Integration of Phase 3-5 modules into product flow is the next engineering priority
 
 ## Active Product Focus
 

@@ -1,4 +1,9 @@
-import { EvaluationSample, SamplePrediction, SignalPrediction, ActionPrediction } from "./types.js";
+import {
+  EvaluationSample,
+  SamplePrediction,
+  SignalPrediction,
+  ActionPrediction,
+} from "./types.js";
 
 interface BaselineOptions {
   variant: string;
@@ -26,7 +31,9 @@ export function buildBaselinePredictions(
     const keepSignal = rand() > dropSignalRate;
     const keepAction = rand() > dropActionRate;
 
-    const expectedSignals = keepSignal ? sample.expected.signals : sample.expected.signals.slice(0, 1);
+    const expectedSignals = keepSignal
+      ? sample.expected.signals
+      : sample.expected.signals.slice(0, 1);
     const noisySignals =
       rand() < noiseSignalRate
         ? [
@@ -42,31 +49,45 @@ export function buildBaselinePredictions(
         : expectedSignals;
 
     const issueShouldFlip = rand() < flipShouldIssueRate;
-    const predictedIssueShouldIssue = issueShouldFlip ? !sample.expected.issue.shouldIssue : sample.expected.issue.shouldIssue;
-    const shortenTitle = sample.expected.issue.title.slice(0, Math.max(12, Math.floor(sample.expected.issue.title.length * 0.65)));
+    const predictedIssueShouldIssue = issueShouldFlip
+      ? !sample.expected.issue.shouldIssue
+      : sample.expected.issue.shouldIssue;
+    const shortenTitle = sample.expected.issue.title.slice(
+      0,
+      Math.max(12, Math.floor(sample.expected.issue.title.length * 0.65)),
+    );
     const predictedActionability = Math.max(
       0,
-      Math.min(1, sample.expected.issue.actionability - rand() * 0.25 + rand() * 0.1),
+      Math.min(
+        1,
+        sample.expected.issue.actionability - rand() * 0.25 + rand() * 0.1,
+      ),
     );
 
     const detectedTokens = detectSensitiveTokens(sample.rawInput);
     const expectedTokens = sample.expected.redaction.mustRedact;
-    const mergedTokens = Array.from(new Set([...expectedTokens, ...detectedTokens]));
-    const predictedRedacted = mergedTokens.filter(() => rand() > dropRedactionRate);
+    const mergedTokens = Array.from(
+      new Set([...expectedTokens, ...detectedTokens]),
+    );
+    const predictedRedacted = mergedTokens.filter(
+      () => rand() > dropRedactionRate,
+    );
 
-    const signalPredictions: SignalPrediction[] = noisySignals.map((signal): SignalPrediction => {
-      const confidence =
-        typeof (signal as { weight?: number }).weight === "number"
-          ? (signal as { weight?: number }).weight
-          : 0.75;
-      return {
-        key: signal.key,
-        summary: signal.summary,
-        category: signal.category,
-        severity: signal.severity,
-        confidence,
-      };
-    });
+    const signalPredictions: SignalPrediction[] = noisySignals.map(
+      (signal): SignalPrediction => {
+        const confidence =
+          typeof (signal as { weight?: number }).weight === "number"
+            ? (signal as { weight?: number }).weight
+            : 0.75;
+        return {
+          key: signal.key,
+          summary: signal.summary,
+          category: signal.category,
+          severity: signal.severity,
+          confidence,
+        };
+      },
+    );
 
     const actionPredictions: ActionPrediction[] = (
       keepAction ? sample.expected.actions : sample.expected.actions.slice(0, 1)
@@ -106,14 +127,21 @@ export function buildBaselinePredictions(
 
 function detectSensitiveTokens(raw: string): string[] {
   const tokens = new Set<string>();
-  const emailMatches = raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [];
-  emailMatches.forEach((email) => tokens.add(email));
+  const emailMatches =
+    raw.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/gi) ?? [];
+  for (const email of emailMatches) {
+    tokens.add(email);
+  }
 
   const keyMatches = raw.match(/sk[-_][a-z0-9-]+/gi) ?? [];
-  keyMatches.forEach((key) => tokens.add(key));
+  for (const key of keyMatches) {
+    tokens.add(key);
+  }
 
   const idMatches = raw.match(/\b(?:user|order|session)[-_]?\d{3,}\b/gi) ?? [];
-  idMatches.forEach((id) => tokens.add(id));
+  for (const id of idMatches) {
+    tokens.add(id);
+  }
 
   return Array.from(tokens);
 }

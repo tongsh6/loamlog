@@ -21,7 +21,10 @@ interface DefineDistillerSpec<TPayload = Record<string, unknown>> {
   teardown?(): Promise<void>;
 }
 
-function createNamespacedState(state: DistillerStateKV, distillerId: string): DistillerStateKV {
+function createNamespacedState(
+  state: DistillerStateKV,
+  distillerId: string,
+): DistillerStateKV {
   return {
     get<V>(key: string): Promise<V | undefined> {
       return state.get<V>(`${distillerId}:${key}`);
@@ -29,7 +32,13 @@ function createNamespacedState(state: DistillerStateKV, distillerId: string): Di
     set<V>(key: string, value: V): Promise<void> {
       return state.set(`${distillerId}:${key}`, value);
     },
-    markProcessed(targetDistillerId: string, sessionIds: string[]): Promise<void> {
+    update<V>(key: string, fn: (current: V | undefined) => V): Promise<void> {
+      return state.update(`${distillerId}:${key}`, fn);
+    },
+    markProcessed(
+      targetDistillerId: string,
+      sessionIds: string[],
+    ): Promise<void> {
       return state.markProcessed(targetDistillerId, sessionIds);
     },
   };
@@ -41,7 +50,10 @@ function createTrackingArtifactStore(
 ): ArtifactQueryClient {
   return {
     async *getUnprocessed(distillerId: string, limit?: number) {
-      for await (const artifact of artifactStore.getUnprocessed(distillerId, limit)) {
+      for await (const artifact of artifactStore.getUnprocessed(
+        distillerId,
+        limit,
+      )) {
         processedSessionIds.add(artifact.meta.session_id);
         yield artifact;
       }
@@ -69,7 +81,10 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
 
     async run(input: DistillerRunInput): Promise<DistillResultDraft[]> {
       const processedSessionIds = new Set<string>();
-      const trackingStore = createTrackingArtifactStore(input.artifactStore, processedSessionIds);
+      const trackingStore = createTrackingArtifactStore(
+        input.artifactStore,
+        processedSessionIds,
+      );
       const namespacedState = createNamespacedState(input.state, spec.id);
 
       const results = await spec.run({
@@ -81,7 +96,10 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
       });
 
       if (processedSessionIds.size > 0) {
-        await input.state.markProcessed(spec.id, Array.from(processedSessionIds));
+        await input.state.markProcessed(
+          spec.id,
+          Array.from(processedSessionIds),
+        );
       }
 
       return results as DistillResultDraft[];

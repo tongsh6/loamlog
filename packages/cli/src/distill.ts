@@ -3,8 +3,11 @@ import { existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
-import type { AICConfig } from "@loamlog/core";
+import type { AICConfig, DistillerPlugin, SinkPlugin } from "@loamlog/core";
 import { createDistillEngine } from "@loamlog/distill";
+import { createLLMRouter } from "@loamlog/distill";
+import { createDistillerStateKV } from "@loamlog/distill";
+import { runDistillDAG, type ConfiguredSink } from "@loamlog/distill";
 
 interface DistillArgs {
   distiller?: string;
@@ -14,6 +17,8 @@ interface DistillArgs {
   since?: string;
   until?: string;
   testSession?: string;
+  dag?: boolean;
+  legacy?: boolean;
 }
 
 type PluginSpec = string | { plugin: string; config: Record<string, unknown> };
@@ -29,16 +34,36 @@ const BUILT_IN_PLUGIN_ENTRY_PATHS = {
     dist: "../../distillers/issue-draft/dist/index.js",
     src: "../../distillers/issue-draft/src/index.ts",
   },
+  "@loamlog/distiller-knowledge-card": {
+    dist: "../../distillers/knowledge-card/dist/index.js",
+    src: "../../distillers/knowledge-card/src/index.ts",
+  },
+  "@loamlog/distiller-prd-draft": {
+    dist: "../../distillers/prd-draft/dist/index.js",
+    src: "../../distillers/prd-draft/src/index.ts",
+  },
   "@loamlog/sink-file": {
     dist: "../../sinks/file/dist/index.js",
     src: "../../sinks/file/src/index.ts",
+  },
+  "@loamlog/sink-github": {
+    dist: "../../sinks/github/dist/index.js",
+    src: "../../sinks/github/src/index.ts",
+  },
+  "@loamlog/sink-notion": {
+    dist: "../../sinks/notion/dist/index.js",
+    src: "../../sinks/notion/src/index.ts",
   },
 } as const;
 
 const BUILT_IN_PLUGIN_SPECIFIERS = new Set<string>([
   "@loamlog/distiller-pitfall-card",
   "@loamlog/distiller-issue-draft",
+  "@loamlog/distiller-knowledge-card",
+  "@loamlog/distiller-prd-draft",
   "@loamlog/sink-file",
+  "@loamlog/sink-github",
+  "@loamlog/sink-notion",
 ]);
 
 function getArg(args: string[], name: string): string | undefined {
@@ -71,6 +96,8 @@ export function parseArgs(args: string[]): DistillArgs {
     since: getArg(args, "--since"),
     until: getArg(args, "--until"),
     testSession: getArg(args, "--test-session"),
+    dag: args.includes("--dag"),
+    legacy: args.includes("--legacy"),
   };
 }
 
@@ -275,38 +302,133 @@ export async function runDistillCommand(args: string[]): Promise<void> {
 
   config.dump_dir = dumpDir;
 
-  const engine = createDistillEngine({
-    dumpDir,
-    config,
+  if (parsed.legacy) {
+    console.log("[loam distill] legacy mode (sequential engine)");
+    await runDistillWithEngine(config, dumpDir, parsed);
+  } else {
+    await runDistillWithDAG(config, dumpDir, parsed);
+  }
+
+  if (tempDumpDir) {
+    await rm(tempDumpDir, { recursive: true, force: true });
+  }
+}
+
+async function runDistillWithEngine(
+  config: AICConfig,
+  dumpDir: string,
+  parsed: DistillArgs,
+): Promise<void> {
+  const engine = createDistillEngine({ dumpDir, config });
+
+  await engine.loadFromConfig(config);
+  const reports = await engine.run({
+    distillers: parsed.distiller ? [parsed.distiller] : undefined,
+    since: parsed.since,
+    until: parsed.until,
   });
 
-  try {
-    await engine.loadFromConfig(config);
-    const reports = await engine.run({
-      distillers: parsed.distiller ? [parsed.distiller] : undefined,
+  let totalProcessed = 0;
+  let totalProduced = 0;
+  let totalSkipped = 0;
+  for (const report of reports) {
+    totalProcessed += report.artifacts_processed;
+    totalProduced += report.results_produced;
+    totalSkipped += report.results_skipped;
+    console.log(
+      `[loam distill] ${report.distiller_id}: processed=${report.artifacts_processed} produced=${report.results_produced} skipped=${report.results_skipped} errors=${report.errors.length}`,
+    );
+    for (const err of report.errors) {
+      console.log(`  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`);
+    }
+  }
+
+  console.log(
+    `[loam distill] Processed ${totalProcessed} sessions, produced ${totalProduced} results, skipped ${totalSkipped}`,
+  );
+  if (totalProduced > 0) {
+    console.log(`[loam distill] Results written to ${path.join(dumpDir, "distill")}`);
+  }
+}
+
+async function runDistillWithDAG(
+  config: AICConfig,
+  dumpDir: string,
+  parsed: DistillArgs,
+): Promise<void> {
+  console.log("[loam distill] DAG mode enabled");
+
+  // Load sinks
+  const sinks: ConfiguredSink[] = [];
+  for (const item of config.sinks ?? []) {
+    const spec = typeof item === "string" ? { plugin: item, config: {} } : item;
+    const loaded = (await import(spec.plugin)) as { default?: unknown };
+    const sink = typeof loaded.default === "function" ? await loaded.default(spec.config) : loaded.default;
+    if (sink && typeof (sink as SinkPlugin).deliver === "function") {
+      sinks.push({ plugin: sink as SinkPlugin, config: spec.config });
+    }
+  }
+
+  const llm = createLLMRouter(config.llm, {
+    logger: { info: () => {}, warn: () => {} },
+  });
+
+  let totalProcessed = 0;
+  let totalProduced = 0;
+  let totalSkipped = 0;
+  let totalErrors = 0;
+  let totalQualityFailed = 0;
+
+  for (const item of config.distillers) {
+    const spec = typeof item === "string" ? { plugin: item, config: {} } : item;
+    const loaded = (await import(spec.plugin)) as { default?: unknown };
+    const distiller = typeof loaded.default === "function" ? await loaded.default(spec.config) : loaded.default;
+    if (!distiller || typeof (distiller as DistillerPlugin).run !== "function") {
+      console.log(`[loam distill] skipping invalid distiller: ${spec.plugin}`);
+      continue;
+    }
+
+    const d = distiller as DistillerPlugin;
+    const state = createDistillerStateKV(dumpDir, d.id);
+
+    const result = await runDistillDAG({
+      distiller: d,
+      distillerConfig: spec.config,
+      llm,
+      state,
+      sinks,
+      dumpDir,
       since: parsed.since,
       until: parsed.until,
     });
 
-    let totalProcessed = 0;
-    let totalProduced = 0;
-    let totalSkipped = 0;
-    for (const report of reports) {
-      totalProcessed += report.artifacts_processed;
-      totalProduced += report.results_produced;
-      totalSkipped += report.results_skipped;
+    totalProcessed += result.artifactsProcessed;
+    totalProduced += result.results.length;
+    totalSkipped += result.skipped;
+    totalErrors += result.errors.length;
+    totalQualityFailed += result.qualityReports.filter((q) => !q.passed).length;
+
+    console.log(
+      `[loam distill:DAG] ${d.id}: processed=${result.artifactsProcessed} produced=${result.results.length} skipped=${result.skipped} errors=${result.errors.length} qualityPassed=${result.qualityReports.filter((q) => q.passed).length}/${result.qualityReports.length} audit=${result.audit.length}`,
+    );
+
+    // Print DAG node report
+    for (const node of result.report.nodes) {
+      const statusIcon = node.status === "success" ? "✓" : node.status === "skipped" ? "○" : "✗";
       console.log(
-        `[loam distill] ${report.distiller_id}: processed=${report.artifacts_processed} produced=${report.results_produced} skipped=${report.results_skipped} errors=${report.errors.length}`,
+        `  ${statusIcon} ${node.nodeId}: ${node.status} (${node.durationMs}ms)${node.error ? ` — ${node.error}` : ""}`,
       );
     }
 
-    console.log(
-      `[loam distill] Processed ${totalProcessed} sessions, produced ${totalProduced} results, skipped ${totalSkipped}`,
-    );
-    console.log(`[loam distill] Results written to ${path.join(dumpDir, "distill")}`);
-  } finally {
-    if (tempDumpDir) {
-      await rm(tempDumpDir, { recursive: true, force: true });
+    for (const err of result.errors) {
+      console.log(`  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`);
     }
+  }
+
+  console.log(
+    `[loam distill:DAG] Total: processed=${totalProcessed} produced=${totalProduced} skipped=${totalSkipped} errors=${totalErrors} qualityFailed=${totalQualityFailed}`,
+  );
+  if (totalProduced > 0) {
+    console.log(`[loam distill:DAG] Results written to ${path.join(dumpDir, "distill")}`);
   }
 }

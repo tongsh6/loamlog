@@ -5,6 +5,118 @@ export const DEFAULT_DAEMON_PORT = 37468;
 export const CAPTURE_PATH = "/capture";
 export const DEFAULT_AIC_VERSION = "0.1.0";
 
+export interface Logger {
+  info(msg: string): void;
+  warn(msg: string): void;
+  error(msg: string, err?: unknown): void;
+}
+
+export interface ExecutionContext {
+  traceId: string;
+  logger: Logger;
+}
+
+const consoleLogger: Logger = {
+  info(msg: string) {
+    console.log(msg);
+  },
+  warn(msg: string) {
+    console.warn(msg);
+  },
+  error(msg: string, err?: unknown) {
+    console.error(msg, err ?? "");
+  },
+};
+
+export function createExecutionContext(options?: { logger?: Logger }): ExecutionContext {
+  return {
+    traceId: crypto.randomUUID(),
+    logger: options?.logger ?? consoleLogger,
+  };
+}
+
+export class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}
+
+export interface RetryOptions {
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  shouldRetry?: (error: unknown) => boolean;
+}
+
+function isRetryable(error: unknown): boolean {
+  if (error instanceof TimeoutError) return true;
+  // Retry on transient-like errors but not on auth or validation failures
+  const message = error instanceof Error ? error.message : String(error);
+  return /timed?[ -]?out|ECONNREFUSED|ECONNRESET|ETIMEDOUT|5[0-9][0-9]|rate[ -]?limit/i.test(message);
+}
+
+export async function withTimeout<T>(
+  fn: () => Promise<T>,
+  timeoutMs: number,
+  ctx?: ExecutionContext,
+): Promise<T> {
+  const logger = ctx?.logger;
+  const traceId = ctx?.traceId ?? "-";
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new TimeoutError(`operation timed out after ${timeoutMs}ms trace_id=${traceId}`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([fn(), timeoutPromise]);
+    clearTimeout(timer);
+    return result;
+  } catch (error) {
+    clearTimeout(timer);
+    if (error instanceof TimeoutError) {
+      logger?.warn(`[aspect:timeout] trace_id=${traceId} timeout_ms=${timeoutMs}`);
+    }
+    throw error;
+  }
+}
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+  ctx?: ExecutionContext,
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? 3;
+  const baseDelayMs = options.baseDelayMs ?? 1000;
+  const maxDelayMs = options.maxDelayMs ?? 30000;
+  const shouldRetry = options.shouldRetry ?? isRetryable;
+  const logger = ctx?.logger;
+  const traceId = ctx?.traceId ?? "-";
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !shouldRetry(error)) {
+        throw error;
+      }
+      const delay = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
+      logger?.warn(
+        `[aspect:retry] trace_id=${traceId} attempt=${attempt}/${maxAttempts} delay_ms=${delay} error=${error instanceof Error ? error.message : String(error)}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 export interface CaptureRequest {
   session_id: string;
   trigger: string;
@@ -197,6 +309,234 @@ export interface DistillResult<T = Record<string, unknown>> {
   };
 }
 
+// ── Asset graph domain types (Phase 4) ──
+
+export interface EvidenceSpan {
+  session_id: string;
+  message_id: string;
+  excerpt: string;
+  position?: { start: number; end: number };
+}
+
+export interface Signal {
+  id: string;
+  signal_type: string;
+  confidence: number;
+  evidence: EvidenceSpan[];
+  metadata?: Record<string, unknown>;
+}
+
+export interface AssetCandidate {
+  id: string;
+  fingerprint: string;
+  candidate_type: string;
+  title: string;
+  summary: string;
+  confidence: number;
+  tags: string[];
+  distiller_id: string;
+  signals: Signal[];
+  evidence: EvidenceSpan[];
+  payload: Record<string, unknown>;
+  render?: { markdown?: string; html?: string };
+}
+
+export type DecisionType = "approved" | "rejected" | "deferred";
+
+export interface Decision {
+  candidate_id: string;
+  decision: DecisionType;
+  reason?: string;
+  decided_at: string;
+}
+
+export interface AssetDelivery {
+  candidate_id: string;
+  sink_id: string;
+  status: "pending" | "delivered" | "failed";
+  delivered_at?: string;
+  external_url?: string;
+  error?: string;
+}
+
+export interface QualityReport {
+  passed: boolean;
+  checks: QualityCheck[];
+}
+
+export interface QualityCheck {
+  name: string;
+  passed: boolean;
+  reason?: string;
+}
+
+export function mapDistillResultToCandidate(result: DistillResult): AssetCandidate {
+  const evidence: EvidenceSpan[] = result.evidence.map((e) => ({
+    session_id: e.session_id,
+    message_id: e.message_id,
+    excerpt: e.excerpt,
+    position: e.position,
+  }));
+
+  const signal: Signal = {
+    id: `${result.id}:signal`,
+    signal_type: result.type,
+    confidence: result.confidence,
+    evidence,
+    metadata: { distiller_id: result.distiller_id, tags: result.tags },
+  };
+
+  return {
+    id: result.id,
+    fingerprint: result.fingerprint,
+    candidate_type: result.type,
+    title: result.title,
+    summary: result.summary,
+    confidence: result.confidence,
+    tags: result.tags,
+    distiller_id: result.distiller_id,
+    signals: [signal],
+    evidence,
+    payload: result.payload,
+    render: result.render,
+  };
+}
+
+export function validateAssetCandidate(
+  candidate: AssetCandidate,
+  options?: { minConfidence?: number; requireEvidence?: boolean },
+): QualityReport {
+  const minConfidence = options?.minConfidence ?? 0.5;
+  const requireEvidence = options?.requireEvidence ?? true;
+  const checks: QualityCheck[] = [];
+
+  checks.push({
+    name: "has_evidence",
+    passed: !requireEvidence || candidate.evidence.length > 0,
+    reason: !requireEvidence || candidate.evidence.length > 0 ? undefined : "no evidence spans",
+  });
+
+  checks.push({
+    name: "confidence_threshold",
+    passed: candidate.confidence >= minConfidence,
+    reason: candidate.confidence >= minConfidence
+      ? undefined
+      : `confidence ${candidate.confidence} below threshold ${minConfidence}`,
+  });
+
+  checks.push({
+    name: "has_title",
+    passed: candidate.title.length > 0,
+    reason: candidate.title.length > 0 ? undefined : "empty title",
+  });
+
+  checks.push({
+    name: "has_summary",
+    passed: candidate.summary.length > 0,
+    reason: candidate.summary.length > 0 ? undefined : "empty summary",
+  });
+
+  return {
+    passed: checks.every((c) => c.passed),
+    checks,
+  };
+}
+
+// ── Approval gate & audit (Phase 5) ──
+
+export interface AuditRecord {
+  id: string;
+  candidate_id: string;
+  session_id?: string;
+  distiller_id: string;
+  candidate_type: string;
+  candidate_title: string;
+  quality_passed: boolean;
+  decision: DecisionType;
+  decision_reason?: string;
+  sink_id: string;
+  delivery_status: "pending" | "delivered" | "failed";
+  delivery_error?: string;
+  created_at: string;
+  updated_at: string;
+}
+
+export function createAuditRecord(
+  candidate: AssetCandidate,
+  decision: Decision,
+  quality: QualityReport,
+  sinkId: string,
+): AuditRecord {
+  return {
+    id: `audit-${candidate.id}-${Date.now()}`,
+    candidate_id: candidate.id,
+    session_id: candidate.evidence[0]?.session_id,
+    distiller_id: candidate.distiller_id,
+    candidate_type: candidate.candidate_type,
+    candidate_title: candidate.title,
+    quality_passed: quality.passed,
+    decision: decision.decision,
+    decision_reason: decision.reason,
+    sink_id: sinkId,
+    delivery_status: "pending",
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function auditRecordDelivered(record: AuditRecord): AuditRecord {
+  return {
+    ...record,
+    delivery_status: "delivered",
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export function auditRecordFailed(record: AuditRecord, error: string): AuditRecord {
+  return {
+    ...record,
+    delivery_status: "failed",
+    delivery_error: error,
+    updated_at: new Date().toISOString(),
+  };
+}
+
+export interface ApprovalResult {
+  allowed: boolean;
+  reason?: string;
+  requires_explicit_optin?: boolean;
+}
+
+export function approvalGate(
+  candidate: AssetCandidate,
+  decision: Decision,
+  quality: QualityReport,
+  options?: { allowExternal?: boolean },
+): ApprovalResult {
+  // Gate 1: quality must pass
+  if (!quality.passed) {
+    const failed = quality.checks.filter((c) => !c.passed).map((c) => c.name);
+    return { allowed: false, reason: `quality gate failed: ${failed.join(", ")}` };
+  }
+
+  // Gate 2: decision must be "approved"
+  if (decision.decision !== "approved") {
+    return { allowed: false, reason: `decision is '${decision.decision}', not 'approved'` };
+  }
+
+  // Gate 3: evidence required for external sinks
+  if (candidate.evidence.length === 0) {
+    return { allowed: false, reason: "evidence is required for delivery" };
+  }
+
+  // Gate 4: external sinks require explicit opt-in
+  if (!options?.allowExternal) {
+    return { allowed: false, reason: "external delivery not enabled", requires_explicit_optin: true };
+  }
+
+  return { allowed: true };
+}
+
 export interface DeliveryReport {
   delivered: number;
   failed: number;
@@ -227,6 +567,8 @@ export interface ArtifactQueryClient {
 export interface DistillerStateKV {
   get<V>(key: string): Promise<V | undefined>;
   set<V>(key: string, value: V): Promise<void>;
+  /** Atomically read, transform, and write a value under the state lock. */
+  update<V>(key: string, fn: (current: V | undefined) => V): Promise<void>;
   markProcessed(distillerId: string, sessionIds: string[]): Promise<void>;
 }
 
@@ -610,6 +952,24 @@ export interface RedactionResult {
   redacted_count: number;
   summary: RedactionSummary;
   risk_level: RedactionRiskLevel;
+}
+
+export interface RedactionConfig {
+  /** Additional regex patterns to redact */
+  patterns?: RedactionPatternDef[];
+  /** Patterns to ignore (skip redaction for matching text) */
+  ignore_patterns?: string[];
+  /** Disable specific built-in categories */
+  disabled_categories?: string[];
+  /** Minimum risk level that triggers a warning log */
+  warn_risk_level?: RedactionRiskLevel;
+}
+
+export interface RedactionPatternDef {
+  id: string;
+  regex: string;
+  placeholder: string;
+  category?: string;
 }
 
 function createEmptySummary(): RedactionSummary {

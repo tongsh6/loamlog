@@ -30,11 +30,9 @@ Loamlog 从三个层面打破这一模式：
 AI 工具           采集层                萃取引擎              输出端
 ─────────────     ─────────────────    ─────────────────    ──────────
 OpenCode     ──►  loam daemon       ►  LLM Router        ►  本地文件
-Claude Code  ──►  JSON 快照            多模型                github*
-Cursor*      ──►  脱敏处理             多 distiller          notion*
-             ──►  repo 上下文
-
-                                    (* = 规划中)
+Claude Code  ──►  JSON 快照            多模型                github
+Gemini CLI   ──►  脱敏处理             多 distiller          notion
+Codex        ──►  repo 上下文
 ```
 
 **核心原则：**
@@ -48,16 +46,16 @@ Cursor*      ──►  脱敏处理             多 distiller          notion*
 
 ## 当前方向
 
-截至 2026-03-13，Loamlog 已完成 **里程碑 A：可信底盘**，新增三项关键能力：
+截至 2026-05，Loamlog v0.5.0 已具备 **4 个 Provider**、**5 个 Distiller**、**3 个 Sink**、**DAG 执行引擎**、审批门禁和审计追踪。
 
-- **脱敏网关** — AI 处理前的敏感数据脱敏
+- **脱敏网关** — AI 处理前的敏感数据脱敏，支持配置文件自定义规则
 - **智能触发管道** — 基于阈值的异步、限流萃取
 - **评估框架** — 萃取质量指标
+- **DAG 管道执行器** — 类型化 DAG 运行时 + 资产图建模 + 审批门禁
+- **CI 质量门禁** — `pnpm run ai:complete` 静态扫描 + Top N 排序 + 复扫验证
+- **审批工作流** — `loam review` 审批/驳回 + 审计记录
 
-当前真正要回答的问题是："第一条产品闭环是否足够稳定，可以进入第二阶段自动化？"
-
-- **今天已具备**：采集、归档、脱敏、触发、evidence-backed distill、评估，以及本地文件输出
-- **当前产品焦点**：稳定首个 Killer Flow：`AI conversation -> structured evidence -> local issue draft`
+M0-M5 全部里程碑已完成。GitHub 和 Notion sink 需显式开启（`allowExternal: true`）。
 - **下一步**：MCP Exposure Layer 设计（里程碑 B，边界规格已落在 `AIEF/openspec/mcp-exposure-layer.md`）和 GitHub API sink（第二阶段）
 
 ---
@@ -94,8 +92,8 @@ loamlog/
 | M2 | 萃取层 MVP — pitfall-card distiller | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | ✅ 已完成 |
 | **里程碑 A** | **可信底盘** — 脱敏、触发、评估 | ✅ **已完成** |
-| M4 | 多数据源接入（Claude Code 等） | ◐ 主路径已落地，需继续补强 |
-| M5 | 生态化 — Sink、审批流、更多 distiller | ⏳ 规划中 |
+| M4 | 多数据源接入（OpenCode、Claude Code、Gemini CLI、Codex） | ✅ 已完成 |
+| M5 | 生态化 — Sink、审批流、更多 distiller | ✅ 已完成 |
 
 采集管道已可端到端运行：
 
@@ -186,7 +184,16 @@ npm: https://www.npmjs.com/package/opencode-loamlog
 
 ### 浏览归档
 
-`loam list` 已进入规划，但当前尚未实现；现阶段请直接查看磁盘归档目录。
+```bash
+# 列出最近的会话
+loam list --limit 10
+
+# 按仓库和时间范围过滤
+loam list --repo my-project --since 7d
+
+# 列出蒸馏结果
+loam list --distill --pending
+```
 
 快照按以下结构组织：
 

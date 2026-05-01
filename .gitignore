@@ -26,6 +26,7 @@ Thumbs.db
 *.log
 npm-debug.log*
 pnpm-debug.log*
+!AIEF/reports/static-scan/**/*.log
 
 # Loamlog archive dumps (never commit real session data)
 loamlog-archive/
