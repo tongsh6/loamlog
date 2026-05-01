@@ -11,6 +11,7 @@
     { "path": "./packages/providers/claude-code" },
     { "path": "./packages/providers/gemini-cli" },
     { "path": "./packages/providers/codex" },
+    { "path": "./packages/pipeline" },
     { "path": "./packages/cli" },
     { "path": "./plugins/opencode" }
   ]
