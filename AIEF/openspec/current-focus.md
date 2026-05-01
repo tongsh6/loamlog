@@ -9,8 +9,14 @@ Keep the repository aligned around the current product question without pretendi
 - Capture, archive, redaction, and local file-based distill already exist in the repository
 - Multi-model LLM routing already exists
 - Claude Code, Gemini CLI, Codex providers all exist — multi-source abstraction validated
-- Architecture DAG Blueprint Phase 0-5 code committed (pipeline, asset graph, approval gate)
-- Integration of Phase 3-5 modules into product flow is the next engineering priority
+- Architecture DAG Blueprint Phase 0-5 integrated — DAG is default distill mode
+- Asset graph quality gate (validateAssetCandidate) integrated into DAG pipeline
+- Approval gate (4-layer checks) + audit trail integrated into sink delivery
+- GitHub sink, Notion sink implemented with evidence-required safety checks
+- `loam review` (approve/reject) command with audit records
+- CI quality gate (`pnpm run ai:complete`) with Top N ranking
+- 160 tests passing, 0 failures (v0.6.0)
+- Dogfooding validation is the current active priority
 
 ## Active Product Focus
 
@@ -40,15 +46,22 @@ Completed MVP thread:
 
 ## Deferred Topics
 
-- GitHub API delivery
-- approval/review workflow
-- multi-session merge
+- multi-session merge distill
+- vector retrieval / semantic search (unlock condition: ≥500 archived sessions)
+- Web UI (unlock condition: ≥3 external users requesting it)
+- Copilot provider (user uses Copilot; evaluate need after dogfooding phase 1)
 
-## Next-Phase Decision Points
+## Current Priority: Dogfooding Validation
 
-- whether users actually reuse the generated local drafts
-- whether issue quality is strong enough to justify GitHub API delivery
-- whether the next step should be automation, better ranking, or broader discovery work
+The product loop is implemented but not yet validated with real usage. The dogfooding validation phase answers: **does this loop provide sustained user value?**
+
+Execution guide: `docs/superpowers/specs/2026-04-29-dogfooding-validation-design.md`
+
+Key decision after validation:
+- Quality ≥60% at ≥3/5 → proceed to automated GitHub sink delivery
+- Quality below threshold → invest in evaluation-harness + prompt tuning
+- Provider issues → bug fixes
+- Coverage gaps → add Copilot provider
 
 Close `#5` only after:
 

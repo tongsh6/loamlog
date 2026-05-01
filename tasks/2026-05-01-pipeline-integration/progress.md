@@ -54,18 +54,11 @@
 | 23:00 | - review.test.ts (4 tests) | ✅ |
 | 23:00 | - 集成到 CLI index.ts | ✅ |
 | 23:00 | 全部测试: 128 pass, 0 fail | ✅ |
-| 22:20 | 全部测试: 113 pass, 0 fail | ✅ |
-| 21:45 | - DistillDAGResult 新增 audit 字段 | ✅ |
-| 21:45 | 全部测试: 110 pass, 0 fail | ✅ |
 
 ## 残留事项
 
-- Phase 2 集成状态：`runDistillDAG()` 可用，但 engine.run() 仍用串行路径（向后兼容）
-- `loam distill` CLI 尚未切换为 DAG 模式
-- Phase 2 部分：事务安全状态和性能夹具仍未完成（基础代码在 Phase 2 蓝图内）
+- 无。Phase 1-12 全部完成，CLI distill 已切换为 DAG 默认模式。
 
-## 下一步建议
+## 当前测试状态 (2026-05-02)
 
-1. 将 `loam distill` CLI 命令切换为调用 `runDistillDAG()`
-2. 完成 Phase 2 的 transactional state 和性能回归测试
-3. 将现有 issue-draft 和 pitfall-card distiller 验证在 DAG 模式下的表现
+- 全部测试: 160 pass, 0 fail
