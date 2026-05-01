@@ -263,7 +263,7 @@ The following items were marked "planned in next phase" in M1/M2 and are now for
 | OpenCode HTTP 不可用时 SDK fallback | architecture.md M2 Status | M4（P3+，Out of Scope 若资源不足）|
 | 细粒度 redaction 规则配置文件 | architecture.md M2 Status | M5.0 |
 | `loam list` 命令 | AGENTS.md、README | ✅ 已完成 (v0.5.0) |
-| `loam capture` 手动采集命令 | AGENTS.md（已文档化，未实现）| M5.1 |
+| `loam capture` 手动采集命令 | AGENTS.md、README | ✅ 已完成 (v0.5.0) | |
 
 ## 非目标 | Non-Goals
 
