@@ -5,6 +5,36 @@ export const DEFAULT_DAEMON_PORT = 37468;
 export const CAPTURE_PATH = "/capture";
 export const DEFAULT_AIC_VERSION = "0.1.0";
 
+export interface Logger {
+  info(msg: string): void;
+  warn(msg: string): void;
+  error(msg: string, err?: unknown): void;
+}
+
+export interface ExecutionContext {
+  traceId: string;
+  logger: Logger;
+}
+
+const consoleLogger: Logger = {
+  info(msg: string) {
+    console.log(msg);
+  },
+  warn(msg: string) {
+    console.warn(msg);
+  },
+  error(msg: string, err?: unknown) {
+    console.error(msg, err ?? "");
+  },
+};
+
+export function createExecutionContext(options?: { logger?: Logger }): ExecutionContext {
+  return {
+    traceId: crypto.randomUUID(),
+    logger: options?.logger ?? consoleLogger,
+  };
+}
+
 export interface CaptureRequest {
   session_id: string;
   trigger: string;

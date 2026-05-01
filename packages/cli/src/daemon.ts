@@ -7,8 +7,10 @@ import {
   DEFAULT_DAEMON_PORT,
   buildSessionSnapshot,
   type CaptureRequest,
+  type ExecutionContext,
   type SessionProvider,
   isCaptureRequest,
+  createExecutionContext,
   type TriggeredIntelligenceConfig,
 } from "@loamlog/core";
 import { applySnapshotRedaction, parseRedactIgnore } from "@loamlog/sanitizer";
@@ -41,6 +43,7 @@ interface ProcessCaptureOptions {
   sessionProvider?: SessionProvider;
   sessionProviders?: Record<string, SessionProvider>;
   intelligence?: TriggeredIntelligencePipeline;
+  ctx?: ExecutionContext;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -85,8 +88,9 @@ export async function processCaptureRequest(
   const dumpDir = options.dumpDir ?? process.env.LOAM_DUMP_DIR;
   const redactIgnorePatterns = parseRedactIgnore(process.env.LOAM_REDACT_IGNORE);
   const sessionProviders = resolveSessionProviders(options);
+  const traceId = options.ctx?.traceId ?? "-";
 
-  logger(`[loam daemon] captured session_id=${payload.session_id} trigger=${payload.trigger} provider=${payload.provider}`);
+  logger(`[loam daemon] trace_id=${traceId} session_id=${payload.session_id} trigger=${payload.trigger} provider=${payload.provider}`);
   options.onCapture?.(payload);
 
   if (!dumpDir) {
@@ -154,6 +158,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
 
   const server = createServer(async (req, res) => {
     if (req.method === "POST" && req.url === CAPTURE_PATH) {
+      const ctx = createExecutionContext({ logger: options.logger ? { info: options.logger, warn: options.logger, error: options.logger } : undefined });
       try {
         const payload = await readJsonBody(req);
 
@@ -165,7 +170,7 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
           return;
         }
 
-        const result = await processCaptureRequest(payload, { ...options, intelligence });
+        const result = await processCaptureRequest(payload, { ...options, intelligence, ctx });
         sendJson(res, result.accepted ? 202 : 400, result);
         return;
       } catch (error) {
