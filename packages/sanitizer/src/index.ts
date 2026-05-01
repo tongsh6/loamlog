@@ -1,4 +1,6 @@
-import type { RedactionResult, RedactionRiskLevel, RedactionSummary, SessionSnapshot } from "@loamlog/core";
+import type { RedactionConfig, RedactionPatternDef, RedactionResult, RedactionRiskLevel, RedactionSummary, SessionSnapshot } from "@loamlog/core";
+import { access, readFile } from "node:fs/promises";
+import path from "node:path";
 
 type SanitizationCategory =
   | "api_key"
@@ -352,6 +354,7 @@ function sanitizeJsonBlock(
   value: string,
   ignorePatterns: RegExp[],
   stats: SanitizationStats,
+  activePatterns?: SanitizationPattern[],
 ): { value: string; count: number } | undefined {
   const trimmed = value.trim();
   if (!trimmed.startsWith("{") && !trimmed.startsWith("[")) {
@@ -361,7 +364,9 @@ function sanitizeJsonBlock(
   try {
     const parsed = JSON.parse(value) as unknown;
     const before = stats.total;
-    const sanitized = sanitizeUnknownValue(parsed, ignorePatterns, stats).value;
+    const sanitized = activePatterns
+      ? sanitizeUnknownValueWithPatterns(parsed, activePatterns, ignorePatterns, stats).value
+      : sanitizeUnknownValue(parsed, ignorePatterns, stats).value;
     const after = stats.total;
     const count = Math.max(after - before, 0);
     const serialized =
@@ -473,8 +478,121 @@ function sanitizeUnknownValue(
 }
 
 export function applySnapshotRedaction(snapshot: SessionSnapshot, ignorePatterns: RegExp[] = []): RedactionResult {
+  return applySnapshotRedactionInternal(snapshot, REGEX_PATTERNS, ignorePatterns);
+}
+
+// ── Redaction config file support ──
+
+interface ResolvedRedactionConfig {
+  extraPatterns: SanitizationPattern[];
+  ignorePatterns: RegExp[];
+  disabledCategories: Set<string>;
+  warnRiskLevel: RedactionRiskLevel;
+}
+
+async function tryReadJsonFile(filePath: string): Promise<Record<string, unknown> | undefined> {
+  try {
+    const text = await readFile(filePath, "utf8");
+    return JSON.parse(text) as Record<string, unknown>;
+  } catch {
+    return undefined;
+  }
+}
+
+function compileRegExp(pattern: string): RegExp | undefined {
+  try {
+    if (pattern.startsWith("/") && pattern.lastIndexOf("/") > 0) {
+      const lastSlash = pattern.lastIndexOf("/");
+      const body = pattern.slice(1, lastSlash);
+      const flags = pattern.slice(lastSlash + 1);
+      return new RegExp(body, flags);
+    }
+    return new RegExp(pattern);
+  } catch {
+    return undefined;
+  }
+}
+
+function compileConfigPatterns(defs: RedactionPatternDef[]): SanitizationPattern[] {
+  const patterns: SanitizationPattern[] = [];
+  for (const def of defs) {
+    const regex = compileRegExp(def.regex);
+    if (!regex) continue;
+    patterns.push({
+      id: def.id,
+      regex,
+      placeholder: def.placeholder,
+      category: (def.category ?? "config") as SanitizationCategory,
+    });
+  }
+  return patterns;
+}
+
+export async function loadRedactionConfig(configPath?: string): Promise<RedactionConfig> {
+  const resolvedPath =
+    configPath ??
+    process.env.LOAM_REDACTION_CONFIG ??
+    path.join(process.cwd(), "redaction.config.json");
+
+  const data = await tryReadJsonFile(resolvedPath);
+  if (!data) return {};
+
+  return {
+    patterns: Array.isArray(data.patterns) ? (data.patterns as RedactionPatternDef[]) : undefined,
+    ignore_patterns: Array.isArray(data.ignore_patterns)
+      ? (data.ignore_patterns as string[])
+      : undefined,
+    disabled_categories: Array.isArray(data.disabled_categories)
+      ? (data.disabled_categories as string[])
+      : undefined,
+    warn_risk_level:
+      typeof data.warn_risk_level === "string"
+        ? (data.warn_risk_level as RedactionRiskLevel)
+        : undefined,
+  };
+}
+
+export function resolveRedactionConfig(config: RedactionConfig): ResolvedRedactionConfig {
+  return {
+    extraPatterns: config.patterns ? compileConfigPatterns(config.patterns) : [],
+    ignorePatterns: (config.ignore_patterns ?? [])
+      .map(compileRegExp)
+      .filter((r): r is RegExp => Boolean(r)),
+    disabledCategories: new Set(config.disabled_categories ?? []),
+    warnRiskLevel: config.warn_risk_level ?? "medium",
+  };
+}
+
+function buildActivePatterns(resolved: ResolvedRedactionConfig): SanitizationPattern[] {
+  const active = REGEX_PATTERNS.filter(
+    (p) => !resolved.disabledCategories.has(p.category),
+  );
+  return [...active, ...resolved.extraPatterns];
+}
+
+/**
+ * Apply redaction with config-driven custom patterns and category toggles.
+ * Built-in patterns can be disabled via `disabled_categories` in the config.
+ * Custom patterns from `config.patterns` are added to the built-in set.
+ */
+export function applySnapshotRedactionWithConfig(
+  snapshot: SessionSnapshot,
+  resolved: ResolvedRedactionConfig,
+  extraIgnorePatterns: RegExp[] = [],
+): RedactionResult {
+  const activePatterns = buildActivePatterns(resolved);
+  const allIgnore = [...resolved.ignorePatterns, ...extraIgnorePatterns];
+
+  return applySnapshotRedactionInternal(snapshot, activePatterns, allIgnore);
+}
+
+function applySnapshotRedactionInternal(
+  snapshot: SessionSnapshot,
+  activePatterns: SanitizationPattern[],
+  ignorePatterns: RegExp[],
+): RedactionResult {
   const stats = new SanitizationStats();
-  const redacted = sanitizeUnknownValue(snapshot, ignorePatterns, stats);
+  const redacted = sanitizeUnknownValueWithPatterns(snapshot, activePatterns, ignorePatterns, stats);
   const output = redacted.value as SessionSnapshot;
   const summary = stats.toSummary();
 
@@ -493,4 +611,106 @@ export function applySnapshotRedaction(snapshot: SessionSnapshot, ignorePatterns
     summary,
     risk_level: summary.risk_level,
   };
+}
+
+function sanitizeUnknownValueWithPatterns(
+  value: unknown,
+  activePatterns: SanitizationPattern[],
+  ignorePatterns: RegExp[],
+  stats: SanitizationStats,
+): { value: unknown; count: number } {
+  if (typeof value === "string") {
+    return sanitizeStringValueWithPatterns(value, activePatterns, ignorePatterns, stats);
+  }
+
+  if (Array.isArray(value)) {
+    const next = value.map((item) =>
+      sanitizeUnknownValueWithPatterns(item, activePatterns, ignorePatterns, stats).value,
+    );
+    return { value: next, count: 0 };
+  }
+
+  if (value && typeof value === "object") {
+    const next: Record<string, unknown> = {};
+    for (const [key, current] of Object.entries(value as Record<string, unknown>)) {
+      if (key === "redacted") {
+        next[key] = current;
+        continue;
+      }
+
+      const lowerKey = key.toLowerCase();
+      if (typeof current === "string" && SKIP_VALUE_SANITIZE_KEYS.has(lowerKey)) {
+        next[key] = current;
+        continue;
+      }
+
+      const keyClassification =
+        typeof current === "string" && !shouldSkipKeyClassification(lowerKey) ? classifyKey(key) : undefined;
+      if (keyClassification && typeof current === "string" && !shouldIgnoreText(current, ignorePatterns)) {
+        stats.add(keyClassification.category, keyClassification.placeholder, `${keyClassification.id}:field`, 1);
+        next[key] = keyClassification.placeholder;
+        continue;
+      }
+
+      next[key] = sanitizeUnknownValueWithPatterns(current, activePatterns, ignorePatterns, stats).value;
+    }
+    return { value: next, count: 0 };
+  }
+
+  return { value, count: 0 };
+}
+
+function sanitizeStringValueWithPatterns(
+  value: string,
+  activePatterns: SanitizationPattern[],
+  ignorePatterns: RegExp[],
+  stats: SanitizationStats,
+): { value: string; count: number } {
+  if (shouldIgnoreText(value, ignorePatterns)) {
+    return { value, count: 0 };
+  }
+
+  let result = value;
+  let redactedCount = 0;
+
+  const jsonBlock = sanitizeJsonBlock(value, ignorePatterns, stats, activePatterns);
+  if (jsonBlock) {
+    result = jsonBlock.value;
+    redactedCount += jsonBlock.count;
+  }
+
+  const auth = sanitizeAuthorizationHeaders(result, stats);
+  result = auth.value;
+  redactedCount += auth.count;
+
+  const cookies = sanitizeCookieHeaders(result, stats);
+  result = cookies.value;
+  redactedCount += cookies.count;
+
+  const jsonPairs = sanitizeJsonLikePairs(result, stats);
+  result = jsonPairs.value;
+  redactedCount += jsonPairs.count;
+
+  const kv = sanitizeKeyValueAssignments(result, stats, ignorePatterns);
+  result = kv.value;
+  redactedCount += kv.count;
+
+  const inline = sanitizeInlineAssignments(result, stats);
+  result = inline.value;
+  redactedCount += inline.count;
+
+  const urlParams = sanitizeUrlParams(result, stats);
+  result = urlParams.value;
+  redactedCount += urlParams.count;
+
+  for (const pattern of activePatterns) {
+    const replaced = replaceWithCount(result, pattern.regex, pattern.placeholder);
+    if (replaced.count > 0) {
+      stats.add(pattern.category, pattern.placeholder, pattern.id, replaced.count);
+      redactedCount += replaced.count;
+      result = replaced.value;
+    }
+  }
+
+  return { value: result, count: redactedCount };
 }

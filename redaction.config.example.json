@@ -1,0 +1,10 @@
+{
+  "$schema": "https://raw.githubusercontent.com/loamlog/loamlog/main/schemas/redaction.config.json",
+  "patterns": [
+  ],
+  "ignore_patterns": [
+  ],
+  "disabled_categories": [
+  ],
+  "warn_risk_level": "medium"
+}

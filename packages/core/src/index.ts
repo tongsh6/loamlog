@@ -954,6 +954,24 @@ export interface RedactionResult {
   risk_level: RedactionRiskLevel;
 }
 
+export interface RedactionConfig {
+  /** Additional regex patterns to redact */
+  patterns?: RedactionPatternDef[];
+  /** Patterns to ignore (skip redaction for matching text) */
+  ignore_patterns?: string[];
+  /** Disable specific built-in categories */
+  disabled_categories?: string[];
+  /** Minimum risk level that triggers a warning log */
+  warn_risk_level?: RedactionRiskLevel;
+}
+
+export interface RedactionPatternDef {
+  id: string;
+  regex: string;
+  placeholder: string;
+  category?: string;
+}
+
 function createEmptySummary(): RedactionSummary {
   return {
     total: 0,
