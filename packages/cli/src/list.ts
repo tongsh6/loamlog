@@ -198,13 +198,39 @@ async function listSessionsFromScan(
   return results;
 }
 
+async function countSessionFiles(dumpDir: string): Promise<number> {
+  const reposRoot = path.join(dumpDir, "repos");
+  let count = 0;
+  let repoEntries;
+  try {
+    repoEntries = await readdir(reposRoot, { withFileTypes: true });
+  } catch {
+    return 0;
+  }
+  for (const repoEntry of repoEntries) {
+    if (!repoEntry.isDirectory()) continue;
+    const sessionsDir = path.join(reposRoot, repoEntry.name, "sessions");
+    try {
+      const sessionEntries = await readdir(sessionsDir, { withFileTypes: true });
+      count += sessionEntries.filter((e) => e.isFile() && e.name.endsWith(".json")).length;
+    } catch {
+      continue;
+    }
+  }
+  return count;
+}
+
 async function listSessions(
   dumpDir: string,
   opts: ListOptions,
 ): Promise<SessionSummary[]> {
   const index = await readArchiveIndex(dumpDir);
-  if (Object.keys(index.entries).length > 0) {
-    return listSessionsFromIndex(dumpDir, opts);
+  const indexEntries = Object.keys(index.entries).length;
+  if (indexEntries > 0) {
+    const fileCount = await countSessionFiles(dumpDir);
+    if (fileCount <= indexEntries) {
+      return listSessionsFromIndex(dumpDir, opts);
+    }
   }
   return listSessionsFromScan(dumpDir, opts);
 }
