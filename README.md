@@ -118,6 +118,7 @@ loam distill --llm openai/gpt-4o-mini
 loam distill --llm anthropic/claude-3-5-haiku-latest
 loam distill --llm deepseek/deepseek-chat
 loam distill --llm ollama/llama3.2:3b
+loam distill --llm lmstudio/qwen/qwen3-coder-next
 ```
 
 The next product-facing loop being specified is local issue-draft generation:

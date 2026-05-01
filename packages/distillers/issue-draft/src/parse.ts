@@ -42,7 +42,12 @@ export function normalizeText(value: string): string {
 
 export function parseIssueDrafts(content: string): LlmIssueDraft[] {
   const json = extractJsonPayload(content);
-  const parsed = JSON.parse(json) as unknown;
+  let parsed: unknown;
+  try {
+    parsed = JSON.parse(json) as unknown;
+  } catch {
+    return [];
+  }
   if (!Array.isArray(parsed)) {
     return [];
   }
