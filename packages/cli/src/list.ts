@@ -369,10 +369,11 @@ async function listDistillResults(
   return results;
 }
 
-async function listScanReports(
+export async function listScanReports(
   opts: ListOptions,
+  scanBaseDir?: string,
 ): Promise<ScanReportSummary[]> {
-  const scanDir = path.join(process.cwd(), "AIEF", "reports", "static-scan");
+  const scanDir = path.join(scanBaseDir ?? process.cwd(), "AIEF", "reports", "static-scan");
   let entries: Dirent[];
   try {
     entries = await readdir(scanDir, { withFileTypes: true });
