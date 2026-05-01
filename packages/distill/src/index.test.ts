@@ -1,5 +1,5 @@
 import assert from "node:assert/strict";
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { pathToFileURL } from "node:url";
@@ -113,6 +113,44 @@ describe("distill package", () => {
 
     const final = await state.get<number>("counter");
     assert.equal(final, count, `expected ${count}, got ${final}`);
+  });
+
+  test("state recovers from corrupted primary file via backup", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-distill-recover-"));
+    const state = createDistillerStateKV(tempDir, "@test/recover");
+
+    // Write valid state first
+    await state.set("recover-key", { recovered: true });
+
+    // sanitizeDistillerId("@test/recover") → "_test_recover"
+    const stateFilePath = path.join(tempDir, "_global", "distill_state__test_recover.db");
+    const backupPath = `${stateFilePath}.bak`;
+
+    // Simulate crash: create backup, then corrupt primary
+    const validContent = await readFile(stateFilePath, "utf8");
+    await writeFile(backupPath, validContent, "utf8");
+    await writeFile(stateFilePath, "not valid json{{{", "utf8");
+
+    // Read should recover from backup
+    const value = await state.get<{ recovered: boolean }>("recover-key");
+    assert.equal(value?.recovered, true);
+  });
+
+  test("state survives write-then-read roundtrip with backup", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-distill-backup-"));
+    const state = createDistillerStateKV(tempDir, "@test/backup");
+
+    await state.set("data", { items: [1, 2, 3] });
+    await state.markProcessed("@test/backup", ["ses-a", "ses-b"]);
+
+    // Read back in a new state instance (simulates process restart)
+    const state2 = createDistillerStateKV(tempDir, "@test/backup");
+    const data = await state2.get<{ items: number[] }>("data");
+    const processed = await state2.get<Record<string, string>>("processed:@test/backup");
+
+    assert.deepEqual(data?.items, [1, 2, 3]);
+    assert.equal(typeof processed?.["ses-a"], "string");
+    assert.equal(typeof processed?.["ses-b"], "string");
   });
 
   test("engine runs distiller and sink end-to-end", async () => {

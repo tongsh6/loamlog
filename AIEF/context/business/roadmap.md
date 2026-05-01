@@ -58,6 +58,19 @@ M4 通过以下工作完成：
 - `@loamlog/evaluation-harness` — 质量评估框架，支持信号提取与 Issue 草稿质量评测
 - Issue #26, #22, #23 已完成并关闭；PR #39, #41, #37 已合并到 `develop`
 
+### 架构 DAG 蓝图推进 (2026-05-01)
+
+架构蓝图（`AIEF/plans/2026-04-30-architecture-dag-blueprint.md`）的 Phase 0-5 代码已全部提交到 `develop`：
+
+- **Phase 0 (基线对齐)** ✅ — 蓝图索引、测试隔离 (`54f8d5a`)
+- **Phase 1 (注册表与切面)** ✅ — Provider Map 注册表 (`8736c01`)、ExecutionContext (`ce1aa36`)、withTimeout/withRetry 切面 (`9bddb20`)
+- **Phase 2 (状态与归档性能)** ⏳ — 原子 state update (`1658c21`)、归档索引文件系统校验 (`4db0255`)，事务安全与性能夹具仍在推进
+- **Phase 3 (最小 DAG 运行时)** ✅ — `@loamlog/pipeline` typed DAG executor (`360c99f`)
+- **Phase 4 (资产图建模)** ✅ — EvidenceSpan/Signal/AssetCandidate/Decision/QualityReport + mapDistillResultToCandidate + validateAssetCandidate (`2bbfb5e`)
+- **Phase 5 (外部工作流准备)** ✅ — approvalGate 四层检查 + AuditRecord + auditRecordDelivered/Failed (`2df3990`)
+
+> **注意**: Phase 3-5 的模块代码已就绪（含单元测试），但尚未集成到实际 daemon/distill/sink 产品链路中。集成工作见 `tasks/2026-05-01-pipeline-integration/plan.md`。
+
 ### 当前产品聚焦说明 | Current Product Focus Note
 
 虽然 M4 的 provider 扩展主路径已经进入仓库，但当前最需要验证的不是继续扩基础设施抽象，而是打穿第一条明确的用户价值闭环：
@@ -215,22 +228,27 @@ At the same time, Milestone B's protocol direction now has its first formal boun
 
 **目标 / Goal**: 补齐外发链路、审批流和更多萃取器。
 
+**当前状态 / Status**: ✅ 基本完成 — 基础设施（Pipeline DAG、Asset Graph、Approval Gate）已全部集成到产品链路；4 个 provider、5 个 distiller、3 个 sink、审批流、redaction 配置、CI 工作流、静态扫描门禁均已落地。`loam list --scan` 支持扫描报告查询。
+
 **交付 / Deliverables**:
-- `packages/sinks/github`（创建 issue/PR）
-- `packages/sinks/notion`
-- 人工审批流（`loam review`）
-- 更多内置 distiller（issue-candidate、prd-draft、knowledge-card）
+- `packages/sinks/github`（创建 issue/PR）✅ 已实现
+- `packages/sinks/notion` ✅ 已实现
+- 人工审批流（`loam review`）✅ 已实现
+- 更多内置 distiller（issue-candidate、prd-draft、knowledge-card）🟡 knowledge-card ✅、prd-draft ✅，issue-candidate 待实现
 - distiller 结果合并去重
+- Pipeline DAG 执行器集成到 distill 引擎 ✅ 已具备代码基础
+- 资产图质量门禁（validateAssetCandidate）✅ 已具备代码基础
+- 审批门禁与审计追踪（approvalGate + AuditRecord）✅ 已具备代码基础
 
 ### M5 子阶段拆解 | M5 Sub-phase Breakdown
 
 | 子阶段 | 目标 | 关键交付 | 解锁条件 |
 |--------|------|----------|----------|
-| M5.0 | `loam list` 命令 + 细粒度 redaction 配置 | ~~CLI `list`~~（✅ 已完成）、redaction config file | M4 完成 |
-| M5.1 | GitHub sink | `@loamlog/sink-github`（创建 Issue/PR） | M4 + evidence 质量评分机制就绪 |
-| M5.2 | 人工审批流 | `loam review` 命令、approved/rejected 目录 | M5.1 完成 |
-| M5.3 | 更多内置萃取器 | issue-candidate、prd-draft、knowledge-card distillers | M5.1 完成 |
-| M5.4 | Notion sink | `@loamlog/sink-notion` | M5.2 完成 |
+| M5.0 | `loam list` 命令 + 细粒度 redaction 配置 | ~~CLI `list`~~（✅ 已完成）、~~redaction config file~~（✅ 已完成） | M4 完成 |
+| M5.1 | GitHub sink | `@loamlog/sink-github`（创建 Issue/PR）✅ 已完成 | M4 + evidence 质量评分机制就绪 |
+| M5.2 | 人工审批流 | `loam review` 命令、approved/rejected 目录 ✅ 已完成 | M5.1 完成 |
+| M5.3 | 更多内置萃取器 | knowledge-card ✅、prd-draft ✅、issue-candidate distiller | M5.1 完成 |
+| M5.4 | Notion sink | `@loamlog/sink-notion` ✅ 已完成 | M5.2 完成 |
 
 ---
 

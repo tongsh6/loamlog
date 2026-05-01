@@ -1,5 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
+import type { SessionArtifact } from "@loamlog/core";
 import factory from "./index.js";
 
 describe("pitfall-card distiller", () => {
@@ -41,8 +42,8 @@ describe("pitfall-card distiller", () => {
             },
           };
         },
-        async *query() {
-          return;
+        query() {
+          return emptyArtifacts();
         },
       },
       llm: {
@@ -69,6 +70,9 @@ describe("pitfall-card distiller", () => {
         async set() {
           return;
         },
+        async update() {
+          return;
+        },
         async markProcessed() {
           return;
         },
@@ -80,3 +84,7 @@ describe("pitfall-card distiller", () => {
     assert.equal(outputs[0].evidence[0].message_id, "msg_1");
   });
 });
+
+async function* emptyArtifacts(): AsyncGenerator<SessionArtifact> {
+  yield* [];
+}

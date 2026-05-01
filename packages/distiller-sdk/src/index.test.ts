@@ -18,11 +18,11 @@ describe("distiller-sdk", () => {
     assert.equal(plugin.id, "@test/sdk-distiller");
     const output = await plugin.run({
       artifactStore: {
-        async *getUnprocessed() {
-          return;
+        getUnprocessed() {
+          return emptyArtifacts();
         },
-        async *query() {
-          return;
+        query() {
+          return emptyArtifacts();
         },
       },
       llm: {
@@ -35,6 +35,9 @@ describe("distiller-sdk", () => {
           return undefined;
         },
         async set() {
+          return;
+        },
+        async update() {
           return;
         },
         async markProcessed() {
@@ -84,3 +87,7 @@ describe("distiller-sdk", () => {
     assert.equal(evidence.message_id, "msg_sdk_1");
   });
 });
+
+async function* emptyArtifacts(): AsyncGenerator<SessionArtifact> {
+  yield* [];
+}

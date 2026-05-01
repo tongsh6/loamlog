@@ -1,4 +1,4 @@
-import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { copyFile, mkdir, readFile, rename, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { DistillerStateKV } from "@loamlog/core";
 
@@ -20,15 +20,41 @@ function createStateFilePath(stateDir: string, distillerId: string): string {
   return path.join(stateDir, "_global", `distill_state_${sanitizeDistillerId(distillerId)}.db`);
 }
 
+function createBackupPath(filePath: string): string {
+  return `${filePath}.bak`;
+}
+
 async function readStateFile(filePath: string): Promise<DistillerStateDocument> {
+  const backupPath = createBackupPath(filePath);
+
+  // Try primary file first
+  const doc = await tryReadStateFile(filePath);
+  if (doc) return doc;
+
+  // Primary failed, try backup
+  const backupDoc = await tryReadStateFile(backupPath);
+  if (backupDoc) {
+    // Recover: write backup content back to primary
+    try {
+      await mkdir(path.dirname(filePath), { recursive: true });
+      await writeFile(filePath, `${JSON.stringify(backupDoc, null, 2)}\n`, "utf8");
+    } catch {
+      // Best-effort recovery; the backup data is still available in memory
+    }
+    return backupDoc;
+  }
+
+  // Both failed, start fresh
+  return { ...EMPTY_DOC, kv: {}, processed: {} };
+}
+
+async function tryReadStateFile(filePath: string): Promise<DistillerStateDocument | null> {
   let text: string;
   try {
     text = await readFile(filePath, "utf8");
   } catch (error) {
     const code = (error as NodeJS.ErrnoException).code;
-    if (code === "ENOENT") {
-      return { ...EMPTY_DOC, kv: {}, processed: {} };
-    }
+    if (code === "ENOENT") return null;
     throw error;
   }
 
@@ -42,7 +68,8 @@ async function readStateFile(filePath: string): Promise<DistillerStateDocument> 
           : {},
     };
   } catch {
-    return { ...EMPTY_DOC, kv: {}, processed: {} };
+    // Corrupted JSON — caller may try backup
+    return null;
   }
 }
 
@@ -50,20 +77,54 @@ async function writeStateFile(filePath: string, doc: DistillerStateDocument): Pr
   await mkdir(path.dirname(filePath), { recursive: true });
   const payload = `${JSON.stringify(doc, null, 2)}\n`;
   const tempPath = `${filePath}.tmp`;
+  const backupPath = createBackupPath(filePath);
+
+  // 1. Write to temp file
   await writeFile(tempPath, payload, "utf8");
+
+  // 2. Backup current file if it exists (best-effort)
+  try {
+    await copyFile(filePath, backupPath);
+  } catch {
+    // File may not exist yet — that's fine
+  }
+
+  // 3. Atomic rename temp → target
   await rename(tempPath, filePath);
+
+  // 4. Clean up backup on successful write
+  try {
+    await unlink(backupPath);
+  } catch {
+    // Best-effort cleanup
+  }
 }
+
+// ── Mutex with timeout ──
 
 type MutexRelease = () => void;
 
-function createMutex(): { acquire: () => Promise<MutexRelease> } {
+interface MutexOptions {
+  acquireTimeoutMs: number;
+}
+
+class MutexAcquireTimeoutError extends Error {
+  constructor(filePath: string, timeoutMs: number) {
+    super(`mutex acquire timeout after ${timeoutMs}ms for ${filePath}`);
+    this.name = "MutexAcquireTimeoutError";
+  }
+}
+
+function createMutex(options?: MutexOptions): { acquire: () => Promise<MutexRelease> } {
+  const timeoutMs = options?.acquireTimeoutMs ?? 30_000;
   let locked = false;
-  const queue: Array<(release: MutexRelease) => void> = [];
+  const queue: Array<{ resolve: (release: MutexRelease) => void; timer: ReturnType<typeof setTimeout> }> = [];
 
   function release(): void {
     const next = queue.shift();
     if (next) {
-      next(release);
+      clearTimeout(next.timer);
+      next.resolve(release);
     } else {
       locked = false;
     }
@@ -75,8 +136,14 @@ function createMutex(): { acquire: () => Promise<MutexRelease> } {
         locked = true;
         return Promise.resolve(release);
       }
-      return new Promise<MutexRelease>((resolve) => {
-        queue.push(resolve);
+      return new Promise<MutexRelease>((resolve, reject) => {
+        const timer = setTimeout(() => {
+          // Remove this entry from queue
+          const idx = queue.findIndex((e) => e.timer === timer);
+          if (idx >= 0) queue.splice(idx, 1);
+          reject(new MutexAcquireTimeoutError("<state-file>", timeoutMs));
+        }, timeoutMs);
+        queue.push({ resolve, timer });
       });
     },
   };
@@ -92,6 +159,8 @@ function getFileMutex(filePath: string): { acquire: () => Promise<MutexRelease> 
   }
   return mutex;
 }
+
+// ── Public API ──
 
 export function createDistillerStateKV(stateDir: string, distillerId: string): DistillerStateKV {
   const filePath = createStateFilePath(stateDir, distillerId);

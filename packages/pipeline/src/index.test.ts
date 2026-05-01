@@ -57,7 +57,7 @@ describe("executeDAG", () => {
     const def: DAGDefinition = {
       nodes: [
         { id: "A", run: async () => { order.push("A"); return { a: 1 }; } },
-        { id: "B", run: async (input: unknown) => { order.push("B"); return { b: (input as Record<string,unknown>).A?.a }; } },
+        { id: "B", run: async (input: unknown) => { order.push("B"); return { b: ((input as Record<string,unknown>).A as Record<string,number> | undefined)?.a }; } },
         { id: "C", run: async () => { order.push("C"); return { c: 3 }; } },
       ],
       edges: [["A", "B"], ["B", "C"]],

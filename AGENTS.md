@@ -37,6 +37,10 @@ loam list --repo xxx --since 7d     # Browse archive
 node AIEF/scripts/check-bilingual-docs.js
 node AIEF/scripts/check-bilingual-docs.js --strict
 node AIEF/scripts/new-bilingual-doc.js --path "AIEF/context/tech/example.md" --titleZh "示例文档" --titleEn "Example Document"
+
+# AI completion quality gate
+pnpm run ai:complete              # Static scan + Top N report after AI code changes
+pnpm run ai:complete:security     # Static scan with optional secret/SAST tools
 ```
 
 ## 架构概览 | Architecture Overview
@@ -109,6 +113,24 @@ Any AI contributor working on this project MUST follow these rules first.
   Do not treat complex business logic as string manipulation only; evolve toward `SessionArtifact -> EvidenceSpan -> Signal -> AssetCandidate -> Decision -> Delivery -> Feedback`.
 - **文档随代码更新 / Keep docs with code**: 改变架构事实、模块边界、执行链路或阶段状态时，同步更新 AIEF 文档入口或对应上下文。
   When architecture facts, module boundaries, execution flow, or phase status change, update AIEF docs or context entries.
+
+## AI 完成质量门禁 | AI Completion Quality Gate
+
+任何 AI 工具完成代码实现后，必须主动执行静态扫描门禁。
+Any AI tool that completes code implementation MUST run the static scan gate proactively.
+
+- **运行统一入口 / Run the unified entrypoint**: 默认执行 `pnpm run ai:complete`；涉及 secret、安全规则或外部输入面时执行 `pnpm run ai:complete:security`。
+  Run `pnpm run ai:complete` by default; run `pnpm run ai:complete:security` when secrets, security rules, or external input surfaces are involved.
+- **保留扫描证据 / Preserve scan evidence**: 扫描报告必须保存在 `AIEF/reports/static-scan/<run-id>/`，包含原始日志、归一化结果、Top N 计划、Top N 处理结果和摘要。
+  Scan reports must be saved under `AIEF/reports/static-scan/<run-id>/` with raw logs, normalized findings, Top N plan, Top N handling results, and summary.
+- **处理 Top N / Handle Top N**: 默认 `TOP_N=5`。AI 必须按报告中的排序处理 Top N：可修复则修复；不能修复则在 `topN.results.md` 中标记 `deferred`、`false_positive`、`not_actionable` 或 `failed` 并说明原因。
+  Default `TOP_N=5`. The AI must handle the ranked Top N findings: fix actionable findings, or mark `deferred`, `false_positive`, `not_actionable`, or `failed` in `topN.results.md` with reasons.
+- **复扫验证 / Rerun verification**: Top N 处理后必须复跑同一门禁，并在最终回复中引用最新报告路径、剩余问题和处理状态。
+  After handling Top N findings, rerun the same gate and reference the latest report path, remaining issues, and handling status in the final response.
+- **未完成定义 / Definition of incomplete**: 没有扫描报告、Top N 处理记录和复扫说明的代码实现，不视为完成。
+  Code implementation without a scan report, Top N handling record, and rerun note is not considered complete.
+- **长期规划入口 / Long-term planning entry**: 完整 DAG、报告契约和分阶段规划见 `AIEF/plans/2026-05-01-ai-completion-static-scan-gate.md`。
+  See `AIEF/plans/2026-05-01-ai-completion-static-scan-gate.md` for the complete DAG, report contract, and phased plan.
 
 ## 硬性约束 | Hard Constraints
 

@@ -1,0 +1,63 @@
+{
+  "runId": "2026-05-01T12-20-29Z",
+  "startedAt": "2026-05-01T12:20:29.410Z",
+  "completedAt": "2026-05-01T12:20:39.038Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "1658c21",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "gitignore",
+      "GENTS.md",
+      "IEF/context/INDEX.md",
+      "ackage.json",
+      "ackages/archive/src/index.ts",
+      "ackages/cli/src/list.ts",
+      "ackages/distiller-sdk/src/index.ts",
+      "ackages/rules/package.json",
+      "npm-lock.yaml",
+      "AIEF/plans/2026-05-01-ai-completion-static-scan-gate.md",
+      "AIEF/reports/",
+      "AIEF/scripts/ai-complete.ts",
+      "biome.json",
+      "packages/pipeline/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 1
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

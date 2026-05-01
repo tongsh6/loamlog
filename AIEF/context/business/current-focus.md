@@ -2,8 +2,18 @@
 
 ## 状态总览 | Status Summary
 
-截至 2026-03-13，Loamlog 已完成 **Milestone A：可信底盘**，新增了三个关键基础设施：
-As of 2026-03-13, Loamlog has completed **Milestone A: Trust Infrastructure**, adding three critical capabilities:
+截至 2026-05-01，Loamlog v0.5.0 已完成 M0-M4 及 Milestone A。架构 DAG 蓝图的 Phase 0-5 代码已全部提交（pipeline、asset graph、approval gate），但尚未集成到产品链路。
+As of 2026-05-01, Loamlog v0.5.0 has completed M0-M4 and Milestone A. Architecture DAG Blueprint Phase 0-5 code is all committed (pipeline, asset graph, approval gate), pending integration into the product flow.
+
+最近进展（2026-03-13 至 2026-05-01）：
+
+- M4 多数据源接入（Codex、Gemini CLI provider、`loam list`）
+- Phase 1: Provider Map 注册表 + ExecutionContext + withTimeout/withRetry 切面
+- Phase 3: `@loamlog/pipeline` typed DAG executor
+- Phase 4: 资产图领域类型（EvidenceSpan → Signal → AssetCandidate → Decision → Delivery）
+- Phase 5: 审批门禁四层检查 + 审计追踪（AuditRecord）
+
+当前最重要的工程任务是将 Phase 3-5 的基础设施接入产品链路，详见 `tasks/2026-05-01-pipeline-integration/plan.md`。
 
 1. **Sanitization Gateway** — 日志脱敏硬前置层，确保敏感数据在进入 AI 处理前被安全脱敏
    Log sanitization gateway ensuring sensitive data is redacted before AI processing

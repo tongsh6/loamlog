@@ -123,12 +123,12 @@ These packages should hide complexity internally. CLI and daemon should only com
 
 | Phase | Status | Main Deliverable | 主要交付 |
 |---|---|---|---|
-| Phase 0: Baseline Alignment | Active | Official blueprint, context index entry, test isolation cleanup | 官方蓝图、上下文索引入口、测试隔离修正 |
-| Phase 1: Registry and Aspects | Planned | Provider registry, execution context, reusable aspects | Provider 注册表、执行上下文、可复用切面 |
-| Phase 2: State and Archive Performance | Planned | Transaction-safe state, archive metadata index, performance fixtures | 事务安全状态、归档元数据索引、性能夹具 |
-| Phase 3: Minimal DAG Runtime | Planned | `packages/pipeline`, DAG executor, issue-draft DAG slice | `packages/pipeline`、DAG 执行器、issue-draft DAG 切片 |
-| Phase 4: Asset Graph Modeling | Planned | Evidence/signal/candidate/decision model and eval gates | 证据、信号、候选资产、决策模型与评估门禁 |
-| Phase 5: External Workflow Readiness | Planned | Approval gate and opt-in external sink readiness | 审批门禁与显式启用的外部 sink 准备 |
+| Phase 0: Baseline Alignment | ✅ Completed | Official blueprint, context index entry, test isolation cleanup | 官方蓝图、上下文索引入口、测试隔离修正 |
+| Phase 1: Registry and Aspects | ✅ Completed | Provider registry, execution context, reusable aspects | Provider 注册表、执行上下文、可复用切面 |
+| Phase 2: State and Archive Performance | ✅ Completed | Transaction-safe state (Mutex+backup), archive metadata index (index.json fast path), performance fixtures | 事务安全状态（Mutex+备份恢复）、归档元数据索引（index.json 快速路径）、性能夹具 |
+| Phase 3: Minimal DAG Runtime | ✅ Completed | `packages/pipeline`, DAG executor, issue-draft DAG slice | `packages/pipeline`、DAG 执行器、issue-draft DAG 切片 |
+| Phase 4: Asset Graph Modeling | ✅ Completed | Evidence/signal/candidate/decision model and eval gates | 证据、信号、候选资产、决策模型与评估门禁 |
+| Phase 5: External Workflow Readiness | ✅ Completed | Approval gate and opt-in external sink readiness | 审批门禁与显式启用的外部 sink 准备 |
 
 ### Phase 0: Baseline Alignment | 基线对齐
 
@@ -331,19 +331,19 @@ Acceptance:
 ## Work Breakdown DAG | 事项拆分 DAG
 
 ```text
-P0-blueprint
-  -> P0-test-isolation
-  -> P1-provider-registry
-  -> P1-execution-context
-  -> P1-aspects
-  -> P2-state-transactions
-  -> P2-archive-index
-  -> P3-pipeline-package
-  -> P3-issue-draft-dag-slice
-  -> P4-asset-graph-types
-  -> P4-eval-gates
-  -> P5-approval-gate
-  -> P5-external-sink-readiness
+P0-blueprint                   ✅
+  -> P0-test-isolation         ✅
+  -> P1-provider-registry      ✅
+  -> P1-execution-context      ✅
+  -> P1-aspects                ✅
+  -> P2-state-transactions     ✅ (Mutex timeout 30s, .bak backup, auto-recovery)
+  -> P2-archive-index          ✅ (index.json fast path, file-count consistency check, full-scan fallback)
+  -> P3-pipeline-package       ✅
+  -> P3-issue-draft-dag-slice  ✅ (DAG is default mode for loam distill, --legacy flag for old path)
+  -> P4-asset-graph-types      ✅
+  -> P4-eval-gates             ✅
+  -> P5-approval-gate          ✅
+  -> P5-external-sink-readiness ✅
 ```
 
 Parallelizable work:
