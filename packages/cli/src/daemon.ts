@@ -11,6 +11,7 @@ import {
   type SessionProvider,
   isCaptureRequest,
   createExecutionContext,
+  withTimeout,
   type TriggeredIntelligenceConfig,
 } from "@loamlog/core";
 import { applySnapshotRedaction, parseRedactIgnore } from "@loamlog/sanitizer";
@@ -104,7 +105,11 @@ export async function processCaptureRequest(
       throw new Error(`unknown provider: ${payload.provider}`);
     }
 
-    const pulled = payload.pulled ?? (await provider.pullSession(payload.session_id));
+    const pulled = payload.pulled ?? (await withTimeout(
+      () => provider.pullSession(payload.session_id),
+      60_000,
+      options.ctx,
+    ));
     const snapshot = buildSessionSnapshot({
       capture: payload,
       pulled,

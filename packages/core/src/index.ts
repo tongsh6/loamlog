@@ -35,6 +35,88 @@ export function createExecutionContext(options?: { logger?: Logger }): Execution
   };
 }
 
+export class TimeoutError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "TimeoutError";
+  }
+}
+
+export interface RetryOptions {
+  maxAttempts?: number;
+  baseDelayMs?: number;
+  maxDelayMs?: number;
+  shouldRetry?: (error: unknown) => boolean;
+}
+
+function isRetryable(error: unknown): boolean {
+  if (error instanceof TimeoutError) return true;
+  // Retry on transient-like errors but not on auth or validation failures
+  const message = error instanceof Error ? error.message : String(error);
+  return /timed?[ -]?out|ECONNREFUSED|ECONNRESET|ETIMEDOUT|5[0-9][0-9]|rate[ -]?limit/i.test(message);
+}
+
+export async function withTimeout<T>(
+  fn: () => Promise<T>,
+  timeoutMs: number,
+  ctx?: ExecutionContext,
+): Promise<T> {
+  const logger = ctx?.logger;
+  const traceId = ctx?.traceId ?? "-";
+
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      reject(new TimeoutError(`operation timed out after ${timeoutMs}ms trace_id=${traceId}`));
+    }, timeoutMs);
+  });
+
+  try {
+    const result = await Promise.race([fn(), timeoutPromise]);
+    clearTimeout(timer);
+    return result;
+  } catch (error) {
+    clearTimeout(timer);
+    if (error instanceof TimeoutError) {
+      logger?.warn(`[aspect:timeout] trace_id=${traceId} timeout_ms=${timeoutMs}`);
+    }
+    throw error;
+  }
+}
+
+export async function withRetry<T>(
+  fn: () => Promise<T>,
+  options: RetryOptions = {},
+  ctx?: ExecutionContext,
+): Promise<T> {
+  const maxAttempts = options.maxAttempts ?? 3;
+  const baseDelayMs = options.baseDelayMs ?? 1000;
+  const maxDelayMs = options.maxDelayMs ?? 30000;
+  const shouldRetry = options.shouldRetry ?? isRetryable;
+  const logger = ctx?.logger;
+  const traceId = ctx?.traceId ?? "-";
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= maxAttempts || !shouldRetry(error)) {
+        throw error;
+      }
+      const delay = Math.min(baseDelayMs * 2 ** (attempt - 1), maxDelayMs);
+      logger?.warn(
+        `[aspect:retry] trace_id=${traceId} attempt=${attempt}/${maxAttempts} delay_ms=${delay} error=${error instanceof Error ? error.message : String(error)}`,
+      );
+      await new Promise((resolve) => setTimeout(resolve, delay));
+    }
+  }
+
+  throw lastError;
+}
+
 export interface CaptureRequest {
   session_id: string;
   trigger: string;

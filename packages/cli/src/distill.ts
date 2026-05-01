@@ -298,12 +298,17 @@ export async function runDistillCommand(args: string[]): Promise<void> {
       console.log(
         `[loam distill] ${report.distiller_id}: processed=${report.artifacts_processed} produced=${report.results_produced} skipped=${report.results_skipped} errors=${report.errors.length}`,
       );
+      for (const err of report.errors) {
+        console.log(`  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`);
+      }
     }
 
     console.log(
       `[loam distill] Processed ${totalProcessed} sessions, produced ${totalProduced} results, skipped ${totalSkipped}`,
     );
-    console.log(`[loam distill] Results written to ${path.join(dumpDir, "distill")}`);
+    if (totalProduced > 0) {
+      console.log(`[loam distill] Results written to ${path.join(dumpDir, "distill")}`);
+    }
   } finally {
     if (tempDumpDir) {
       await rm(tempDumpDir, { recursive: true, force: true });
