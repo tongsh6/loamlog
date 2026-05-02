@@ -580,6 +580,8 @@ export interface LLMProviderConfig {
   api_key?: string;
   base_url?: string;
   model?: string;
+  /** Override the default context window size in tokens. */
+  context_window?: number;
 }
 
 export class LLMError extends Error {
@@ -625,6 +627,8 @@ export class LLMResponseFormatError extends LLMError {
 
 export interface LLMProvider {
   id: string;
+  /** Maximum context window size in tokens. Used for shard threshold calculation. */
+  contextWindow?: number;
   complete(input: {
     messages: Array<{ role: "system" | "user" | "assistant"; content: string }>;
     model: string;
@@ -643,7 +647,7 @@ export interface LLMRouter {
     task: LLMTask;
     budget: LLMBudget;
     input_tokens: number;
-  }): { provider: LLMProvider; model: string };
+  }): { provider: LLMProvider; model: string; contextWindow?: number };
 }
 
 export interface DistillerContext {

@@ -12,6 +12,7 @@ export function createDeepSeekProvider(
       defaultBaseUrl: "https://api.deepseek.com",
       requireApiKey: true,
       supportsJsonResponseFormat: true,
+      defaultContextWindow: 128000,
     },
     config,
     options,

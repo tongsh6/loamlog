@@ -23,11 +23,14 @@ import { createArtifactQueryClient } from "./query.js";
 import type { DistillerStateKV } from "@loamlog/core";
 import { injectMetadata } from "./metadata.js";
 import { runSinks, type ConfiguredSink } from "./sink-runner.js";
+import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
 
 export interface DistillDAGOptions {
   distiller: DistillerPlugin;
   distillerConfig?: Record<string, unknown>;
   llm: LLMRouter;
+  /** Model context window in tokens. Enables automatic sharding for large sessions. */
+  contextWindow?: number;
   state: DistillerStateKV;
   sinks: ConfiguredSink[];
   dumpDir: string;
@@ -98,7 +101,7 @@ export function createDistillDAG(
     },
   };
 
-  // ── Node 2: run_distiller (streams artifacts, avoids full collection) ──
+  // ── Node 2: run_distiller (streams artifacts, shards large sessions) ──
   const distillNode: PipelineNode<
     Record<string, unknown>,
     { drafts: DistillResultDraft[]; processedSessionIds: string[] }
@@ -107,40 +110,53 @@ export function createDistillDAG(
     timeoutMs: 0, // no timeout — duration depends on session count × LLM latency
     async run(_input, ctx) {
       const processedSessionIds = new Set<string>();
+      const allDrafts: DistillResultDraft[] = [];
       let progressCount = 0;
 
-      // Stream artifacts one at a time from the real store instead of
-      // receiving a pre-collected array. This keeps memory bounded to
-      // a single artifact regardless of archive size.
-      const trackingStore = {
-        async *getUnprocessed(_targetId: string, _limit?: number) {
-          for await (const a of artifactStore.getUnprocessed(distiller.id)) {
-            processedSessionIds.add(a.meta.session_id);
-            progressCount += 1;
-            if (progressCount % 10 === 0) {
-              ctx.logger.info(
-                `[dag:distill] progress=${progressCount} sessions`,
-              );
-            }
-            yield a;
-          }
-        },
-        query: artifactStore.query.bind(artifactStore),
-      };
+      for await (const artifact of artifactStore.getUnprocessed(distiller.id)) {
+        processedSessionIds.add(artifact.meta.session_id);
+        progressCount += 1;
+        if (progressCount % 10 === 0) {
+          ctx.logger.info(`[dag:distill] progress=${progressCount} sessions`);
+        }
 
-      const drafts = await distiller.run({
-        artifactStore: trackingStore,
-        llm,
-        state,
-        config: distillerConfig,
-        distiller_id: distiller.id,
-        distiller_version: distiller.version,
-      });
+        if (shouldShard({ artifact, contextWindow: options.contextWindow })) {
+          // Large session: shard → parallel map → reduce
+          ctx.logger.info(
+            `[dag:distill] sharding session ${artifact.meta.session_id} (${artifact.messages.length} msgs)`,
+          );
+          const shards = shardSession(artifact);
+          const mapResults = await mapDistiller(
+            distiller,
+            { llm, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },
+            shards,
+          );
+          const merged = reduceResults(mapResults);
+          allDrafts.push(...merged);
+        } else {
+          // Small session: single distiller call with a one-artifact store
+          const singleStore = {
+            async *getUnprocessed(_targetId: string, _limit?: number) {
+              yield artifact;
+            },
+            query: artifactStore.query.bind(artifactStore),
+          };
+          const drafts = await distiller.run({
+            artifactStore: singleStore,
+            llm,
+            state,
+            config: distillerConfig,
+            distiller_id: distiller.id,
+            distiller_version: distiller.version,
+          });
+          allDrafts.push(...drafts);
+        }
+      }
 
       ctx.logger.info(
-        `[dag:distill] drafts=${drafts.length} sessions=${processedSessionIds.size}`,
+        `[dag:distill] drafts=${allDrafts.length} sessions=${processedSessionIds.size}`,
       );
-      return { drafts, processedSessionIds: [...processedSessionIds] };
+      return { drafts: allDrafts, processedSessionIds: [...processedSessionIds] };
     },
   };
 

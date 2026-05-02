@@ -12,6 +12,7 @@ export function createLMStudioProvider(
       defaultBaseUrl: "http://127.0.0.1:1234",
       requireApiKey: false,
       supportsJsonResponseFormat: false,
+      defaultContextWindow: 131072,
     },
     config,
     factoryOptions,

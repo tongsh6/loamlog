@@ -197,6 +197,7 @@ export function createLLMRouter(
       return {
         provider: buildFallbackProvider(attempts, logger, request.budget, request.input_tokens),
         model: primary.model,
+        contextWindow: primary.provider.contextWindow,
       };
     },
   };

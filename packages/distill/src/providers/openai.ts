@@ -12,6 +12,7 @@ export function createOpenAIProvider(
       defaultBaseUrl: "https://api.openai.com",
       requireApiKey: true,
       supportsJsonResponseFormat: true,
+      defaultContextWindow: 128000,
     },
     config,
     options,

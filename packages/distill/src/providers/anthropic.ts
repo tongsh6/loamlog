@@ -53,6 +53,7 @@ export function createAnthropicProvider(
 
   return {
     id: "anthropic",
+    contextWindow: config.context_window ?? 200000,
     async complete(input) {
       const split = splitSystemMessages(input.messages);
       const body: Record<string, unknown> = {

@@ -21,6 +21,8 @@ interface OpenAICompatibleProviderOptions {
   defaultBaseUrl: string;
   requireApiKey: boolean;
   supportsJsonResponseFormat: boolean;
+  /** Default context window in tokens. Can be overridden via config. */
+  defaultContextWindow?: number;
 }
 
 export function createOpenAICompatibleProvider(
@@ -35,6 +37,7 @@ export function createOpenAICompatibleProvider(
 
   return {
     id: options.id,
+    contextWindow: config.context_window ?? options.defaultContextWindow,
     async complete(input) {
       const body: Record<string, unknown> = {
         model: input.model,

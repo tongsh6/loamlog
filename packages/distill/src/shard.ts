@@ -1,0 +1,303 @@
+import type { SessionArtifact } from "@loamlog/core";
+
+const MAX_MESSAGE_CHARS = 1200;
+
+/** Format overhead per message: `[message-id] (role) ` ≈ 50 chars + newline */
+const MESSAGE_FORMAT_OVERHEAD = 60;
+
+/** Prompt overhead for system prompt + session_id header + output format instructions */
+const PROMPT_OVERHEAD_CHARS = 1000;
+
+const TOKEN_ESTIMATE_RATIO = 4; // chars per token
+
+const DEFAULT_MESSAGE_COUNT_THRESHOLD = 200;
+
+/**
+ * Estimate the number of tokens the prompt would consume for a given artifact.
+ * Uses the same formatting logic as distiller buildPrompt() to produce
+ * a token count comparable to what the LLM router's route() would receive.
+ */
+export function estimatePromptTokens(artifact: SessionArtifact): number {
+  let totalChars = PROMPT_OVERHEAD_CHARS;
+
+  for (const message of artifact.messages) {
+    const text = (message.content ?? "").slice(0, MAX_MESSAGE_CHARS);
+    totalChars += MESSAGE_FORMAT_OVERHEAD + text.length;
+  }
+
+  return Math.max(1, Math.ceil(totalChars / TOKEN_ESTIMATE_RATIO));
+}
+
+export interface ShouldShardOptions {
+  artifact: SessionArtifact;
+  /** Model context window in tokens. Falls back to message count threshold if undefined. */
+  contextWindow?: number;
+  /** Fraction of context window to use as the split threshold (default 0.8). */
+  margin?: number;
+  /** Fallback message count threshold when contextWindow is unavailable (default 200). */
+  fallbackMessageCount?: number;
+}
+
+/**
+ * Determine whether a session should be sharded before distillation.
+ *
+ * Returns true when:
+ * 1. contextWindow is available AND estimated prompt tokens > contextWindow * margin, OR
+ * 2. contextWindow is NOT available AND message count > fallbackMessageCount
+ */
+export function shouldShard(options: ShouldShardOptions): boolean {
+  const { artifact, contextWindow, margin = 0.8, fallbackMessageCount = DEFAULT_MESSAGE_COUNT_THRESHOLD } = options;
+
+  if (contextWindow !== undefined && contextWindow > 0) {
+    const estimatedTokens = estimatePromptTokens(artifact);
+    return estimatedTokens > contextWindow * margin;
+  }
+
+  // Fallback: use message count threshold
+  return artifact.messages.length > fallbackMessageCount;
+}
+
+export interface ShardLayout {
+  shardSize: number;
+  overlapSize: number;
+  totalShards: number;
+}
+
+const DEFAULT_SHARD_MESSAGES = 50;
+const DEFAULT_OVERLAP_RATIO = 0.2;
+
+/**
+ * Compute how to split the session's messages into overlapping shards.
+ *
+ * shardSize is clamped to [1, messageCount] so a single-shard session
+ * (messageCount ≤ shardSize) produces exactly one shard with all messages.
+ */
+export function computeShardLayout(
+  messageCount: number,
+  maxMessagesPerShard: number = DEFAULT_SHARD_MESSAGES,
+  overlapRatio: number = DEFAULT_OVERLAP_RATIO,
+): ShardLayout {
+  const shardSize = Math.max(1, Math.min(maxMessagesPerShard, messageCount));
+  const overlapSize = Math.max(0, Math.floor(shardSize * overlapRatio));
+
+  if (shardSize <= overlapSize) {
+    return { shardSize: messageCount, overlapSize: 0, totalShards: 1 };
+  }
+
+  if (messageCount <= shardSize) {
+    return { shardSize: messageCount, overlapSize: 0, totalShards: 1 };
+  }
+
+  const stride = shardSize - overlapSize;
+  const totalShards = Math.ceil((messageCount - overlapSize) / stride);
+
+  return { shardSize, overlapSize, totalShards };
+}
+
+/**
+ * Split a session's messages into overlapping shards.
+ *
+ * Each shard is a shallow copy of the original artifact with a different
+ * messages slice. The meta, context, session, tools, and redacted fields
+ * are shared (not cloned) since shards are read-only during distillation.
+ *
+ * Adjacent shards overlap by `overlapRatio * shardSize` messages to prevent
+ * cross-boundary discussion from being lost.
+ */
+export function shardSession(
+  artifact: SessionArtifact,
+  maxMessagesPerShard: number = DEFAULT_SHARD_MESSAGES,
+  overlapRatio: number = DEFAULT_OVERLAP_RATIO,
+): SessionArtifact[] {
+  const { messages } = artifact;
+  if (messages.length === 0) {
+    return [artifact];
+  }
+
+  const layout = computeShardLayout(messages.length, maxMessagesPerShard, overlapRatio);
+  if (layout.totalShards <= 1) {
+    return [artifact];
+  }
+
+  const { shardSize, overlapSize } = layout;
+  const stride = shardSize - overlapSize;
+  const shards: SessionArtifact[] = [];
+
+  for (let start = 0; start < messages.length; start += stride) {
+    const end = Math.min(start + shardSize, messages.length);
+    shards.push({
+      ...artifact,
+      messages: messages.slice(start, end),
+    });
+    if (end >= messages.length) break;
+  }
+
+  return shards;
+}
+
+/**
+ * Run a distiller on multiple shard artifacts in parallel.
+ *
+ * Each shard is processed independently via distiller.run(). Failures in
+ * individual shards are caught so one bad shard doesn't kill the whole batch.
+ */
+export async function mapDistiller(
+  distiller: { run(input: {
+    artifactStore: { getUnprocessed(distillerId: string, limit?: number): AsyncIterable<import("@loamlog/core").SessionArtifact>; query: unknown };
+    llm: unknown;
+    state: unknown;
+    config?: Record<string, unknown>;
+    distiller_id?: string;
+    distiller_version?: string;
+  }): Promise<import("@loamlog/core").DistillResultDraft[]> },
+  distillerRunInput: {
+    llm: unknown;
+    state: unknown;
+    config?: Record<string, unknown>;
+    distiller_id?: string;
+    distiller_version?: string;
+  },
+  shards: SessionArtifact[],
+  concurrency: number = 3,
+): Promise<import("@loamlog/core").DistillResultDraft[][]> {
+  const results: import("@loamlog/core").DistillResultDraft[][] = [];
+
+  // Process shards in batches of `concurrency`
+  for (let i = 0; i < shards.length; i += concurrency) {
+    const batch = shards.slice(i, i + concurrency);
+    const batchResults = await Promise.all(
+      batch.map(async (shard) => {
+        try {
+          const store = {
+            async *getUnprocessed(_targetId: string, _limit?: number) {
+              yield shard;
+            },
+            query: async function* () {
+              yield shard;
+            },
+          };
+
+          return await distiller.run({
+            artifactStore: store,
+            llm: distillerRunInput.llm,
+            state: distillerRunInput.state,
+            config: distillerRunInput.config,
+            distiller_id: distillerRunInput.distiller_id,
+            distiller_version: distillerRunInput.distiller_version,
+          });
+        } catch (error) {
+          console.error(
+            `[shard:map] session ${shard.meta.session_id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+          return [];
+        }
+      }),
+    );
+    for (const r of batchResults) {
+      results.push(r);
+    }
+  }
+
+  return results;
+}
+
+const TITLE_SIMILARITY_THRESHOLD = 0.7;
+
+/** Simple word-overlap similarity for title dedup. */
+function titleSimilarity(a: string, b: string): number {
+  const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
+  const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+  if (wordsA.size === 0 || wordsB.size === 0) return 0;
+  const intersection = [...wordsA].filter((w) => wordsB.has(w)).length;
+  const union = new Set([...wordsA, ...wordsB]).size;
+  return intersection / union;
+}
+
+/**
+ * Merge distill results from multiple shards of the same session.
+ *
+ * Structural merge (code-based, no LLM call):
+ * 1. Exact title match → dedup, keep highest confidence
+ * 2. High title similarity (>0.7) → merge, keep highest confidence
+ * 3. Same evidence message_id → dedup, keep highest confidence
+ * 4. Same issue found in ≥2 shards → confidence boost (+0.1, max 1.0)
+ * 5. Single-shard findings with confidence <0.5 → drop
+ */
+export function reduceResults(
+  shardResults: import("@loamlog/core").DistillResultDraft[][],
+): import("@loamlog/core").DistillResultDraft[] {
+  // Flatten and track which shard each result came from
+  const allResults: Array<{ result: import("@loamlog/core").DistillResultDraft; shardIndex: number }> = [];
+  for (let i = 0; i < shardResults.length; i++) {
+    for (const r of shardResults[i]) {
+      allResults.push({ result: r, shardIndex: i });
+    }
+  }
+
+  if (allResults.length <= 1) {
+    return allResults.map((r) => r.result);
+  }
+
+  const merged: import("@loamlog/core").DistillResultDraft[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < allResults.length; i++) {
+    if (used.has(i)) continue;
+
+    const current = allResults[i];
+    const crossShardHits = new Set<number>([current.shardIndex]);
+
+    // Find duplicates/merges
+    let best = current.result;
+    let bestIdx = i;
+
+    for (let j = i + 1; j < allResults.length; j++) {
+      if (used.has(j)) continue;
+
+      const other = allResults[j];
+      const sameEvidence = best.evidence.some((e) =>
+        other.result.evidence.some((oe) => oe.message_id === e.message_id),
+      );
+      const similarTitle = titleSimilarity(
+        best.title,
+        other.result.title,
+      ) >= TITLE_SIMILARITY_THRESHOLD;
+
+      if (sameEvidence || similarTitle) {
+        used.add(j);
+        crossShardHits.add(other.shardIndex);
+        // Keep the result with higher confidence
+        if (other.result.confidence > best.confidence) {
+          best = other.result;
+          bestIdx = j;
+        }
+      }
+    }
+
+    used.add(bestIdx);
+
+    // Cross-validation boost
+    if (crossShardHits.size >= 2) {
+      best = {
+        ...best,
+        confidence: Math.min(1.0, best.confidence + 0.1),
+      };
+    }
+
+    merged.push(best);
+  }
+
+  // Filter single-shard low confidence
+  return merged.filter((r, idx) => {
+    const shardIndices = new Set<number>();
+    for (const item of allResults) {
+      if (item.result === r || titleSimilarity(item.result.title, r.title) >= TITLE_SIMILARITY_THRESHOLD) {
+        shardIndices.add(item.shardIndex);
+      }
+    }
+    if (shardIndices.size < 2 && r.confidence < 0.5) {
+      return false;
+    }
+    return true;
+  });
+}

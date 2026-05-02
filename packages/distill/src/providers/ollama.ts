@@ -12,6 +12,7 @@ export function createOllamaProvider(
       defaultBaseUrl: "http://127.0.0.1:11434",
       requireApiKey: false,
       supportsJsonResponseFormat: false,
+      defaultContextWindow: 8192,
     },
     config,
     options,
