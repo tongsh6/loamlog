@@ -1,4 +1,5 @@
 import type { DistillResultDraft, DistillerPlugin, DistillerRunInput, SessionArtifact } from "@loamlog/core";
+import { createSingleArtifactStore } from "./query.js";
 
 const MAX_MESSAGE_CHARS = 1200;
 
@@ -216,17 +217,8 @@ export async function mapDistiller(
     const batchResults = await Promise.all(
       batch.map(async (shard) => {
         try {
-          const store = {
-            async *getUnprocessed(_targetId: string, _limit?: number) {
-              yield shard;
-            },
-            query: async function* () {
-              yield shard;
-            },
-          };
-
           return await distiller.run({
-            artifactStore: store,
+            artifactStore: createSingleArtifactStore(shard),
             llm: distillerRunInput.llm,
             state: distillerRunInput.state,
             config: distillerRunInput.config,

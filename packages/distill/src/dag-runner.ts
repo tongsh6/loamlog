@@ -8,6 +8,7 @@ import type {
   DistillerPlugin,
   LLMRouter,
   QualityReport,
+  SessionArtifact,
 } from "@loamlog/core";
 import {
   approvalGate,
@@ -26,6 +27,7 @@ import { runSinks, type ConfiguredSink } from "./sink-runner.js";
 import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
 import { detectLanguage, withLanguageRouter } from "./language.js";
 import { writeProcessJournal } from "./journal.js";
+import { createSingleArtifactStore } from "./query.js";
 
 export interface DistillDAGOptions {
   distiller: DistillerPlugin;
@@ -78,6 +80,78 @@ interface DistillAccumulator {
  * generates AuditRecords, and writes them to distill/{repo}/audit/.
  * Local file sink always delivers; external sinks require approval.
  */
+interface ProcessSessionResult {
+  drafts: DistillResultDraft[];
+  error?: string;
+}
+
+interface ProcessSessionContext {
+  distiller: DistillerPlugin;
+  llm: LLMRouter;
+  state: DistillerStateKV;
+  distillerConfig?: Record<string, unknown>;
+  dumpDir: string;
+  repo: string;
+  contextWindow?: number;
+  artifactStore: ReturnType<typeof createArtifactQueryClient>;
+}
+
+/**
+ * Process a single session artifact through the distiller.
+ *
+ * Encapsulates language detection, sharding decision, and distiller invocation.
+ * Cross-cutting concerns (language injection, sharding) are handled here so the
+ * DAG node stays a thin orchestration loop.
+ */
+async function processSessionArtifact(
+  artifact: SessionArtifact,
+  ctx: ProcessSessionContext,
+): Promise<ProcessSessionResult> {
+  const lang = detectLanguage(artifact);
+  const langRouter = withLanguageRouter(ctx.llm, lang);
+
+  if (shouldShard({ artifact, contextWindow: ctx.contextWindow })) {
+    try {
+      const shards = shardSession(artifact, { contextWindow: ctx.contextWindow });
+      const mapResults = await mapDistiller(
+        ctx.distiller,
+        {
+          llm: langRouter,
+          state: ctx.state,
+          config: ctx.distillerConfig,
+          distiller_id: ctx.distiller.id,
+          distiller_version: ctx.distiller.version,
+        },
+        shards,
+      );
+      return { drafts: reduceResults(mapResults) };
+    } catch (error) {
+      return {
+        drafts: [],
+        error: error instanceof Error ? error.message : String(error),
+      };
+    }
+  }
+
+  // Small session: single distiller call
+  try {
+    const drafts = await ctx.distiller.run({
+      artifactStore: createSingleArtifactStore(artifact, ctx.artifactStore),
+      llm: langRouter,
+      state: ctx.state,
+      config: ctx.distillerConfig,
+      distiller_id: ctx.distiller.id,
+      distiller_version: ctx.distiller.version,
+    });
+    return { drafts };
+  } catch (error) {
+    return {
+      drafts: [],
+      error: error instanceof Error ? error.message : String(error),
+    };
+  }
+}
+
 export function createDistillDAG(
   options: DistillDAGOptions,
   acc: DistillAccumulator,
@@ -103,17 +177,18 @@ export function createDistillDAG(
     },
   };
 
-  // ── Node 2: run_distiller (streams artifacts, shards large sessions) ──
+  // ── Node 2: run_distiller (thin loop, delegates to processSessionArtifact) ──
   const distillNode: PipelineNode<
     Record<string, unknown>,
     { drafts: DistillResultDraft[]; processedSessionIds: string[] }
   > = {
     id: "run_distiller",
-    timeoutMs: 0, // no timeout — duration depends on session count × LLM latency
+    timeoutMs: 0,
     async run(_input, ctx) {
       const processedSessionIds = new Set<string>();
       const allDrafts: DistillResultDraft[] = [];
       let progressCount = 0;
+      const effectiveRepo = repo ?? "_global";
 
       for await (const artifact of artifactStore.getUnprocessed(distiller.id)) {
         processedSessionIds.add(artifact.meta.session_id);
@@ -122,66 +197,27 @@ export function createDistillDAG(
           ctx.logger.info(`[dag:distill] progress=${progressCount} sessions`);
         }
 
-        // Detect language from the session and wrap the LLM router so the
-        // distiller receives a language-aware provider automatically. This is
-        // a cross-cutting aspect — individual distillers don't need to handle it.
-        const lang = detectLanguage(artifact);
-        const langRouter = withLanguageRouter(llm, lang);
+        const result = await processSessionArtifact(artifact, {
+          distiller,
+          llm,
+          state,
+          distillerConfig,
+          dumpDir,
+          repo: effectiveRepo,
+          contextWindow: options.contextWindow,
+          artifactStore,
+        });
 
-        let sessionDrafts: DistillResultDraft[] = [];
-        let sessionError: string | undefined;
+        allDrafts.push(...result.drafts);
 
-        if (shouldShard({ artifact, contextWindow: options.contextWindow })) {
-          // Large session: shard → parallel map → reduce
-          ctx.logger.info(
-            `[dag:distill] sharding session ${artifact.meta.session_id} (${artifact.messages.length} msgs, lang=${lang})`,
-          );
-          try {
-            const shards = shardSession(artifact, { contextWindow: options.contextWindow });
-            const mapResults = await mapDistiller(
-              distiller,
-              { llm: langRouter, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },
-              shards,
-            );
-            sessionDrafts = reduceResults(mapResults);
-          } catch (error) {
-            sessionError = error instanceof Error ? error.message : String(error);
-          }
-        } else {
-          // Small session: single distiller call with a one-artifact store
-          const singleStore = {
-            async *getUnprocessed(_targetId: string, _limit?: number) {
-              yield artifact;
-            },
-            query: artifactStore.query.bind(artifactStore),
-          };
-          try {
-            sessionDrafts = await distiller.run({
-              artifactStore: singleStore,
-              llm: langRouter,
-              state,
-              config: distillerConfig,
-              distiller_id: distiller.id,
-              distiller_version: distiller.version,
-            });
-          } catch (error) {
-            sessionError = error instanceof Error ? error.message : String(error);
-          }
-        }
-
-        allDrafts.push(...sessionDrafts);
-
-        // Write journal entry immediately so users see progress in real-time.
-        // Without this, journal entries only appear after ALL sessions are done.
-        const effectiveRepo = artifact.context.repo ?? repo ?? "_global";
-        const now = new Date().toISOString();
-        writeProcessJournal(dumpDir, effectiveRepo, {
+        // Journal: write immediately for real-time observability
+        writeProcessJournal(dumpDir, artifact.context.repo ?? effectiveRepo, {
           session_id: artifact.meta.session_id,
           distiller_id: distiller.id,
-          processed_at: now,
-          status: sessionError ? "error" : sessionDrafts.length > 0 ? "produced" : "no_signal",
-          drafts_count: sessionDrafts.length,
-          error_message: sessionError,
+          processed_at: new Date().toISOString(),
+          status: result.error ? "error" : result.drafts.length > 0 ? "produced" : "no_signal",
+          drafts_count: result.drafts.length,
+          error_message: result.error,
         }).catch((err) => {
           ctx.logger.warn(`[dag:journal] write failed: ${err instanceof Error ? err.message : String(err)}`);
         });

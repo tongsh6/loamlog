@@ -68,12 +68,20 @@ export function withLanguageInstruction(
  * Wrap an LLMRouter so that its route() returns a provider that auto-injects
  * language instruction. The language is determined per-session, so each
  * distill call gets the correct instruction for the source conversation.
+ *
+ * Wrappers are cached per language to avoid creating new closures for every
+ * session when most sessions share the same language.
  */
+const languageRouterCache = new Map<DetectedLanguage, LLMRouter>();
+
 export function withLanguageRouter(
   router: LLMRouter,
   language: DetectedLanguage,
 ): LLMRouter {
-  return {
+  const cached = languageRouterCache.get(language);
+  if (cached) return cached;
+
+  const wrapped: LLMRouter = {
     route(request) {
       const result = router.route(request);
       return {
@@ -85,4 +93,7 @@ export function withLanguageRouter(
       return router.getDefaultContextWindow();
     },
   };
+
+  languageRouterCache.set(language, wrapped);
+  return wrapped;
 }

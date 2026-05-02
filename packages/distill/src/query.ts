@@ -128,3 +128,21 @@ export function createArtifactQueryClient(
     },
   };
 }
+
+/**
+ * Create an artifact store that yields a single session artifact.
+ * Used by the DAG runner and mapDistiller when processing one session
+ * (or shard) at a time instead of streaming from the full archive.
+ */
+export function createSingleArtifactStore(
+  artifact: SessionArtifact,
+  queryStore?: ArtifactQueryClient,
+): ArtifactQueryClient {
+  const fallbackQuery = queryStore?.query.bind(queryStore) ?? (async function* () { yield artifact; });
+  return {
+    async *getUnprocessed(_targetId: string, _limit?: number) {
+      yield artifact;
+    },
+    query: fallbackQuery,
+  };
+}
