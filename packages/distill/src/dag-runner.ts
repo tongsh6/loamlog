@@ -24,6 +24,7 @@ import type { DistillerStateKV } from "@loamlog/core";
 import { injectMetadata } from "./metadata.js";
 import { runSinks, type ConfiguredSink } from "./sink-runner.js";
 import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
+import { detectLanguage, withLanguageRouter } from "./language.js";
 
 export interface DistillDAGOptions {
   distiller: DistillerPlugin;
@@ -120,15 +121,21 @@ export function createDistillDAG(
           ctx.logger.info(`[dag:distill] progress=${progressCount} sessions`);
         }
 
+        // Detect language from the session and wrap the LLM router so the
+        // distiller receives a language-aware provider automatically. This is
+        // a cross-cutting aspect — individual distillers don't need to handle it.
+        const lang = detectLanguage(artifact);
+        const langRouter = withLanguageRouter(llm, lang);
+
         if (shouldShard({ artifact, contextWindow: options.contextWindow })) {
           // Large session: shard → parallel map → reduce
           ctx.logger.info(
-            `[dag:distill] sharding session ${artifact.meta.session_id} (${artifact.messages.length} msgs)`,
+            `[dag:distill] sharding session ${artifact.meta.session_id} (${artifact.messages.length} msgs, lang=${lang})`,
           );
           const shards = shardSession(artifact, { contextWindow: options.contextWindow });
           const mapResults = await mapDistiller(
             distiller,
-            { llm, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },
+            { llm: langRouter, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },
             shards,
           );
           const merged = reduceResults(mapResults);
@@ -143,7 +150,7 @@ export function createDistillDAG(
           };
           const drafts = await distiller.run({
             artifactStore: singleStore,
-            llm,
+            llm: langRouter,
             state,
             config: distillerConfig,
             distiller_id: distiller.id,
