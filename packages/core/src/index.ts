@@ -648,6 +648,8 @@ export interface LLMRouter {
     budget: LLMBudget;
     input_tokens: number;
   }): { provider: LLMProvider; model: string; contextWindow?: number };
+  /** Return the context window of the first configured provider, without routing overhead. */
+  getDefaultContextWindow(): number | undefined;
 }
 
 export interface DistillerContext {

@@ -260,47 +260,61 @@ export function reduceResults(
     return [];
   }
 
-  const merged: import("@loamlog/core").DistillResultDraft[] = [];
-  // Track which original result indices contributed to each merged result
-  const mergedContributors: Array<Set<number>> = [];
+  // Build adjacency graph by evidence overlap and title similarity,
+  // then resolve transitive closure via multi-pass merging
+  const merges: number[][] = []; // each group = array of indices
   const used = new Set<number>();
 
   for (let i = 0; i < allResults.length; i++) {
     if (used.has(i)) continue;
 
-    const current = allResults[i];
-    const contributors = new Set<number>([i]);
+    const group = new Set<number>([i]);
+    let changed = true;
 
-    // Find duplicates/merges
-    let best = current.result;
-    let bestIdx = i;
+    // Multi-pass: keep absorbing until no new members join the group
+    while (changed) {
+      changed = false;
+      for (let j = 0; j < allResults.length; j++) {
+        if (used.has(j) || group.has(j)) continue;
 
-    for (let j = i + 1; j < allResults.length; j++) {
-      if (used.has(j)) continue;
+        // Check if j matches ANY member of the group (transitive)
+        for (const gi of group) {
+          const sameEvidence = allResults[gi].result.evidence.some((e) =>
+            allResults[j].result.evidence.some((oe) => oe.message_id === e.message_id),
+          );
+          const similarTitle =
+            titleSimilarity(allResults[gi].result.title, allResults[j].result.title) >=
+            TITLE_SIMILARITY_THRESHOLD;
 
-      const other = allResults[j];
-      const sameEvidence = best.evidence.some((e) =>
-        other.result.evidence.some((oe) => oe.message_id === e.message_id),
-      );
-      const similarTitle =
-        titleSimilarity(best.title, other.result.title) >= TITLE_SIMILARITY_THRESHOLD;
-
-      if (sameEvidence || similarTitle) {
-        used.add(j);
-        contributors.add(j);
-        // Keep the result with higher confidence
-        if (other.result.confidence > best.confidence) {
-          best = other.result;
-          bestIdx = j;
+          if (sameEvidence || similarTitle) {
+            group.add(j);
+            used.add(j);
+            changed = true;
+            break;
+          }
         }
       }
     }
 
-    used.add(bestIdx);
+    used.add(i);
+    merges.push([...group]);
+  }
 
-    // Cross-validation boost: count distinct shards via contributor indices
+  const merged: import("@loamlog/core").DistillResultDraft[] = [];
+  const mergedContributors: Array<Set<number>> = [];
+
+  for (const group of merges) {
+    // Select best from the group (highest confidence)
+    let best = allResults[group[0]].result;
+    for (const idx of group) {
+      if (allResults[idx].result.confidence > best.confidence) {
+        best = allResults[idx].result;
+      }
+    }
+
+    // Cross-validation boost
     const distinctShards = new Set<number>();
-    for (const idx of contributors) {
+    for (const idx of group) {
       distinctShards.add(allResults[idx].shardIndex);
     }
     if (distinctShards.size >= 2) {
@@ -311,7 +325,7 @@ export function reduceResults(
     }
 
     merged.push(best);
-    mergedContributors.push(contributors);
+    mergedContributors.push(new Set(group));
   }
 
   // Filter single-shard low confidence using explicit contributor tracking

@@ -200,5 +200,18 @@ export function createLLMRouter(
         contextWindow: primary.provider.contextWindow,
       };
     },
+
+    /**
+     * Return the context window from the first configured provider
+     * without constructing the fallback chain needed by route().
+     */
+    getDefaultContextWindow(): number | undefined {
+      for (const rt of runtimes) {
+        if (rt.provider.contextWindow !== undefined) {
+          return rt.provider.contextWindow;
+        }
+      }
+      return undefined;
+    },
   };
 }

@@ -121,8 +121,17 @@ async function main(): Promise<void> {
     console.log("[loam daemon] backfill-on-startup: processing unprocessed sessions...");
     try {
       const loaded = await loadAICConfig();
+      // Merge intelligence.distill settings (used by continuous mining mode)
+      // into the root-level config so backfill uses the same distiller/LLM config
+      // as the real-time trigger pipeline.
+      const mergedConfig = {
+        ...loaded,
+        distillers: loaded.intelligence?.distill?.distillers ?? loaded.distillers,
+        sinks: loaded.intelligence?.distill?.sinks ?? loaded.sinks,
+        llm: loaded.intelligence?.distill?.llm ?? loaded.llm,
+      };
       const config = buildRuntimeDistillConfig(
-        normalizeBuiltInPluginSpecifiers(loaded),
+        normalizeBuiltInPluginSpecifiers(mergedConfig),
         undefined,
       );
       const result = await backfillUnprocessed({

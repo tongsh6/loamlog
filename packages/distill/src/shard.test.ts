@@ -22,7 +22,7 @@ function makeArtifact(messageCount: number, charsPerMessage: number): SessionArt
       loam_version: "0.1.0",
       provider: "test",
     },
-    context: {},
+    context: { cwd: "/test", worktree: "/test" },
     time_range: { start: new Date().toISOString(), end: new Date().toISOString() },
     session: {},
     messages,
