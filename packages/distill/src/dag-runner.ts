@@ -125,7 +125,7 @@ export function createDistillDAG(
           ctx.logger.info(
             `[dag:distill] sharding session ${artifact.meta.session_id} (${artifact.messages.length} msgs)`,
           );
-          const shards = shardSession(artifact);
+          const shards = shardSession(artifact, { contextWindow: options.contextWindow });
           const mapResults = await mapDistiller(
             distiller,
             { llm, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },

@@ -423,6 +423,10 @@ async function runDistillWithDAG(
     logger: { info: () => {}, warn: () => {} },
   });
 
+  // Resolve context window from the configured provider for token-aware sharding
+  const routed = llm.route({ task: "extract", budget: "cheap", input_tokens: 1000 });
+  const contextWindow = routed.contextWindow;
+
   let totalProcessed = 0;
   let totalProduced = 0;
   let totalSkipped = 0;
@@ -448,6 +452,7 @@ async function runDistillWithDAG(
       state,
       sinks,
       dumpDir,
+      contextWindow,
       since: parsed.since,
       until: parsed.until,
     });

@@ -1,4 +1,4 @@
-import type { SessionArtifact } from "@loamlog/core";
+import type { DistillResultDraft, DistillerPlugin, DistillerRunInput, SessionArtifact } from "@loamlog/core";
 
 const MAX_MESSAGE_CHARS = 1200;
 
@@ -63,8 +63,35 @@ export interface ShardLayout {
   totalShards: number;
 }
 
-const DEFAULT_SHARD_MESSAGES = 50;
 const DEFAULT_OVERLAP_RATIO = 0.2;
+
+/** Safety margin within each shard to leave room for output tokens. */
+const SHARD_CONTEXT_MARGIN = 0.8;
+
+/**
+ * Compute how many messages fit in a shard given a target token budget.
+ * Uses the same estimation logic as estimatePromptTokens().
+ */
+export function computeShardSize(
+  sampleMessages: Array<{ content?: string }>,
+  contextWindow: number,
+  margin: number = SHARD_CONTEXT_MARGIN,
+): number {
+  const targetTokens = contextWindow * margin;
+
+  // Estimate per-message tokens from a sample (first 20 messages)
+  const sample = sampleMessages.slice(0, 20);
+  if (sample.length === 0) return 1;
+
+  let sampleChars = 0;
+  for (const m of sample) {
+    sampleChars += MESSAGE_FORMAT_OVERHEAD + (m.content ?? "").slice(0, MAX_MESSAGE_CHARS).length;
+  }
+  const avgTokensPerMessage = Math.ceil(sampleChars / sample.length / TOKEN_ESTIMATE_RATIO);
+  const availableTokens = targetTokens - Math.ceil(PROMPT_OVERHEAD_CHARS / TOKEN_ESTIMATE_RATIO);
+
+  return Math.max(1, Math.floor(availableTokens / avgTokensPerMessage));
+}
 
 /**
  * Compute how to split the session's messages into overlapping shards.
@@ -74,7 +101,7 @@ const DEFAULT_OVERLAP_RATIO = 0.2;
  */
 export function computeShardLayout(
   messageCount: number,
-  maxMessagesPerShard: number = DEFAULT_SHARD_MESSAGES,
+  maxMessagesPerShard: number,
   overlapRatio: number = DEFAULT_OVERLAP_RATIO,
 ): ShardLayout {
   const shardSize = Math.max(1, Math.min(maxMessagesPerShard, messageCount));
@@ -106,13 +133,21 @@ export function computeShardLayout(
  */
 export function shardSession(
   artifact: SessionArtifact,
-  maxMessagesPerShard: number = DEFAULT_SHARD_MESSAGES,
-  overlapRatio: number = DEFAULT_OVERLAP_RATIO,
+  options: { maxMessagesPerShard?: number; contextWindow?: number; overlapRatio?: number } = {},
 ): SessionArtifact[] {
   const { messages } = artifact;
   if (messages.length === 0) {
     return [artifact];
   }
+
+  const overlapRatio = options.overlapRatio ?? DEFAULT_OVERLAP_RATIO;
+
+  // Use context window to adaptively compute shard size when available
+  const maxMessagesPerShard =
+    options.maxMessagesPerShard ??
+    (options.contextWindow
+      ? computeShardSize(messages, options.contextWindow)
+      : 50);
 
   const layout = computeShardLayout(messages.length, maxMessagesPerShard, overlapRatio);
   if (layout.totalShards <= 1) {
@@ -142,25 +177,12 @@ export function shardSession(
  * individual shards are caught so one bad shard doesn't kill the whole batch.
  */
 export async function mapDistiller(
-  distiller: { run(input: {
-    artifactStore: { getUnprocessed(distillerId: string, limit?: number): AsyncIterable<import("@loamlog/core").SessionArtifact>; query: unknown };
-    llm: unknown;
-    state: unknown;
-    config?: Record<string, unknown>;
-    distiller_id?: string;
-    distiller_version?: string;
-  }): Promise<import("@loamlog/core").DistillResultDraft[]> },
-  distillerRunInput: {
-    llm: unknown;
-    state: unknown;
-    config?: Record<string, unknown>;
-    distiller_id?: string;
-    distiller_version?: string;
-  },
+  distiller: DistillerPlugin,
+  distillerRunInput: Omit<DistillerRunInput, "artifactStore">,
   shards: SessionArtifact[],
   concurrency: number = 3,
-): Promise<import("@loamlog/core").DistillResultDraft[][]> {
-  const results: import("@loamlog/core").DistillResultDraft[][] = [];
+): Promise<DistillResultDraft[][]> {
+  const results: DistillResultDraft[][] = [];
 
   // Process shards in batches of `concurrency`
   for (let i = 0; i < shards.length; i += concurrency) {
@@ -234,18 +256,20 @@ export function reduceResults(
     }
   }
 
-  if (allResults.length <= 1) {
-    return allResults.map((r) => r.result);
+  if (allResults.length === 0) {
+    return [];
   }
 
   const merged: import("@loamlog/core").DistillResultDraft[] = [];
+  // Track which original result indices contributed to each merged result
+  const mergedContributors: Array<Set<number>> = [];
   const used = new Set<number>();
 
   for (let i = 0; i < allResults.length; i++) {
     if (used.has(i)) continue;
 
     const current = allResults[i];
-    const crossShardHits = new Set<number>([current.shardIndex]);
+    const contributors = new Set<number>([i]);
 
     // Find duplicates/merges
     let best = current.result;
@@ -258,14 +282,12 @@ export function reduceResults(
       const sameEvidence = best.evidence.some((e) =>
         other.result.evidence.some((oe) => oe.message_id === e.message_id),
       );
-      const similarTitle = titleSimilarity(
-        best.title,
-        other.result.title,
-      ) >= TITLE_SIMILARITY_THRESHOLD;
+      const similarTitle =
+        titleSimilarity(best.title, other.result.title) >= TITLE_SIMILARITY_THRESHOLD;
 
       if (sameEvidence || similarTitle) {
         used.add(j);
-        crossShardHits.add(other.shardIndex);
+        contributors.add(j);
         // Keep the result with higher confidence
         if (other.result.confidence > best.confidence) {
           best = other.result;
@@ -276,26 +298,30 @@ export function reduceResults(
 
     used.add(bestIdx);
 
-    // Cross-validation boost
-    if (crossShardHits.size >= 2) {
+    // Cross-validation boost: count distinct shards via contributor indices
+    const distinctShards = new Set<number>();
+    for (const idx of contributors) {
+      distinctShards.add(allResults[idx].shardIndex);
+    }
+    if (distinctShards.size >= 2) {
       best = {
         ...best,
-        confidence: Math.min(1.0, best.confidence + 0.1),
+        confidence: Math.min(1.0, Math.round((best.confidence + 0.1) * 10) / 10),
       };
     }
 
     merged.push(best);
+    mergedContributors.push(contributors);
   }
 
-  // Filter single-shard low confidence
-  return merged.filter((r, idx) => {
-    const shardIndices = new Set<number>();
-    for (const item of allResults) {
-      if (item.result === r || titleSimilarity(item.result.title, r.title) >= TITLE_SIMILARITY_THRESHOLD) {
-        shardIndices.add(item.shardIndex);
-      }
+  // Filter single-shard low confidence using explicit contributor tracking
+  return merged.filter((_r, idx) => {
+    const contributors = mergedContributors[idx];
+    const distinctShards = new Set<number>();
+    for (const ci of contributors) {
+      distinctShards.add(allResults[ci].shardIndex);
     }
-    if (shardIndices.size < 2 && r.confidence < 0.5) {
+    if (distinctShards.size < 2 && _r.confidence < 0.5) {
       return false;
     }
     return true;

@@ -8,3 +8,4 @@
 - **19:25** — Step 2 完成: shouldShard + estimatePromptTokens（+10 测试）
 - **19:35** — Step 3 完成: shardSession + computeShardLayout（+8 测试）
 - **19:45** — Steps 4-6 完成: mapDistiller + reduceResults + DAG 集成（178 测试全绿）
+- **20:10** — Code review 修复 3 critical + 3 important: contextWindow 流向、自适应分片大小、reduceResults 引用跟踪、类型安全、测试覆盖（185 测试全绿）

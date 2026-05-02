@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { describe, it } from "node:test";
-import { computeShardLayout, estimatePromptTokens, shardSession, shouldShard } from "./shard.js";
+import { computeShardLayout, computeShardSize, estimatePromptTokens, reduceResults, shardSession, shouldShard } from "./shard.js";
 import type { SessionArtifact } from "@loamlog/core";
 
 function makeArtifact(messageCount: number, charsPerMessage: number): SessionArtifact {
@@ -121,14 +121,14 @@ describe("computeShardLayout", () => {
 describe("shardSession", () => {
   it("returns single shard for session under shard size", () => {
     const a = makeArtifact(30, 100);
-    const shards = shardSession(a, 50, 0.2);
+    const shards = shardSession(a, { maxMessagesPerShard: 50, overlapRatio: 0.2 });
     assert.equal(shards.length, 1);
     assert.equal(shards[0].messages.length, 30);
   });
 
   it("splits large session into overlapping shards", () => {
     const a = makeArtifact(150, 100);
-    const shards = shardSession(a, 50, 0.2);
+    const shards = shardSession(a, { maxMessagesPerShard: 50, overlapRatio: 0.2 });
     assert.ok(shards.length >= 3, `got ${shards.length} shards, expected >= 3`);
 
     // Verify overlap: last message of shard[0] should appear in shard[1]
@@ -141,7 +141,7 @@ describe("shardSession", () => {
 
   it("covers all messages across shards", () => {
     const a = makeArtifact(100, 100);
-    const shards = shardSession(a, 40, 0.25);
+    const shards = shardSession(a, { maxMessagesPerShard: 40, overlapRatio: 0.25 });
 
     // Every message should appear in at least one shard
     const covered = new Set<string>();
@@ -155,8 +155,77 @@ describe("shardSession", () => {
 
   it("returns single shard for empty session", () => {
     const a = makeArtifact(0, 0);
-    const shards = shardSession(a, 50, 0.2);
+    const shards = shardSession(a, { maxMessagesPerShard: 50, overlapRatio: 0.2 });
     assert.equal(shards.length, 1);
     assert.equal(shards[0].messages.length, 0);
+  });
+});
+
+describe("computeShardSize", () => {
+  it("returns fewer messages for smaller context windows", () => {
+    const msgs = Array.from({ length: 100 }, () => ({ content: "x".repeat(200) }));
+    const sizeLarge = computeShardSize(msgs, 128000);
+    const sizeSmall = computeShardSize(msgs, 8192);
+    assert.ok(sizeLarge > sizeSmall, `large=${sizeLarge} should be > small=${sizeSmall}`);
+  });
+
+  it("returns at least 1", () => {
+    assert.ok(computeShardSize([], 128000) >= 1);
+  });
+});
+
+function makeDraft(title: string, confidence: number, messageIds: string[]): import("@loamlog/core").DistillResultDraft {
+  return {
+    type: "issue-draft",
+    title,
+    summary: title,
+    confidence,
+    tags: [],
+    payload: { title },
+    evidence: messageIds.map((id) => ({
+      session_id: "test",
+      message_id: id,
+      excerpt: "...",
+      source_text: "...",
+      role: "user" as const,
+    })),
+    render: { markdown: title },
+  };
+}
+
+describe("reduceResults", () => {
+  it("returns empty for empty input", () => {
+    assert.deepEqual(reduceResults([]), []);
+  });
+
+  it("returns single shard results unchanged", () => {
+    const drafts = [makeDraft("Fix CI", 0.8, ["m1"])];
+    const result = reduceResults([drafts]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].title, "Fix CI");
+  });
+
+  it("deduplicates by evidence message_id", () => {
+    const shard1 = [makeDraft("Fix CI timeout", 0.8, ["m1"])];
+    const shard2 = [makeDraft("CI issue", 0.6, ["m1"])]; // same evidence
+    const result = reduceResults([shard1, shard2]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].confidence, 0.9); // 0.8 + 0.1 cross-validation boost
+  });
+
+  it("deduplicates by similar title", () => {
+    // "Fix CI pipeline timeout" vs "Fix CI timeout" → 3/4 overlap = 0.75
+    const shard1 = [makeDraft("Fix CI pipeline timeout", 0.7, ["m1"])];
+    const shard2 = [makeDraft("Fix CI timeout", 0.5, ["m2"])];
+    const result = reduceResults([shard1, shard2]);
+    assert.equal(result.length, 1);
+    // Keeps higher confidence, then boosted for cross-shard
+    assert.equal(result[0].confidence, 0.8); // 0.7 + 0.1
+  });
+
+  it("drops single-shard low confidence results", () => {
+    const shard1 = [makeDraft("Weak signal", 0.3, ["m1"])];
+    const result = reduceResults([shard1]);
+    assert.equal(result.length, 0);
   });
 });
