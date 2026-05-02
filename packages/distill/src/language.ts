@@ -97,3 +97,51 @@ export function withLanguageRouter(
   languageRouterCache.set(language, wrapped);
   return wrapped;
 }
+
+/**
+ * Wrap an LLMProvider to auto-prepend session context to the first user message.
+ * This is a cross-cutting aspect — distillers don't need to know about it.
+ * The context tells the LLM which repo/branch/provider the conversation belongs to.
+ */
+export function withSessionContext(
+  provider: LLMProvider,
+  artifact: SessionArtifact,
+): LLMProvider {
+  const ctx = artifact.context;
+  const header = [
+    `## Session Context`,
+    ctx.repo ? `repo: ${ctx.repo}` : "",
+    ctx.branch ? `branch: ${ctx.branch}` : "",
+    `provider: ${artifact.meta.provider}`,
+  ]
+    .filter(Boolean)
+    .join("\n");
+
+  return {
+    ...provider,
+    async complete(input) {
+      const messages = input.messages.map((m, i) => {
+        // Prepend context to the first user message
+        if (m.role === "user" && i === input.messages.findIndex((msg) => msg.role === "user")) {
+          return { ...m, content: `${header}\n\n${m.content}` };
+        }
+        return m;
+      });
+
+      return provider.complete({ ...input, messages });
+    },
+  };
+}
+
+/**
+ * Combine language and session context wrappers into a single provider decorator.
+ * Applied per-session in the DAG runner before calling the distiller.
+ */
+export function withSessionAugmentation(
+  provider: LLMProvider,
+  artifact: SessionArtifact,
+): LLMProvider {
+  const lang = detectLanguage(artifact);
+  const withLang = withLanguageInstruction(provider, lang);
+  return withSessionContext(withLang, artifact);
+}

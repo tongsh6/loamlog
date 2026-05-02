@@ -25,7 +25,7 @@ import type { DistillerStateKV } from "@loamlog/core";
 import { injectMetadata } from "./metadata.js";
 import { runSinks, type ConfiguredSink } from "./sink-runner.js";
 import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
-import { detectLanguage, withLanguageRouter } from "./language.js";
+import { detectLanguage, withLanguageRouter, withSessionAugmentation } from "./language.js";
 import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
 
@@ -110,13 +110,30 @@ async function processSessionArtifact(
   const lang = detectLanguage(artifact);
   const langRouter = withLanguageRouter(ctx.llm, lang);
 
+  // Wrap the routed provider to auto-inject session context + language.
+  // This is a cross-cutting aspect — individual distillers don't need to
+  // handle session context or language themselves. Every distiller call
+  // through this path automatically gets both augmentations.
+  const augmentRouter: LLMRouter = {
+    route(request) {
+      const result = langRouter.route(request);
+      return {
+        ...result,
+        provider: withSessionAugmentation(result.provider, artifact),
+      };
+    },
+    getDefaultContextWindow() {
+      return langRouter.getDefaultContextWindow();
+    },
+  };
+
   if (shouldShard({ artifact, contextWindow: ctx.contextWindow })) {
     try {
       const shards = shardSession(artifact, { contextWindow: ctx.contextWindow });
       const mapResults = await mapDistiller(
         ctx.distiller,
         {
-          llm: langRouter,
+          llm: augmentRouter,
           state: ctx.state,
           config: ctx.distillerConfig,
           distiller_id: ctx.distiller.id,
@@ -137,7 +154,7 @@ async function processSessionArtifact(
   try {
     const drafts = await ctx.distiller.run({
       artifactStore: createSingleArtifactStore(artifact, ctx.artifactStore),
-      llm: langRouter,
+      llm: augmentRouter,
       state: ctx.state,
       config: ctx.distillerConfig,
       distiller_id: ctx.distiller.id,

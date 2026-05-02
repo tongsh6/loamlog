@@ -128,6 +128,28 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
   };
 }
 
+/**
+ * Build a session context header for the distill prompt.
+ *
+ * Provides essential project identity info so the LLM knows which repo,
+ * branch, and provider the conversation belongs to. All built-in distillers
+ * use this — third-party distillers SHOULD use it too.
+ *
+ * @returns A markdown-style header block to prepend to the distill prompt.
+ */
+export function buildSessionContext(artifact: SessionArtifact): string {
+  const parts: string[] = [];
+  const ctx = artifact.context;
+
+  if (ctx.repo) parts.push(`repo: ${ctx.repo}`);
+  if (ctx.branch) parts.push(`branch: ${ctx.branch}`);
+  if (ctx.commit) parts.push(`commit: ${ctx.commit.slice(0, 8)}`);
+  parts.push(`provider: ${artifact.meta.provider}`);
+  parts.push(`captured_at: ${artifact.meta.captured_at}`);
+
+  return `## Session Context\n${parts.join("\n")}\n`;
+}
+
 export function createEvidence(
   artifact: SessionArtifact,
   message: SessionArtifact["messages"][number],
