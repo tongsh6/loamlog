@@ -50,7 +50,7 @@ const factory: DistillerFactory = () =>
               type: "issue-draft",
               title: normalizeText(issue.title),
               summary: normalizeText(issue.summary),
-              confidence: typeof issue.confidence === "number" ? issue.confidence : 0.7,
+              confidence: typeof issue.confidence === "number" ? issue.confidence : 0.5,
               tags: toTags(issue),
               payload,
               evidence,

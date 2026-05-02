@@ -1,6 +1,9 @@
+import { DEFAULT_MAX_MESSAGE_CHARS } from "@loamlog/core";
+
 export const DISTILLER_ID = "@loamlog/distiller-issue-draft";
-export const MAX_MESSAGE_CHARS = 1200;
 export const SUPPORTED_ISSUE_KINDS = new Set(["bug", "feature", "docs", "refactor", "chore"]);
+
+export { DEFAULT_MAX_MESSAGE_CHARS as MAX_MESSAGE_CHARS };
 export const SYSTEM_PROMPT = [
   "You extract all strong GitHub issue drafts from an AI coding session.",
   "Return a JSON array. If no meaningful issues exist, return an empty array.",

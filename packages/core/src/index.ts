@@ -3,6 +3,7 @@ import type { JSONSchema7 } from "json-schema";
 export const DEFAULT_DAEMON_HOST = "127.0.0.1";
 export const DEFAULT_DAEMON_PORT = 37468;
 export const CAPTURE_PATH = "/capture";
+export const DEFAULT_MAX_MESSAGE_CHARS = 1200;
 export const DEFAULT_AIC_VERSION = "0.1.0";
 
 export interface Logger {

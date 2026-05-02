@@ -131,9 +131,12 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
 /**
  * Build a session context header for the distill prompt.
  *
- * Provides essential project identity info so the LLM knows which repo,
- * branch, and provider the conversation belongs to. All built-in distillers
- * use this — third-party distillers SHOULD use it too.
+ * Session context is automatically injected by the engine via provider
+ * wrapping (see augment.ts). Distillers do not need to call this manually.
+ *
+ * This utility is provided for distiller authors who want explicit control
+ * over how context is rendered, or who need a different format than the
+ * engine default.
  *
  * @returns A markdown-style header block to prepend to the distill prompt.
  */

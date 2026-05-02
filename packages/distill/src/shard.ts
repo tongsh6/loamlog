@@ -1,7 +1,5 @@
-import type { DistillResultDraft, DistillerPlugin, DistillerRunInput, SessionArtifact } from "@loamlog/core";
+import { DEFAULT_MAX_MESSAGE_CHARS, type DistillResultDraft, type DistillerPlugin, type DistillerRunInput, type SessionArtifact } from "@loamlog/core";
 import { createSingleArtifactStore } from "./query.js";
-
-const MAX_MESSAGE_CHARS = 1200;
 
 /** Format overhead per message: `[message-id] (role) ` ≈ 50 chars + newline */
 const MESSAGE_FORMAT_OVERHEAD = 60;
@@ -22,7 +20,7 @@ export function estimatePromptTokens(artifact: SessionArtifact): number {
   let totalChars = PROMPT_OVERHEAD_CHARS;
 
   for (const message of artifact.messages) {
-    const text = (message.content ?? "").slice(0, MAX_MESSAGE_CHARS);
+    const text = (message.content ?? "").slice(0, DEFAULT_MAX_MESSAGE_CHARS);
     totalChars += MESSAGE_FORMAT_OVERHEAD + text.length;
   }
 
@@ -112,7 +110,7 @@ export function computeShardSize(
 
   let sampleChars = 0;
   for (const m of sample) {
-    sampleChars += MESSAGE_FORMAT_OVERHEAD + (m.content ?? "").slice(0, MAX_MESSAGE_CHARS).length;
+    sampleChars += MESSAGE_FORMAT_OVERHEAD + (m.content ?? "").slice(0, DEFAULT_MAX_MESSAGE_CHARS).length;
   }
   const avgTokensPerMessage = Math.ceil(sampleChars / sample.length / TOKEN_ESTIMATE_RATIO);
   const availableTokens = targetTokens - Math.ceil(PROMPT_OVERHEAD_CHARS / TOKEN_ESTIMATE_RATIO);

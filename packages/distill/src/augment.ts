@@ -126,6 +126,7 @@ export function withSessionContext(
     `## Session Context`,
     ctx.repo ? `repo: ${ctx.repo}` : "",
     ctx.branch ? `branch: ${ctx.branch}` : "",
+    ctx.commit ? `commit: ${ctx.commit.slice(0, 8)}` : "",
     `provider: ${artifact.meta.provider}`,
   ]
     .filter(Boolean)
@@ -148,14 +149,15 @@ export function withSessionContext(
 }
 
 /**
- * Combine language and session context wrappers into a single provider decorator.
- * Applied per-session in the DAG runner before calling the distiller.
+ * Wrap a provider with session context injection.
+ *
+ * Language instruction is handled separately by withLanguageRouter at the
+ * router level (cached per language). This function only adds the session
+ * context header to the first user message.
  */
 export function withSessionAugmentation(
   provider: LLMProvider,
   artifact: SessionArtifact,
 ): LLMProvider {
-  const lang = detectLanguage(artifact);
-  const withLang = withLanguageInstruction(provider, lang);
-  return withSessionContext(withLang, artifact);
+  return withSessionContext(provider, artifact);
 }
