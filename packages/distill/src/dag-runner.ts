@@ -128,19 +128,25 @@ export function createDistillDAG(
         const lang = detectLanguage(artifact);
         const langRouter = withLanguageRouter(llm, lang);
 
+        let sessionDrafts: DistillResultDraft[] = [];
+        let sessionError: string | undefined;
+
         if (shouldShard({ artifact, contextWindow: options.contextWindow })) {
           // Large session: shard → parallel map → reduce
           ctx.logger.info(
             `[dag:distill] sharding session ${artifact.meta.session_id} (${artifact.messages.length} msgs, lang=${lang})`,
           );
-          const shards = shardSession(artifact, { contextWindow: options.contextWindow });
-          const mapResults = await mapDistiller(
-            distiller,
-            { llm: langRouter, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },
-            shards,
-          );
-          const merged = reduceResults(mapResults);
-          allDrafts.push(...merged);
+          try {
+            const shards = shardSession(artifact, { contextWindow: options.contextWindow });
+            const mapResults = await mapDistiller(
+              distiller,
+              { llm: langRouter, state, config: distillerConfig, distiller_id: distiller.id, distiller_version: distiller.version },
+              shards,
+            );
+            sessionDrafts = reduceResults(mapResults);
+          } catch (error) {
+            sessionError = error instanceof Error ? error.message : String(error);
+          }
         } else {
           // Small session: single distiller call with a one-artifact store
           const singleStore = {
@@ -149,16 +155,36 @@ export function createDistillDAG(
             },
             query: artifactStore.query.bind(artifactStore),
           };
-          const drafts = await distiller.run({
-            artifactStore: singleStore,
-            llm: langRouter,
-            state,
-            config: distillerConfig,
-            distiller_id: distiller.id,
-            distiller_version: distiller.version,
-          });
-          allDrafts.push(...drafts);
+          try {
+            sessionDrafts = await distiller.run({
+              artifactStore: singleStore,
+              llm: langRouter,
+              state,
+              config: distillerConfig,
+              distiller_id: distiller.id,
+              distiller_version: distiller.version,
+            });
+          } catch (error) {
+            sessionError = error instanceof Error ? error.message : String(error);
+          }
         }
+
+        allDrafts.push(...sessionDrafts);
+
+        // Write journal entry immediately so users see progress in real-time.
+        // Without this, journal entries only appear after ALL sessions are done.
+        const effectiveRepo = artifact.context.repo ?? repo ?? "_global";
+        const now = new Date().toISOString();
+        writeProcessJournal(dumpDir, effectiveRepo, {
+          session_id: artifact.meta.session_id,
+          distiller_id: distiller.id,
+          processed_at: now,
+          status: sessionError ? "error" : sessionDrafts.length > 0 ? "produced" : "no_signal",
+          drafts_count: sessionDrafts.length,
+          error_message: sessionError,
+        }).catch((err) => {
+          ctx.logger.warn(`[dag:journal] write failed: ${err instanceof Error ? err.message : String(err)}`);
+        });
       }
 
       ctx.logger.info(
@@ -227,37 +253,6 @@ export function createDistillDAG(
 
       await state.set("fingerprints", knownFingerprints);
       await state.markProcessed(distiller.id, processedSessionIds);
-
-      // ── Processing Journal ──
-      // Write a journal entry for every processed session so users can see
-      // processing history even when no assets were produced.
-      const producedIds = new Set(results.map((r) => r.evidence[0]?.session_id).filter(Boolean));
-      const errorIds = new Set(errors.map((e) => e.session_id).filter(Boolean));
-      const now = new Date().toISOString();
-      const effectiveRepo = repo ?? "_global";
-
-      for (const sessionId of processedSessionIds) {
-        let status: "produced" | "no_signal" | "error";
-        let errorMessage: string | undefined;
-        if (errorIds.has(sessionId)) {
-          status = "error";
-          errorMessage = errors.find((e) => e.session_id === sessionId)?.message;
-        } else if (producedIds.has(sessionId)) {
-          status = "produced";
-        } else {
-          status = "no_signal";
-        }
-        writeProcessJournal(dumpDir, effectiveRepo, {
-          session_id: sessionId,
-          distiller_id: distiller.id,
-          processed_at: now,
-          status,
-          drafts_count: results.filter((r) => r.evidence[0]?.session_id === sessionId).length,
-          error_message: errorMessage,
-        }).catch((err) => {
-          ctx.logger.warn(`[dag:journal] write failed for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`);
-        });
-      }
 
       // Phase 3: expose asset graph data via accumulator
       acc.results = results;
