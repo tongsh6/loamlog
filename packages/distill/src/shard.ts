@@ -79,8 +79,22 @@ export function computeShardSize(
 ): number {
   const targetTokens = contextWindow * margin;
 
-  // Estimate per-message tokens from a sample (first 20 messages)
-  const sample = sampleMessages.slice(0, 20);
+  // Estimate per-message tokens from evenly-spaced samples across the
+  // entire session (first, middle, last). Using only the first 20 messages
+  // underestimates when conversations grow longer over time.
+  const SAMPLE_COUNT = 60;
+  const sample: Array<{ content?: string }> = [];
+  const n = sampleMessages.length;
+  const stride = Math.max(1, Math.floor(n / SAMPLE_COUNT));
+
+  for (let i = 0; i < n && sample.length < SAMPLE_COUNT; i += stride) {
+    sample.push(sampleMessages[i]);
+  }
+  // Always include last message if present and not already sampled
+  if (n > 0 && (n - 1) % stride !== 0 && sample.length < SAMPLE_COUNT + 1) {
+    sample.push(sampleMessages[n - 1]);
+  }
+
   if (sample.length === 0) return 1;
 
   let sampleChars = 0;
