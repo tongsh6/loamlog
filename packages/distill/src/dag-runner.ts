@@ -104,9 +104,10 @@ export function createDistillDAG(
     { drafts: DistillResultDraft[]; processedSessionIds: string[] }
   > = {
     id: "run_distiller",
-    timeoutMs: 120_000,
+    timeoutMs: 0, // no timeout — duration depends on session count × LLM latency
     async run(_input, ctx) {
       const processedSessionIds = new Set<string>();
+      let progressCount = 0;
 
       // Stream artifacts one at a time from the real store instead of
       // receiving a pre-collected array. This keeps memory bounded to
@@ -115,6 +116,12 @@ export function createDistillDAG(
         async *getUnprocessed(_targetId: string, _limit?: number) {
           for await (const a of artifactStore.getUnprocessed(distiller.id)) {
             processedSessionIds.add(a.meta.session_id);
+            progressCount += 1;
+            if (progressCount % 10 === 0) {
+              ctx.logger.info(
+                `[dag:distill] progress=${progressCount} sessions`,
+              );
+            }
             yield a;
           }
         },

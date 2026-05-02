@@ -19,48 +19,56 @@ const factory: DistillerFactory = () =>
       const results: DistillResultDraft<IssueDraftPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
-        const prompt = buildPrompt(artifact);
-        const { provider, model } = llm.route({
-          task: "extract",
-          budget: "cheap",
-          input_tokens: estimateTokens(prompt),
-        });
+        try {
+          const prompt = buildPrompt(artifact);
+          const { provider, model } = llm.route({
+            task: "extract",
+            budget: "cheap",
+            input_tokens: estimateTokens(prompt),
+          });
 
-        const response = await provider.complete({
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt },
-          ],
-          model,
-          temperature: 0.2,
-          response_format: "json",
-        });
+          const response = await provider.complete({
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: prompt },
+            ],
+            model,
+            temperature: 0.2,
+            response_format: "json",
+          });
 
-        const parsed = parseIssueDrafts(response.content);
-        const selected = selectBestCandidate(parsed, artifact);
-        if (!selected) {
-          continue;
+          const parsed = parseIssueDrafts(response.content);
+          const selected = selectBestCandidate(parsed, artifact);
+          if (!selected) {
+            continue;
+          }
+
+          const { issue, evidence } = selected;
+          const payload: IssueDraftPayload = {
+            title: normalizeText(issue.title),
+            issue_kind: normalizeIssueKind(issue.issue_kind),
+            labels: normalizeLabels(issue.labels),
+          };
+
+          results.push({
+            type: "issue-draft",
+            title: normalizeText(issue.title),
+            summary: normalizeText(issue.summary),
+            confidence: typeof issue.confidence === "number" ? issue.confidence : 0.7,
+            tags: toTags(issue),
+            payload,
+            evidence,
+            render: {
+              markdown: renderMarkdown(issue, evidence),
+            },
+          });
+        } catch (error) {
+          // Continue to next session on per-artifact errors (timeout, parse failure, etc.)
+          // so one problematic session does not kill the entire distill run.
+          console.error(
+            `[issue-draft] session ${artifact.meta.session_id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
-
-        const { issue, evidence } = selected;
-        const payload: IssueDraftPayload = {
-          title: normalizeText(issue.title),
-          issue_kind: normalizeIssueKind(issue.issue_kind),
-          labels: normalizeLabels(issue.labels),
-        };
-
-        results.push({
-          type: "issue-draft",
-          title: normalizeText(issue.title),
-          summary: normalizeText(issue.summary),
-          confidence: typeof issue.confidence === "number" ? issue.confidence : 0.7,
-          tags: toTags(issue),
-          payload,
-          evidence,
-          render: {
-            markdown: renderMarkdown(issue, evidence),
-          },
-        });
       }
 
       return results;

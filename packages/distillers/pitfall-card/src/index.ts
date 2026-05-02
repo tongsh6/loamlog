@@ -100,61 +100,67 @@ const factory: DistillerFactory = () =>
       const results: DistillResultDraft<PitfallCardPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
-        const prompt = buildPrompt(artifact);
-        const { provider, model } = llm.route({
-          task: "extract",
-          budget: "cheap",
-          input_tokens: estimateTokens(prompt),
-        });
-
-        const response = await provider.complete({
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt },
-          ],
-          model,
-          temperature: 0.3,
-          response_format: "json",
-        });
-
-        const parsed = parsePitfalls(response.content);
-        for (const pitfall of parsed) {
-          const evidence = (pitfall.evidence_refs ?? [])
-            .map((ref) => {
-              const message = findMessage(artifact, ref.message_id);
-              if (!message) {
-                return undefined;
-              }
-              return createEvidence(artifact, message, ref.excerpt);
-            })
-            .filter((item): item is DistillResultDraft["evidence"][number] => Boolean(item));
-
-          if (evidence.length === 0) {
-            const fallbackMessage = artifact.messages[0];
-            if (!fallbackMessage) {
-              continue;
-            }
-            evidence.push(createEvidence(artifact, fallbackMessage, fallbackMessage.content ?? pitfall.problem));
-          }
-
-          const payload: PitfallCardPayload = {
-            problem: pitfall.problem,
-            root_cause: pitfall.root_cause,
-            solution: pitfall.solution,
-            prevention: pitfall.prevention,
-            category: pitfall.category,
-            language: pitfall.language,
-          };
-
-          results.push({
-            type: "pitfall-card",
-            title: pitfall.problem.slice(0, 80),
-            summary: `${pitfall.problem} -> ${pitfall.solution}`,
-            confidence: typeof pitfall.confidence === "number" ? pitfall.confidence : 0.7,
-            tags: ["pitfall", pitfall.category],
-            payload,
-            evidence,
+        try {
+          const prompt = buildPrompt(artifact);
+          const { provider, model } = llm.route({
+            task: "extract",
+            budget: "cheap",
+            input_tokens: estimateTokens(prompt),
           });
+
+          const response = await provider.complete({
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: prompt },
+            ],
+            model,
+            temperature: 0.3,
+            response_format: "json",
+          });
+
+          const parsed = parsePitfalls(response.content);
+          for (const pitfall of parsed) {
+            const evidence = (pitfall.evidence_refs ?? [])
+              .map((ref) => {
+                const message = findMessage(artifact, ref.message_id);
+                if (!message) {
+                  return undefined;
+                }
+                return createEvidence(artifact, message, ref.excerpt);
+              })
+              .filter((item): item is DistillResultDraft["evidence"][number] => Boolean(item));
+
+            if (evidence.length === 0) {
+              const fallbackMessage = artifact.messages[0];
+              if (!fallbackMessage) {
+                continue;
+              }
+              evidence.push(createEvidence(artifact, fallbackMessage, fallbackMessage.content ?? pitfall.problem));
+            }
+
+            const payload: PitfallCardPayload = {
+              problem: pitfall.problem,
+              root_cause: pitfall.root_cause,
+              solution: pitfall.solution,
+              prevention: pitfall.prevention,
+              category: pitfall.category,
+              language: pitfall.language,
+            };
+
+            results.push({
+              type: "pitfall-card",
+              title: pitfall.problem.slice(0, 80),
+              summary: `${pitfall.problem} -> ${pitfall.solution}`,
+              confidence: typeof pitfall.confidence === "number" ? pitfall.confidence : 0.7,
+              tags: ["pitfall", pitfall.category],
+              payload,
+              evidence,
+            });
+          }
+        } catch (error) {
+          console.error(
+            `[pitfall-card] session ${artifact.meta.session_id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
 

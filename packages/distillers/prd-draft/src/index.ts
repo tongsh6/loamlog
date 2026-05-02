@@ -134,7 +134,8 @@ const factory: DistillerFactory = () =>
       const results: DistillResultDraft<PrdDraftPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
-        const prompt = buildPrompt(artifact);
+        try {
+          const prompt = buildPrompt(artifact);
         const { provider, model } = llm.route({
           task: "extract",
           budget: "cheap",
@@ -195,6 +196,11 @@ const factory: DistillerFactory = () =>
             payload,
             evidence,
           });
+        }
+        } catch (error) {
+          console.error(
+            `[prd-draft] session ${artifact.meta.session_id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
 

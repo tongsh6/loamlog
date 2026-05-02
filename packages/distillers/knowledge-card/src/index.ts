@@ -142,7 +142,8 @@ const factory: DistillerFactory = () =>
       const results: DistillResultDraft<KnowledgeCardPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
-        const prompt = buildPrompt(artifact);
+        try {
+          const prompt = buildPrompt(artifact);
         const { provider, model } = llm.route({
           task: "extract",
           budget: "cheap",
@@ -197,6 +198,11 @@ const factory: DistillerFactory = () =>
             payload,
             evidence,
           });
+        }
+        } catch (error) {
+          console.error(
+            `[knowledge-card] session ${artifact.meta.session_id}: ${error instanceof Error ? error.message : String(error)}`,
+          );
         }
       }
 
