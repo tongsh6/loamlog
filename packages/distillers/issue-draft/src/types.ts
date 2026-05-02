@@ -4,6 +4,7 @@ export interface IssueDraftPayload {
   title: string;
   issue_kind?: IssueKind;
   labels?: string[];
+  target_repo?: string;
 }
 
 export interface LlmEvidenceRef {
@@ -26,5 +27,6 @@ export interface LlmIssueDraft {
   confidence?: number;
   issue_kind?: string;
   labels?: string[];
+  target_repo?: string;
   evidence_refs?: LlmEvidenceRef[];
 }

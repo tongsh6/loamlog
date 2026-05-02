@@ -484,9 +484,12 @@ describe("issue-draft distiller", () => {
       },
     });
 
-    assert.equal(outputs.length, 1);
+    assert.equal(outputs.length, 2);
+    // sorted: alpha (2 evidence) > zeta (1 evidence) at equal confidence
     assert.equal(outputs[0].title, "alpha candidate");
     assert.equal(outputs[0].evidence.length, 2);
+    assert.equal(outputs[1].title, "zeta candidate");
+    assert.equal(outputs[1].evidence.length, 1);
   });
 
   test("ignores malformed evidence refs instead of throwing", async () => {

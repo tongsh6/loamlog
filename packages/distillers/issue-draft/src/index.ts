@@ -5,7 +5,7 @@ import { DISTILLER_ID, SYSTEM_PROMPT } from "./constants.js";
 import { normalizeIssueKind, normalizeLabels, normalizeText, parseIssueDrafts } from "./parse.js";
 import { buildPrompt, estimateTokens } from "./prompt.js";
 import { renderMarkdown, toTags } from "./render.js";
-import { selectBestCandidate } from "./select.js";
+import { selectBestCandidates } from "./select.js";
 import type { IssueDraftPayload } from "./types.js";
 
 const factory: DistillerFactory = () =>
@@ -38,30 +38,27 @@ const factory: DistillerFactory = () =>
           });
 
           const parsed = parseIssueDrafts(response.content);
-          const selected = selectBestCandidate(parsed, artifact);
-          if (!selected) {
-            continue;
+          for (const { issue, evidence } of selectBestCandidates(parsed, artifact)) {
+            const payload: IssueDraftPayload = {
+              title: normalizeText(issue.title),
+              issue_kind: normalizeIssueKind(issue.issue_kind),
+              labels: normalizeLabels(issue.labels),
+              target_repo: issue.target_repo,
+            };
+
+            results.push({
+              type: "issue-draft",
+              title: normalizeText(issue.title),
+              summary: normalizeText(issue.summary),
+              confidence: typeof issue.confidence === "number" ? issue.confidence : 0.7,
+              tags: toTags(issue),
+              payload,
+              evidence,
+              render: {
+                markdown: renderMarkdown(issue, evidence),
+              },
+            });
           }
-
-          const { issue, evidence } = selected;
-          const payload: IssueDraftPayload = {
-            title: normalizeText(issue.title),
-            issue_kind: normalizeIssueKind(issue.issue_kind),
-            labels: normalizeLabels(issue.labels),
-          };
-
-          results.push({
-            type: "issue-draft",
-            title: normalizeText(issue.title),
-            summary: normalizeText(issue.summary),
-            confidence: typeof issue.confidence === "number" ? issue.confidence : 0.7,
-            tags: toTags(issue),
-            payload,
-            evidence,
-            render: {
-              markdown: renderMarkdown(issue, evidence),
-            },
-          });
         } catch (error) {
           // Continue to next session on per-artifact errors (timeout, parse failure, etc.)
           // so one problematic session does not kill the entire distill run.
