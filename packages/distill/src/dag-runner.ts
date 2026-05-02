@@ -25,7 +25,7 @@ import type { DistillerStateKV } from "@loamlog/core";
 import { injectMetadata } from "./metadata.js";
 import { runSinks, type ConfiguredSink } from "./sink-runner.js";
 import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
-import { detectLanguage, withLanguageRouter, withSessionAugmentation } from "./language.js";
+import { detectLanguage, withLanguageRouter, withSessionAugmentation } from "./augment.js";
 import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
 

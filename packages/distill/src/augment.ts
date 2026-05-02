@@ -1,3 +1,17 @@
+/**
+ * LLM Prompt Augmentation — cross-cutting aspects injected at the engine level.
+ *
+ * All augmentations use the same pattern: wrap an LLMProvider to modify
+ * messages before they reach the model. Distillers don't need to know about
+ * these — they receive a pre-wrapped provider from the DAG runner.
+ *
+ * Current augmentations:
+ *   - Language instruction (auto-detected from session user messages)
+ *   - Session context (repo, branch, provider info)
+ *
+ * Future augmentations (output format enforcement, token budget warnings, etc.)
+ * should follow the same provider-wrapping pattern.
+ */
 import type { LLMProvider, LLMRouter, SessionArtifact } from "@loamlog/core";
 
 const CJK_PATTERN = /[一-鿿㐀-䶿豈-﫿]/g;
