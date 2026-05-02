@@ -25,6 +25,7 @@ import { injectMetadata } from "./metadata.js";
 import { runSinks, type ConfiguredSink } from "./sink-runner.js";
 import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
 import { detectLanguage, withLanguageRouter } from "./language.js";
+import { writeProcessJournal } from "./journal.js";
 
 export interface DistillDAGOptions {
   distiller: DistillerPlugin;
@@ -226,6 +227,37 @@ export function createDistillDAG(
 
       await state.set("fingerprints", knownFingerprints);
       await state.markProcessed(distiller.id, processedSessionIds);
+
+      // ── Processing Journal ──
+      // Write a journal entry for every processed session so users can see
+      // processing history even when no assets were produced.
+      const producedIds = new Set(results.map((r) => r.evidence[0]?.session_id).filter(Boolean));
+      const errorIds = new Set(errors.map((e) => e.session_id).filter(Boolean));
+      const now = new Date().toISOString();
+      const effectiveRepo = repo ?? "_global";
+
+      for (const sessionId of processedSessionIds) {
+        let status: "produced" | "no_signal" | "error";
+        let errorMessage: string | undefined;
+        if (errorIds.has(sessionId)) {
+          status = "error";
+          errorMessage = errors.find((e) => e.session_id === sessionId)?.message;
+        } else if (producedIds.has(sessionId)) {
+          status = "produced";
+        } else {
+          status = "no_signal";
+        }
+        writeProcessJournal(dumpDir, effectiveRepo, {
+          session_id: sessionId,
+          distiller_id: distiller.id,
+          processed_at: now,
+          status,
+          drafts_count: results.filter((r) => r.evidence[0]?.session_id === sessionId).length,
+          error_message: errorMessage,
+        }).catch((err) => {
+          ctx.logger.warn(`[dag:journal] write failed for ${sessionId}: ${err instanceof Error ? err.message : String(err)}`);
+        });
+      }
 
       // Phase 3: expose asset graph data via accumulator
       acc.results = results;

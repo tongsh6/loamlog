@@ -42,6 +42,13 @@ interface DistillResultSummary {
   repo: string;
 }
 
+interface JournalStats {
+  total: number;
+  produced: number;
+  no_signal: number;
+  error: number;
+}
+
 function sanitizeRepoName(value: string): string {
   return value.replace(/[^a-zA-Z0-9._-]/g, "_");
 }
@@ -281,6 +288,44 @@ async function listDistillRepos(dumpDir: string): Promise<string[]> {
   }
 
   return entries.filter((e) => e.isDirectory()).map((e) => e.name);
+}
+
+async function readJournalStats(
+  dumpDir: string,
+  repo?: string,
+): Promise<JournalStats> {
+  const stats: JournalStats = { total: 0, produced: 0, no_signal: 0, error: 0 };
+
+  const distillRoot = path.join(dumpDir, "distill");
+  const repoDirs = repo
+    ? [sanitizeRepoName(repo)]
+    : await listDistillRepos(dumpDir);
+
+  for (const repoDir of repoDirs) {
+    const journalDir = path.join(distillRoot, repoDir, "journal");
+    let entries: Dirent[];
+    try {
+      entries = await readdir(journalDir, { withFileTypes: true });
+    } catch {
+      continue;
+    }
+
+    for (const entry of entries) {
+      if (!entry.isFile() || !entry.name.endsWith(".json")) continue;
+      try {
+        const text = await readFile(path.join(journalDir, entry.name), "utf8");
+        const parsed = JSON.parse(text) as { status?: string };
+        stats.total += 1;
+        if (parsed.status === "produced") stats.produced += 1;
+        else if (parsed.status === "error") stats.error += 1;
+        else stats.no_signal += 1;
+      } catch {
+        continue;
+      }
+    }
+  }
+
+  return stats;
 }
 
 async function listDistillResults(
@@ -542,15 +587,31 @@ export async function runListCommand(args: string[]): Promise<void> {
 
   if (distill) {
     const results = await listDistillResults(dumpDir, opts);
+    const journal = await readJournalStats(dumpDir, repo);
 
     if (json) {
-      console.log(JSON.stringify(results, null, 2));
+      console.log(JSON.stringify({ results, journal }, null, 2));
       return;
     }
 
+    // Show processing journal stats first
+    if (journal.total > 0) {
+      const pct = (n: number) => journal.total > 0 ? `${((n / journal.total) * 100).toFixed(0)}%` : "0%";
+      console.log(`Processed: ${journal.total} sessions`);
+      console.log(`  ✓ ${journal.produced} with results (${pct(journal.produced)})`);
+      console.log(`  ○ ${journal.no_signal} no signal   (${pct(journal.no_signal)})`);
+      if (journal.error > 0) {
+        console.log(`  ✗ ${journal.error} errors       (${pct(journal.error)})`);
+      }
+      console.log("");
+    }
+
     if (results.length === 0) {
+      const hint = journal.total === 0
+        ? `\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`
+        : "";
       console.log(
-        `No distill results found${repo ? ` in ${repo}` : ""}.\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`,
+        `No distill results yet${repo ? ` in ${repo}` : ""}.${hint}`,
       );
       return;
     }
