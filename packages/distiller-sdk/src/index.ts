@@ -100,11 +100,20 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
         // Always mark sessions as processed, even when spec.run() throws.
         // Without this, a failing session is retried on every restart and
         // blocks the entire pipeline (distill → crash → restart → same session).
+        // catch markProcessed errors separately so they don't replace the
+        // original error from spec.run().
         if (processedSessionIds.size > 0) {
-          await input.state.markProcessed(
-            spec.id,
-            Array.from(processedSessionIds),
-          );
+          try {
+            await input.state.markProcessed(
+              spec.id,
+              Array.from(processedSessionIds),
+            );
+          } catch (markError) {
+            console.error(
+              `[distiller-sdk] markProcessed failed for ${spec.id}:`,
+              markError,
+            );
+          }
         }
       }
 

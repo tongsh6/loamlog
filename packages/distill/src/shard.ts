@@ -86,19 +86,25 @@ export function computeShardSize(
   const targetTokens = contextWindow * margin;
 
   // Estimate per-message tokens from evenly-spaced samples across the
-  // entire session (first, middle, last). Using only the first 20 messages
+  // entire session (first, middle, last). Using only the first messages
   // underestimates when conversations grow longer over time.
   const SAMPLE_COUNT = 60;
   const sample: Array<{ content?: string }> = [];
   const n = sampleMessages.length;
-  const stride = Math.max(1, Math.floor(n / SAMPLE_COUNT));
 
-  for (let i = 0; i < n && sample.length < SAMPLE_COUNT; i += stride) {
-    sample.push(sampleMessages[i]);
-  }
-  // Always include last message if present and not already sampled
-  if (n > 0 && (n - 1) % stride !== 0 && sample.length < SAMPLE_COUNT + 1) {
-    sample.push(sampleMessages[n - 1]);
+  if (n <= SAMPLE_COUNT) {
+    // Small session: use all messages
+    for (const m of sampleMessages) sample.push(m);
+  } else {
+    // Large session: evenly space SAMPLE_COUNT samples across [0, n)
+    const step = n / SAMPLE_COUNT;
+    for (let i = 0; i < SAMPLE_COUNT; i++) {
+      sample.push(sampleMessages[Math.floor(i * step)]);
+    }
+    // Always include the last message
+    if (sample[sample.length - 1] !== sampleMessages[n - 1]) {
+      sample[sample.length - 1] = sampleMessages[n - 1];
+    }
   }
 
   if (sample.length === 0) return 1;

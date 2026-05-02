@@ -1,29 +1,31 @@
 import type { LLMProvider, LLMRouter, SessionArtifact } from "@loamlog/core";
 
-const CJK_PATTERN = /[一-鿿㐀-䶿豈-﫿]/;
-const LATIN_PATTERN = /[a-zA-Z]{3,}/;
+const CJK_PATTERN = /[一-鿿㐀-䶿豈-﫿]/g;
+const LATIN_PATTERN = /[a-zA-Z]{3,}/g;
 
 export type DetectedLanguage = "zh" | "en" | "mixed";
 
 /**
  * Detect the primary human language of a session by sampling user messages.
- * Returns "zh" for predominantly Chinese, "en" for English, "mixed" otherwise.
+ * Counts actual character/word occurrences (regex with `g` flag), not per-message
+ * binary matches. Returns "zh" for predominantly Chinese, "en" for English,
+ * "mixed" otherwise.
  */
 export function detectLanguage(artifact: SessionArtifact): DetectedLanguage {
-  let cjkChars = 0;
-  let latinWords = 0;
+  let cjkCount = 0;
+  let latinCount = 0;
 
   for (const msg of artifact.messages) {
     // Only sample user messages — they best represent the human's language
     if (msg.role !== "user") continue;
     const content = msg.content ?? "";
-    cjkChars += (content.match(CJK_PATTERN) ?? []).length;
-    latinWords += (content.match(LATIN_PATTERN) ?? []).length;
+    cjkCount += (content.match(CJK_PATTERN) ?? []).length;
+    latinCount += (content.match(LATIN_PATTERN) ?? []).length;
   }
 
-  if (cjkChars === 0 && latinWords === 0) return "en"; // default
-  if (cjkChars > latinWords * 2) return "zh";
-  if (latinWords > cjkChars * 2) return "en";
+  if (cjkCount === 0 && latinCount === 0) return "en"; // default
+  if (cjkCount > latinCount * 2) return "zh";
+  if (latinCount > cjkCount * 2) return "en";
   return "mixed";
 }
 

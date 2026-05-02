@@ -413,6 +413,8 @@ export function createTriggeredIntelligencePipeline(options: TriggeredIntelligen
     // prompt decides whether the session has enough signal to produce an asset.
     if (resolvedConfig.mode === "continuous") {
       const signature = buildSignature(signal, "");
+      // Always enqueue as "full"; flush() may override to "summary-only"
+      // at batch level when the queue is overloaded (rate limit gate).
       enqueueTask(signal, ["continuous:capture"], signature, "full");
       return;
     }
