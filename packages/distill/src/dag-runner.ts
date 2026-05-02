@@ -8,7 +8,6 @@ import type {
   DistillerPlugin,
   LLMRouter,
   QualityReport,
-  SessionArtifact,
 } from "@loamlog/core";
 import {
   approvalGate,
@@ -88,39 +87,33 @@ export function createDistillDAG(
     session_ids,
   });
 
-  // ── Node 1: query_artifacts ──
-  const queryNode: PipelineNode<Record<string, never>, SessionArtifact[]> = {
+  // ── Node 1: query_artifacts (validate only, no collection) ──
+  // Artifacts are streamed directly in Node 2 to avoid loading
+  // all session snapshots into memory at once.
+  const queryNode: PipelineNode<Record<string, never>, { ready: boolean }> = {
     id: "query_artifacts",
     async run(_input, ctx) {
-      const artifacts: SessionArtifact[] = [];
-      for await (const a of artifactStore.getUnprocessed(distiller.id)) {
-        artifacts.push(a);
-      }
-      ctx.logger.info(`[dag:query] distiller=${distiller.id} count=${artifacts.length}`);
-      return artifacts;
+      ctx.logger.info(`[dag:query] distiller=${distiller.id} dumpDir=${dumpDir}`);
+      return { ready: true };
     },
   };
 
-  // ── Node 2: run_distiller ──
+  // ── Node 2: run_distiller (streams artifacts, avoids full collection) ──
   const distillNode: PipelineNode<
     Record<string, unknown>,
     { drafts: DistillResultDraft[]; processedSessionIds: string[] }
   > = {
     id: "run_distiller",
     timeoutMs: 120_000,
-    async run(input, ctx) {
-      const artifacts = (input as Record<string, unknown>).query_artifacts as
-        | SessionArtifact[]
-        | undefined;
-      if (!artifacts || artifacts.length === 0) {
-        ctx.logger.info(`[dag:distill] distiller=${distiller.id} no artifacts, skipping`);
-        return { drafts: [], processedSessionIds: [] };
-      }
-
+    async run(_input, ctx) {
       const processedSessionIds = new Set<string>();
+
+      // Stream artifacts one at a time from the real store instead of
+      // receiving a pre-collected array. This keeps memory bounded to
+      // a single artifact regardless of archive size.
       const trackingStore = {
         async *getUnprocessed(_targetId: string, _limit?: number) {
-          for (const a of artifacts) {
+          for await (const a of artifactStore.getUnprocessed(distiller.id)) {
             processedSessionIds.add(a.meta.session_id);
             yield a;
           }

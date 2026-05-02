@@ -910,6 +910,8 @@ export interface TriggeredDistillConfig {
 
 export interface TriggeredIntelligenceConfig {
   enabled?: boolean;
+  /** Processing mode: "signal" = keyword-triggered only (default), "continuous" = all sessions enqueued */
+  mode?: "signal" | "continuous";
   processing_mode?: ProcessingMode;
   thresholds?: TriggerThresholdConfig;
   batch?: TriggerBatchConfig;

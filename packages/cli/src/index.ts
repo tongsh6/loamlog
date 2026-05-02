@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 import { startDaemon } from "./daemon.js";
 import { runCaptureCommand } from "./capture.js";
-import { runDistillCommand } from "./distill.js";
+import { runDistillCommand, loadAICConfig, buildRuntimeDistillConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
 import { runListCommand } from "./list.js";
 import { runReviewCommand } from "./review.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
@@ -9,11 +9,12 @@ import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loam
 import { pullCodexSessionFromFilePath, startCodexWatcher } from "@loamlog/provider-codex";
 import { pullGeminiCliSessionFromFilePath, startGeminiCliWatcher } from "@loamlog/provider-gemini-cli";
 import { startOpencodeWatcher } from "@loamlog/provider-opencode";
+import { backfillUnprocessed } from "@loamlog/trigger";
 
 function printUsage(): void {
   console.log("Usage: loam <command> [options]");
   console.log("Commands:");
-  console.log("  daemon  [--port <number>] [--dump-dir <path>] [--providers <list>]");
+  console.log("  daemon  [--port <number>] [--dump-dir <path>] [--providers <list>] [--backfill-on-startup]");
   console.log("  list    [--repo <name>] [--since <duration>] [--distill] [--pending] [--scan] [--limit <n>] [--json] [--dump-dir <path>]");
   console.log("  capture [--provider <name>] [--session-id <id>] [--dump-dir <path>] [--trigger <name>]");
   console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>] [--legacy]");
@@ -113,6 +114,31 @@ async function main(): Promise<void> {
     sessionProviders,
   });
   console.log(`[loam daemon] listening on http://${started.host}:${started.port}`);
+
+  // --backfill-on-startup: process all unprocessed sessions in the archive
+  // before starting the provider watchers. Designed for continuous mining mode.
+  if (args.includes("--backfill-on-startup")) {
+    console.log("[loam daemon] backfill-on-startup: processing unprocessed sessions...");
+    try {
+      const loaded = await loadAICConfig();
+      const config = buildRuntimeDistillConfig(
+        normalizeBuiltInPluginSpecifiers(loaded),
+        undefined,
+      );
+      const result = await backfillUnprocessed({
+        dumpDir: dumpDir ?? process.env.LOAM_DUMP_DIR ?? "",
+        logger: (msg) => console.log(msg),
+        loadDistillConfig: async () => config,
+      });
+      console.log(
+        `[loam daemon] backfill complete: processed=${result.totalProcessed} produced=${result.totalProduced} skipped=${result.totalSkipped} errors=${result.totalErrors}`,
+      );
+    } catch (error) {
+      console.error(
+        `[loam daemon] backfill failed (daemon continues): ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+  }
 
   const watchers: Array<{ close(): void }> = [];
 

@@ -59,6 +59,7 @@ interface FrequencyState {
 
 interface ResolvedIntelligenceConfig {
   enabled: boolean;
+  mode: "signal" | "continuous";
   processingMode: ProcessingMode;
   thresholds: {
     frequency: { windowMs: number; threshold: number };
@@ -78,6 +79,7 @@ interface ResolvedIntelligenceConfig {
 
 const DEFAULT_CONFIG: ResolvedIntelligenceConfig = {
   enabled: true,
+  mode: "signal",
   processingMode: "full",
   thresholds: {
     frequency: { windowMs: 5 * 60 * 1000, threshold: 3 },
@@ -93,6 +95,7 @@ const DEFAULT_CONFIG: ResolvedIntelligenceConfig = {
 function mergeConfig(config?: TriggeredIntelligenceConfig): ResolvedIntelligenceConfig {
   return {
     enabled: config?.enabled !== false,
+    mode: config?.mode ?? DEFAULT_CONFIG.mode,
     processingMode: config?.processing_mode ?? DEFAULT_CONFIG.processingMode,
     thresholds: {
       frequency: {
@@ -244,6 +247,63 @@ function createDefaultDistillRunner(
   };
 }
 
+export interface BackfillOptions {
+  dumpDir: string;
+  logger: Logger;
+  loadDistillConfig: () => Promise<AICConfig | undefined>;
+}
+
+export interface BackfillResult {
+  totalProcessed: number;
+  totalProduced: number;
+  totalSkipped: number;
+  totalErrors: number;
+}
+
+/**
+ * Process all unprocessed sessions in the archive.
+ *
+ * Designed for daemon startup backfill and manual CLI --all-unprocessed.
+ * Uses engine.run() directly without the trigger's in-memory queue,
+ * streaming artifacts one at a time via AsyncIterable.
+ */
+export async function backfillUnprocessed(options: BackfillOptions): Promise<BackfillResult> {
+  const { dumpDir, logger, loadDistillConfig } = options;
+
+  const loaded = await loadDistillConfig();
+  if (!loaded) {
+    logger("[backfill] skip: no distill config");
+    return { totalProcessed: 0, totalProduced: 0, totalSkipped: 0, totalErrors: 0 };
+  }
+
+  const config: AICConfig = {
+    ...loaded,
+    dump_dir: loaded.dump_dir ?? dumpDir,
+  };
+
+  const engine = createDistillEngine({ dumpDir, config });
+  await engine.loadFromConfig(config);
+
+  const reports = await engine.run({});
+
+  let totalProcessed = 0;
+  let totalProduced = 0;
+  let totalSkipped = 0;
+  let totalErrors = 0;
+
+  for (const report of reports) {
+    totalProcessed += report.artifacts_processed;
+    totalProduced += report.results_produced;
+    totalSkipped += report.results_skipped;
+    totalErrors += report.errors.length;
+    logger(
+      `[backfill] ${report.distiller_id}: processed=${report.artifacts_processed} produced=${report.results_produced} skipped=${report.results_skipped} errors=${report.errors.length}`,
+    );
+  }
+
+  return { totalProcessed, totalProduced, totalSkipped, totalErrors };
+}
+
 export function createTriggeredIntelligencePipeline(options: TriggeredIntelligenceOptions = {}): TriggeredIntelligencePipeline {
   const resolvedConfig = mergeConfig(options.config);
   const logger: Logger = options.logger ?? ((message) => console.log(message));
@@ -347,6 +407,21 @@ export function createTriggeredIntelligencePipeline(options: TriggeredIntelligen
     if (!resolvedConfig.enabled) {
       return;
     }
+
+    // Continuous mode: skip keyword matching and text collection.
+    // Every captured session is enqueued for distill; the distiller's
+    // prompt decides whether the session has enough signal to produce an asset.
+    if (resolvedConfig.mode === "continuous") {
+      const signature = buildSignature(signal, "");
+      enqueueTask(
+        signal,
+        ["continuous:capture"],
+        signature,
+        shouldProcessInFull(resolvedConfig, queue.length) ? "full" : "summary-only",
+      );
+      return;
+    }
+
     const text = collectSnapshotText(signal.snapshot);
     const signature = buildSignature(signal, text);
     const severityHits = findKeywordHits(text, resolvedConfig.thresholds.severityKeywords);

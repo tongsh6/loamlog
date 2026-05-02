@@ -143,6 +143,45 @@ The current `DistillResult` can remain, but new complex capabilities should cons
 
 ## 任务拆分规则 | Task Decomposition Rules
 
+### 设计文档先行 | Design Docs Before Code
+
+任何涉及架构决策、模块边界变更、新能力引入、或跨模块流程变更的任务，必须在编码前产出设计文档。
+
+Any task involving architecture decisions, module boundary changes, new capability introduction, or cross-module flow changes must produce a design document before coding.
+
+设计文档的目的：
+
+The purpose of the design document:
+
+- 让设计意图被显式记录、可被评审、可被后来的 AI 或开发者理解。
+- Make design intent explicitly recorded, reviewable, and understandable by future AI or human developers.
+- 避免在编码过程中才发现方向错误。
+- Avoid discovering directional mistakes during coding.
+
+最低要求的设计文档内容：
+
+Minimum required content for a design document:
+
+- **要解决什么问题 / Problem to solve**：现状是什么，为什么需要变
+- **目标状态 / Target state**：改完之后系统长什么样
+- **边界 / Boundary**：做什么、不做什么、为什么不做
+- **DAG 拆分**（跨模块任务必须）：节点依赖、输入输出、失败影响、验收标准
+- **与现有架构的关系**：复用哪些模块、修改哪些模块、不影响哪些模块
+
+设计文档的存放位置：
+
+Where to place design documents:
+
+| 文档类型 | 位置 | 示例 |
+|----------|------|------|
+| 阶段蓝图（长期架构演进） | `AIEF/plans/` | `2026-04-30-architecture-dag-blueprint.md` |
+| 边界规格（单次变更范围） | `AIEF/openspec/` | `mcp-exposure-layer.md` |
+| 执行计划（带任务的实施计划） | `tasks/<date>-<topic>/plan.md` | `2026-05-01-pipeline-integration/plan.md` |
+
+例外：纯 bug 修复、单行改动、不加新行为的重构，可以跳过设计文档，但必须在 commit message 中说明原因。
+
+Exception: Pure bug fixes, single-line changes, and refactors that add no new behavior may skip the design document, but the reason must be stated in the commit message.
+
 ### 优先垂直切片 | Prefer Vertical Slices
 
 任务粒度优先按“可运行的端到端小闭环”拆分，而不是只按技术层横向拆分。
@@ -219,16 +258,18 @@ Any AI contributor working on Loamlog should follow this order:
 2. Read `AGENTS.md`, `AIEF/context/INDEX.md`, and this document.
 3. 判断任务属于哪个层次：capture、archive、trigger、distill、rules、evaluation、sink、CLI、docs。
 4. Identify the task layer: capture, archive, trigger, distill, rules, evaluation, sink, CLI, or docs.
-5. 明确是否需要新增抽象；只有当它降低真实复杂性或匹配既有模式时才新增。
-6. Decide whether a new abstraction is needed; add one only when it reduces real complexity or matches an existing pattern.
-7. 若任务跨模块，先写出 DAG 和垂直切片边界。
-8. If the task crosses modules, write the DAG and vertical-slice boundary first.
-9. 实现时保持现有行为可用，优先兼容迁移。
-10. Keep existing behavior working during implementation and prefer compatible migration.
-11. 修改后运行相关测试；涉及契约或共享模块时运行更广测试。
-12. Run focused tests after changes; run broader tests when contracts or shared modules change.
-13. 更新 AIEF 文档，使后续接手者知道当前事实。
-14. Update AIEF docs so future contributors inherit the current facts.
+5. 若任务涉及架构决策、模块边界变更或跨模块流程，先写设计文档，再编码。参见"设计文档先行"原则。
+6. If the task involves architecture decisions, module boundary changes, or cross-module flow, write a design document before coding. See "Design Docs Before Code" principle.
+8. 明确是否需要新增抽象；只有当它降低真实复杂性或匹配既有模式时才新增。
+9. Decide whether a new abstraction is needed; add one only when it reduces real complexity or matches an existing pattern.
+10. 若任务跨模块，先写出 DAG 和垂直切片边界。
+11. If the task crosses modules, write the DAG and vertical-slice boundary first.
+12. 实现时保持现有行为可用，优先兼容迁移。
+13. Keep existing behavior working during implementation and prefer compatible migration.
+14. 修改后运行相关测试；涉及契约或共享模块时运行更广测试。
+15. Run focused tests after changes; run broader tests when contracts or shared modules change.
+16. 更新 AIEF 文档，使后续接手者知道当前事实。
+17. Update AIEF docs so future contributors inherit the current facts.
 
 ## 架构评审清单 | Architecture Review Checklist
 
@@ -236,6 +277,8 @@ Any AI contributor working on Loamlog should follow this order:
 
 Before submitting or merging, check at minimum:
 
+- 是否有设计文档（若任务涉及架构决策、模块边界变更或跨模块流程）？
+- Does it have a design document (if the task involves architecture decisions, module boundary changes, or cross-module flow)?
 - 这个改动是否破坏 local-first 或 evidence-first？
 - Does this change break local-first or evidence-first behavior?
 - 是否新增了中心分支，导致开闭原则变差？

@@ -7,6 +7,7 @@ import type { AICConfig, DistillerPlugin, SinkPlugin } from "@loamlog/core";
 import { createDistillEngine } from "@loamlog/distill";
 import { createLLMRouter } from "@loamlog/distill";
 import { createDistillerStateKV } from "@loamlog/distill";
+import { createArtifactQueryClient } from "@loamlog/distill";
 import { runDistillDAG, type ConfiguredSink } from "@loamlog/distill";
 
 interface DistillArgs {
@@ -17,6 +18,8 @@ interface DistillArgs {
   since?: string;
   until?: string;
   testSession?: string;
+  allUnprocessed?: boolean;
+  dryRun?: boolean;
   dag?: boolean;
   legacy?: boolean;
 }
@@ -96,6 +99,8 @@ export function parseArgs(args: string[]): DistillArgs {
     since: getArg(args, "--since"),
     until: getArg(args, "--until"),
     testSession: getArg(args, "--test-session"),
+    allUnprocessed: args.includes("--all-unprocessed"),
+    dryRun: args.includes("--dry-run"),
     dag: args.includes("--dag"),
     legacy: args.includes("--legacy"),
   };
@@ -281,6 +286,38 @@ async function createTestDumpDir(testSessionPath: string): Promise<string> {
   return tempDir;
 }
 
+async function runDryRun(config: AICConfig, dumpDir: string, parsed: DistillArgs): Promise<void> {
+  console.log("[loam distill] --dry-run: counting unprocessed sessions...\n");
+
+  let grandTotal = 0;
+
+  for (const item of config.distillers) {
+    const spec = typeof item === "string" ? { plugin: item, config: {} } : item;
+    const loaded = (await import(spec.plugin)) as { default?: unknown };
+    const distiller =
+      typeof loaded.default === "function" ? await loaded.default(spec.config) : loaded.default;
+    if (!distiller || typeof (distiller as DistillerPlugin).run !== "function") continue;
+
+    const d = distiller as DistillerPlugin;
+    const state = createDistillerStateKV(dumpDir, d.id);
+    const store = createArtifactQueryClient(dumpDir, state, d.id, {
+      since: parsed.since,
+      until: parsed.until,
+    });
+
+    let count = 0;
+    for await (const _ of store.getUnprocessed(d.id)) {
+      count++;
+    }
+
+    console.log(`  ${d.id}: ${count} unprocessed session(s)`);
+    grandTotal += count;
+  }
+
+  console.log(`\n  Total: ${grandTotal} unprocessed session(s) across all distillers`);
+  console.log("  (dry-run: no distill was executed)");
+}
+
 export async function runDistillCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
   const loaded = await loadAICConfig();
@@ -301,6 +338,19 @@ export async function runDistillCommand(args: string[]): Promise<void> {
   }
 
   config.dump_dir = dumpDir;
+
+  // --all-unprocessed: process all unprocessed sessions regardless of time
+  if (parsed.allUnprocessed) {
+    console.log("[loam distill] --all-unprocessed mode: processing all unprocessed sessions");
+    parsed.since = undefined;
+    parsed.until = undefined;
+  }
+
+  // --dry-run: count unprocessed sessions without distilling
+  if (parsed.dryRun) {
+    await runDryRun(config, dumpDir, parsed);
+    return;
+  }
 
   if (parsed.legacy) {
     console.log("[loam distill] legacy mode (sequential engine)");

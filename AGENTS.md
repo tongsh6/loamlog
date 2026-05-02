@@ -91,6 +91,8 @@ loamlog/
 任何 AI 接手本项目开发时，必须先按以下规则推进。
 Any AI contributor working on this project MUST follow these rules first.
 
+- **设计文档先行 / Design docs before code**: 任何涉及架构决策、模块边界变更、新能力引入或跨模块流程的任务，必须在编码前产出设计文档。纯 bug 修复、单行改动、不加新行为的重构可跳过，但须在 commit 中说明。设计文档位置规则见工程原则"设计文档先行"节。
+  Any task involving architecture decisions, module boundary changes, new capability, or cross-module flow MUST produce a design document before coding. Pure bug fixes, single-line changes, and behavior-neutral refactors are exempt with commit message justification. See "Design Docs Before Code" in engineering principles for file placement rules.
 - **先读工程原则 / Read principles first**: 开始设计或编码前，阅读 `AIEF/context/tech/engineering-principles.md`，并把它作为高于单个阶段计划的长期准则。
   Before design or coding, read `AIEF/context/tech/engineering-principles.md` and treat it as the long-term rulebook above individual phase plans.
 - **保持 DRY / Keep DRY**: 不复制 provider、distiller、sink、CLI、日志、重试、脱敏、指标等控制流；重复逻辑应收敛到注册表、中间件、执行上下文或共享模块。
