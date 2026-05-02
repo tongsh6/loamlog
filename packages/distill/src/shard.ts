@@ -41,20 +41,26 @@ export interface ShouldShardOptions {
 /**
  * Determine whether a session should be sharded before distillation.
  *
- * Returns true when:
+ * Returns true when ANY of:
  * 1. contextWindow is available AND estimated prompt tokens > contextWindow * margin, OR
- * 2. contextWindow is NOT available AND message count > fallbackMessageCount
+ * 2. message count > fallbackMessageCount (protects against high message-count
+ *    sessions that fit in token budget but cause inference timeout / O(n²) latency)
  */
 export function shouldShard(options: ShouldShardOptions): boolean {
   const { artifact, contextWindow, margin = 0.8, fallbackMessageCount = DEFAULT_MESSAGE_COUNT_THRESHOLD } = options;
+
+  // High message count always triggers sharding — even if the token budget
+  // fits, 500+ messages cause LM inference timeout and attention dilution.
+  if (artifact.messages.length > fallbackMessageCount) {
+    return true;
+  }
 
   if (contextWindow !== undefined && contextWindow > 0) {
     const estimatedTokens = estimatePromptTokens(artifact);
     return estimatedTokens > contextWindow * margin;
   }
 
-  // Fallback: use message count threshold
-  return artifact.messages.length > fallbackMessageCount;
+  return false;
 }
 
 export interface ShardLayout {

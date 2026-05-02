@@ -87,19 +87,25 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
       );
       const namespacedState = createNamespacedState(input.state, spec.id);
 
-      const results = await spec.run({
-        ...input,
-        artifactStore: trackingStore,
-        state: namespacedState,
-        distiller_id: spec.id,
-        distiller_version: spec.version,
-      });
-
-      if (processedSessionIds.size > 0) {
-        await input.state.markProcessed(
-          spec.id,
-          Array.from(processedSessionIds),
-        );
+      let results: DistillResultDraft<TPayload>[];
+      try {
+        results = (await spec.run({
+          ...input,
+          artifactStore: trackingStore,
+          state: namespacedState,
+          distiller_id: spec.id,
+          distiller_version: spec.version,
+        })) as DistillResultDraft<TPayload>[];
+      } finally {
+        // Always mark sessions as processed, even when spec.run() throws.
+        // Without this, a failing session is retried on every restart and
+        // blocks the entire pipeline (distill → crash → restart → same session).
+        if (processedSessionIds.size > 0) {
+          await input.state.markProcessed(
+            spec.id,
+            Array.from(processedSessionIds),
+          );
+        }
       }
 
       return results as DistillResultDraft[];
