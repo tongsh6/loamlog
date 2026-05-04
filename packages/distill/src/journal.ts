@@ -2,7 +2,7 @@ import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 
 /** Status of a single session after distillation. */
-export type ProcessStatus = "produced" | "no_signal" | "error";
+export type ProcessStatus = "produced" | "no_signal" | "error" | "prefiltered";
 
 export interface ProcessJournalEntry {
   session_id: string;

@@ -6,6 +6,7 @@ import type {
   DistillerStateKV,
   DistillerRunInput,
   JSONSchema7,
+  PrefilterResult,
   SessionArtifact,
 } from "@loamlog/core";
 
@@ -16,6 +17,7 @@ interface DefineDistillerSpec<TPayload = Record<string, unknown>> {
   supported_types: string[];
   configSchema?: JSONSchema7;
   payloadSchema?: Record<string, JSONSchema7>;
+  prefilter?(artifact: SessionArtifact): import("@loamlog/core").PrefilterResult;
   initialize?(ctx: DistillerContext): Promise<void>;
   run(input: DistillerRunInput): Promise<DistillResultDraft<TPayload>[]>;
   teardown?(): Promise<void>;
@@ -72,6 +74,7 @@ export function defineDistiller<TPayload = Record<string, unknown>>(
     supported_types: spec.supported_types,
     configSchema: spec.configSchema,
     payloadSchema: spec.payloadSchema,
+    prefilter: spec.prefilter,
 
     async initialize(ctx: DistillerContext): Promise<void> {
       if (spec.initialize) {
@@ -163,4 +166,74 @@ export function createEvidence(
     message_id: message.id,
     excerpt,
   };
+}
+
+export interface DefaultPrefilterOptions {
+	/** Minimum number of total messages. Default 2. */
+	minMessages?: number;
+	/** Minimum number of user-role messages. Default 1. */
+	minUserMessages?: number;
+	/** Minimum total characters across all message content. Default 100. */
+	minTotalChars?: number;
+}
+
+/**
+ * Create a default pre-LLM filter.
+ *
+ * Rules are deliberately conservative — the goal is to skip sessions that
+ * are almost certainly noise, not to make semantic judgments. A session
+ * that passes this filter may still produce zero results from the LLM.
+ *
+ * Rules:
+ * 1. Total messages >= minMessages (default 2)
+ * 2. At least one user-role message
+ * 3. Total text content >= minTotalChars (default 100)
+ * 4. At least one message has text content (not pure tool calls)
+ */
+export function createDefaultPrefilter(
+	options: DefaultPrefilterOptions = {},
+): (artifact: SessionArtifact) => PrefilterResult {
+	const minMessages = options.minMessages ?? 2;
+	const minUserMessages = options.minUserMessages ?? 1;
+	const minTotalChars = options.minTotalChars ?? 100;
+
+	return (artifact: SessionArtifact): PrefilterResult => {
+		if (artifact.messages.length < minMessages) {
+			return {
+				pass: false,
+				reason: `session too short: ${artifact.messages.length} msgs (min ${minMessages})`,
+			};
+		}
+
+		const userCount = artifact.messages.filter((m) => m.role === "user").length;
+		if (userCount < minUserMessages) {
+			return {
+				pass: false,
+				reason: `no user messages: ${userCount} user msgs (min ${minUserMessages})`,
+			};
+		}
+
+		let totalChars = 0;
+		let hasTextContent = false;
+		for (const msg of artifact.messages) {
+			const text = msg.content ?? "";
+			totalChars += text.length;
+			if (text.trim().length > 0) hasTextContent = true;
+		}
+		if (totalChars < minTotalChars) {
+			return {
+				pass: false,
+				reason: `content too short: ${totalChars} chars (min ${minTotalChars})`,
+			};
+		}
+
+		if (!hasTextContent) {
+			return {
+				pass: false,
+				reason: "no text content in any message",
+			};
+		}
+
+		return { pass: true };
+	};
 }

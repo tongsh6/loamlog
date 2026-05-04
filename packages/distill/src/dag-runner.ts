@@ -214,6 +214,23 @@ export function createDistillDAG(
 					ctx.logger.info(`[dag:distill] progress=${progressCount} sessions`);
 				}
 
+				// ── Layer 1: Pre-LLM filter ──
+				const prefilter = distiller.prefilter?.(artifact) ?? { pass: true };
+				if (!prefilter.pass) {
+					writeProcessJournal(dumpDir, artifact.context.repo ?? effectiveRepo, {
+						session_id: artifact.meta.session_id,
+						distiller_id: distiller.id,
+						processed_at: new Date().toISOString(),
+						status: "prefiltered",
+						drafts_count: 0,
+						error_message: prefilter.reason,
+					}).catch((err) => {
+						ctx.logger.warn(`[dag:journal] write failed: ${err instanceof Error ? err.message : String(err)}`);
+					});
+					await state.markProcessed(distiller.id, [artifact.meta.session_id]);
+					continue;
+				}
+
 				const result = await processSessionArtifact(artifact, {
 					distiller,
 					llm,

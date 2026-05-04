@@ -1,5 +1,5 @@
 import type { DistillResultDraft, DistillerFactory, DistillerRunInput, SessionArtifact } from "@loamlog/core";
-import { createEvidence, defineDistiller } from "@loamlog/distiller-sdk";
+import { createDefaultPrefilter, createEvidence, defineDistiller } from "@loamlog/distiller-sdk";
 
 const DISTILLER_ID = "@loamlog/distiller-knowledge-card";
 
@@ -171,8 +171,10 @@ const factory: DistillerFactory = () =>
 	defineDistiller<KnowledgeCardPayload>({
 		id: DISTILLER_ID,
 		name: "Knowledge Card Extractor",
-		version: "0.2.0",
+		version: "0.3.0",
 		supported_types: ["knowledge-card"],
+
+			prefilter: createDefaultPrefilter({ minMessages: 3 }),
 
 		async run({ artifactStore, llm }: DistillerRunInput): Promise<DistillResultDraft<KnowledgeCardPayload>[]> {
 			const results: DistillResultDraft<KnowledgeCardPayload>[] = [];

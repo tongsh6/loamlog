@@ -672,6 +672,13 @@ export interface DistillerRunInput {
   distiller_version?: string;
 }
 
+export interface PrefilterResult {
+  /** Whether the session should proceed to LLM distillation. */
+  pass: boolean;
+  /** Reason for filtering. Used for journal observability, not user-facing. */
+  reason?: string;
+}
+
 export interface DistillerPlugin {
   id: string;
   name: string;
@@ -680,6 +687,19 @@ export interface DistillerPlugin {
   configSchema?: JSONSchema7;
   payloadSchema?: Record<string, JSONSchema7>;
   initialize?(ctx: DistillerContext): Promise<void>;
+  /**
+   * Pre-LLM filter: runs before the distiller is invoked to skip sessions
+   * that clearly contain no extractable signal. Must be synchronous and
+   * pure in-memory computation (no external service calls).
+   *
+   * Not implementing this method means all sessions pass through (the
+   * default, backward-compatible behavior).
+   *
+   * Design principle: prefer false-positives (let through) over
+   * false-negatives (filter out). This is a cost-saving layer, not a
+   * quality gate.
+   */
+  prefilter?(artifact: SessionArtifact): PrefilterResult;
   run(input: DistillerRunInput): Promise<DistillResultDraft[]>;
   teardown?(): Promise<void>;
 }
