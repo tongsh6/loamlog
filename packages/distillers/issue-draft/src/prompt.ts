@@ -45,8 +45,8 @@ export function buildPrompt(session: SessionArtifact | NormalizedSession): strin
     });
 
     return [
-      `session: ${session.header.sessionId} repo: ${session.header.repoPath ?? "unknown"}`,
-      `context: branch=${session.header.vcsContext?.branch ?? "unknown"} commit=${session.header.vcsContext?.commitSha ?? "unknown"}`,
+      `session: ${session.header.session_id} repo: ${session.header.repo_path ?? "unknown"}`,
+      `context: branch=${session.header.vcs_context?.branch ?? "unknown"} commit=${session.header.vcs_context?.commit_sha ?? "unknown"}`,
       "messages:",
       ...chunks,
       "",

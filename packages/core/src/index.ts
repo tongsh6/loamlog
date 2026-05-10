@@ -340,6 +340,37 @@ export interface AssetCandidate {
   evidence: EvidenceSpan[];
   payload: Record<string, unknown>;
   render?: { markdown?: string; html?: string };
+  /** Optional verification report from the Smelting workshop */
+  verification?: VerificationReport;
+}
+
+export interface VerificationReport {
+  status: "verified" | "archived" | "unverified" | "rejected";
+  /** Mining value score (0.0 - 1.0): higher score means bigger gap or harder evidence */
+  mining_score: number;
+  evidence: {
+    dialogue_ref: string;
+    git_gap_status?: string;
+    physical_log_ref?: string;
+  };
+  reason?: string;
+  verified_at: string;
+}
+
+export interface VerifiedAsset extends AssetCandidate {
+  verification: VerificationReport;
+}
+
+export interface VerifierContext {
+  repoPath: string;
+  capturedAt: string;
+  logger: Logger;
+}
+
+export interface VerifierPlugin {
+  id: string;
+  name: string;
+  verify(candidate: AssetCandidate, ctx: VerifierContext): Promise<VerificationReport>;
 }
 
 export type DecisionType = "approved" | "rejected" | "deferred";
@@ -679,18 +710,22 @@ export interface DistillerRunInput {
 
 export interface NormalizedSession {
   header: {
-    sessionId: string;
-    repoPath?: string;
-    vcsContext?: { branch: string; commitSha: string };
+    session_id: string;
+    repo_path?: string;
+    vcs_context?: { branch: string; commit_sha: string };
     provider: string;
-    capturedAt: string;
+    captured_at: string;
+    /** Semantic fingerprint for cross-session correlation (Mining-aligned) */
+    topic_fingerprint?: string;
+    /** Whether this session is a continuation of a previous one */
+    session_continuity?: "new" | "continuation";
   };
   messages: NormalizedMessage[];
   stats: {
-    totalMessages: number;
-    toolCalls: number;
-    rawChars: number;
-    normalizedChars: number;
+    total_messages: number;
+    tool_calls: number;
+    raw_chars: number;
+    normalized_chars: number;
   };
 }
 

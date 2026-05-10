@@ -46,10 +46,15 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
           rawChars += (part.input ? JSON.stringify(part.input).length : 0) + output.length + error.length;
 
           let summary = "";
+          // L1-L2 Tiered Crushing: 
+          // If it's an error, allow much larger context (up to 5000 chars).
+          const isError = !!error || /error|failed|exception/i.test(output);
+          const limit = isError ? 5000 : maxToolSummaryChars;
+
           if (error) {
-            summary = `error: ${truncate(error, maxToolSummaryChars)}`;
+            summary = `error: ${truncate(error, limit)}`;
           } else if (output) {
-            summary = `output: ${truncate(output, maxToolSummaryChars)}`;
+            summary = `output: ${truncate(output, limit)}`;
           } else {
             summary = "called";
           }
@@ -59,9 +64,6 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
             summary,
             source_index: { raw_size: output.length + error.length }
           });
-          break;
-        case "file":
-          rawChars += part.filename.length;
           break;
       }
     }
@@ -82,23 +84,33 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
     };
   });
 
+  // Basic Topic Fingerprinting: use repo and the first few unique file paths mentioned
+  const entities = new Set<string>();
+  for (const m of messages) {
+    const paths = m.text.match(/[a-zA-Z0-9_\-\.\/]+\.(ts|js|py|go|rs|md|json)/g);
+    if (paths) for (const p of paths) entities.add(p);
+  }
+  const fingerprint = Array.from(entities).slice(0, 3).sort().join("|");
+
   return {
     header: {
-      sessionId: artifact.meta.session_id,
-      repoPath: artifact.context.worktree,
-      vcsContext: artifact.context.branch && artifact.context.commit ? {
+      session_id: artifact.meta.session_id,
+      repo_path: artifact.context.worktree,
+      vcs_context: artifact.context.branch && artifact.context.commit ? {
         branch: artifact.context.branch,
-        commitSha: artifact.context.commit
+        commit_sha: artifact.context.commit
       } : undefined,
       provider: artifact.meta.provider,
-      capturedAt: artifact.meta.captured_at
+      captured_at: artifact.meta.captured_at,
+      topic_fingerprint: fingerprint || undefined,
+      session_continuity: artifact.messages.length > 50 ? "continuation" : "new"
     },
     messages,
     stats: {
-      totalMessages: messages.length,
-      toolCalls,
-      rawChars,
-      normalizedChars
+      total_messages: messages.length,
+      tool_calls: toolCalls,
+      raw_chars: rawChars,
+      normalized_chars: normalizedChars
     }
   };
 }

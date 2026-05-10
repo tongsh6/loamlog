@@ -29,6 +29,7 @@ import { detectLanguage, withLanguageRouter, withSessionAugmentation } from "./a
 import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
 import { normalizeSession } from "./normalizer.js";
+import { GitGapVerifier } from "./verifier/git-gap.js";
 
 export interface DistillDAGOptions {
 	distiller: DistillerPlugin;
@@ -262,11 +263,26 @@ export function createDistillDAG(
 					}
 
 					knownFingerprints[r.fingerprint] = true;
+					const candidate = mapDistillResultToCandidate(r);
+					const verifier = new GitGapVerifier();
+					const verification = await verifier.verify(candidate, {
+						repoPath: artifact.context.worktree,
+						capturedAt: artifact.meta.captured_at,
+						logger: ctx.logger,
+					});
+					candidate.verification = verification;
+
+					const quality = validateAssetCandidate(candidate);
+
+					// Block only rejected (hallucinated) or archived (already done) assets.
+					if (verification.status === "rejected" || verification.status === "archived") {
+						totalSkipped += 1;
+						ctx.logger.info(`[dag:smelt] asset skipped: ${candidate.id} status=${verification.status} reason=${verification.reason}`);
+						continue;
+					}
+
 					sessionResults.push(r);
 					acc.results.push(r);
-
-					const candidate = mapDistillResultToCandidate(r);
-					const quality = validateAssetCandidate(candidate);
 					acc.candidates.push(candidate);
 					acc.qualityReports.push(quality);
 
@@ -282,10 +298,13 @@ export function createDistillDAG(
 					const approvedResults: DistillResult[] = [];
 					const auditRecords: AuditRecord[] = [];
 
+					// In a streaming session, the last N items in acc belong to this session
+					const startIndex = acc.results.length - sessionResults.length;
+
 					for (let i = 0; i < sessionResults.length; i++) {
-						const r = sessionResults[i];
-						const candidate = acc.candidates[acc.candidates.length - sessionResults.length + i];
-						const quality = acc.qualityReports[acc.qualityReports.length - sessionResults.length + i];
+						const r = acc.results[startIndex + i];
+						const candidate = acc.candidates[startIndex + i];
+						const quality = acc.qualityReports[startIndex + i];
 
 						if (candidate && quality) {
 							const decision = {
@@ -338,10 +357,10 @@ export function createDistillDAG(
 					}
 
 						totalProduced += approvedResults.length;
-						acc.artifactsProcessed += approvedResults.length;
 					}
 
 				// Persist state after each session so progress survives crashes
+				acc.artifactsProcessed += 1;
 				await state.set("fingerprints", knownFingerprints);
 				await state.markProcessed(distiller.id, [artifact.meta.session_id]);
 

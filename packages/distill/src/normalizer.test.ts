@@ -26,7 +26,7 @@ describe("normalizer", () => {
         id: "msg_1",
         role: "user",
         timestamp: "...",
-        content: "Hello",
+        content: "Hello, can you check src/index.ts?",
       },
       {
         id: "msg_2",
@@ -67,11 +67,12 @@ describe("normalizer", () => {
 
   it("preserves meta and stats", () => {
     const normalized = normalizeSession(mockArtifact);
-    assert.strictEqual(normalized.header.sessionId, "ses_123");
-    assert.strictEqual(normalized.header.repoPath, "/work/loamlog");
-    assert.strictEqual(normalized.header.vcsContext?.branch, "develop");
-    assert.strictEqual(normalized.stats.totalMessages, 2);
-    assert.strictEqual(normalized.stats.toolCalls, 1);
-    assert.ok(normalized.stats.rawChars > normalized.stats.normalizedChars);
+    assert.strictEqual(normalized.header.session_id, "ses_123");
+    assert.strictEqual(normalized.header.repo_path, "/work/loamlog");
+    assert.strictEqual(normalized.header.vcs_context?.branch, "develop");
+    assert.strictEqual(normalized.stats.total_messages, 2);
+    assert.strictEqual(normalized.stats.tool_calls, 1);
+    assert.ok(normalized.stats.raw_chars > normalized.stats.normalized_chars);
+    assert.ok(normalized.header.topic_fingerprint);
   });
 });
