@@ -8,16 +8,17 @@
 | M1 | 采集层 MVP — 自动归档会话 | core, archive, providers/opencode, cli | 1–2 days | ✅ 已完成 |
 | M2 | 萃取层 MVP — SDK + demo distiller + file sink | distill, distillers/pitfall-card, sinks/file | 2–4 days | ✅ 已完成 |
 | M3 | 多模型 LLM 路由 | distill/llm-providers/* | 1–2 days | ✅ 已完成 |
-| **Milestone A** | **可信底盘** — 脱敏、触发控制、质量评估 | sanitizer, trigger, evaluation-harness | 2–3 weeks | ✅ **已完成** |
-| M4 | 多数据源接入 | providers/opencode, claude-code, gemini-cli, codex | 1–2 days | ✅ 已完成 |
-| M5 | 生态化与工作流 | sinks/github, approve-flow, more distillers | Ongoing | ⏳ 规划中 |
+| Milestone A | **炼矿中心底盘** — 脱敏、触发、正常化、质量评估 | sanitizer, trigger, normalizer, evaluation-harness | 2–3 weeks | ✅ **已完成 (基础)** |
+| M4 | 多数据源接入 | providers/* | 1–2 days | ✅ 已完成 |
+| M5 | **工业化提炼** | refinery, verifier, aggregator, sinks | Ongoing | ⏳ 核心攻坚中 |
 
 ---
 
 ## 当前进度 | Current Progress
 
-截至 2026-05，Loamlog v0.5.0 已完成 **M4：多数据源接入**，现支持 4 个 AI 工具的主动采集。
-As of 2026-05, Loamlog v0.5.0 has completed **M4: Multi-source Providers** with active watchers for 4 AI tools.
+截至 2026-05-11，Loamlog 正在进行从线性管道向 **炼矿中心 (Refinery)** 架构的战略重构。
+As of 2026-05-11, Loamlog is undergoing a strategic refactor from linear pipelines to a **Refinery** architecture.
+
 
 Milestone A 通过以下 Issues 和 PRs 完成：
 - Issue #26 (Sanitization Gateway) → PR #39 ✅
