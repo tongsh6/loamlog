@@ -1,72 +1,73 @@
-# Refinery Workshop 2: Smelting (Verifier) — 冶炼车间规格说明书
+# Refinery Workshop 2: Smelting (Verifier) — 冶炼车间规格说明书 (意图与事实对账版)
 
-> **状态：** 设计中 (2026-05-11)
->
-> **角色：** 定义精矿 (Asset Candidate) 到粗金属 (Verified Asset) 的逻辑还原与物理验证流程。这是炼矿中心的核心增值环节，旨在通过“事实还原”消除 LLM 幻觉。
->
-> **关联契约：** `CP-03 (VerifiedAsset Contract)`
+> **Workshop Role:** Implementation Gap Analysis & Evidence Weaving
+> **Goal:** 识别“对话意图”与“工程现实”之间的缺口，织补多源证据，将 AI 猜想炼成确凿资产。
 
 ---
 
-## 1. 冶炼目标 (Workshop Goals)
+## 1. 核心冶炼策略 (Mining-aligned Strategies)
 
-冶炼车间不负责“挖掘新想法”，其职责是**事实核查与证据固化**：
+### 1.1 [P0] 实现状态对账 (Implementation Gap Analysis)
+**任务**：判定 AI 在对话中提出的修改建议是否已在物理世界落地。
+- **对账逻辑**：
+    - 扫描 Candidate 涉及的 `file_path`。
+    - 对比对话发生的时间点 (captured_at) 与该文件的最后 Git 提交时间或本地修改时间。
+    - **判定 1 (Gap)**：若对话建议修改，但之后代码无相关变更 -> **产出高价值 Issue 草稿**。
+    - **判定 2 (Matched)**：若代码已变更且逻辑契合 -> **标记为“已完成任务”或“Changelog”**。
 
-- **事实回归 (Fact Grounding)**：验证 Candidate 提到的所有路径、代码、符号在磁盘上是否真实存在。
-- **证据冷冻 (Evidence Freezing)**：拉取当前时间点的 Git Hash，确保存量资产不因代码演进而失效。
-- **逻辑证伪 (Falsification)**：通过静态工具证明 Candidate 的猜想是否在逻辑上成立。
+### 1.2 [P1] 跨工具证据织补 (Cross-Tool Evidence Weaving)
+**任务**：利用 Loamlog 的多源采集能力，为孤立的 AI 对话寻找物理日志支撑。
+- **织补逻辑**：
+    - **时间线锚定**：以对话中提到 Bug 的时间点为中心，前后检索 OpenCode 捕获的终端日志。
+    - **语义关联**：若对话提到 `TypeError`，Verifier 自动去 Archive 搜索匹配的错误堆栈。
+    - **证据熔炼**：将搜寻到的“物理证据”直接挂载到资产的 `EvidenceSpan` 中。
 
 ---
 
-## 2. 冶炼等级 (Verification Tiers)
+## 2. 需求定义 (Requirements)
 
-并不是所有资产都需要全量冶炼，系统支持三级验证深度：
+### 2.1 业务场景
+- **场景 A (遗忘捕捉)**：对话中讨论了重构逻辑，但开发者随后去写了其他功能。冶炼环节应识别出这一“执行中断”，并生成提醒。
+- **场景 B (多维定罪)**：Claude 里的 AI 说“这个 API 返回了 404”，冶炼环节应从 `provider-codex` 捕获的 HTTP 流量或 `provider-opencode` 捕获的终端输出中找到那个 404 记录。
 
-| 等级 | 名称 | 动作 | 产物 |
+---
+
+## 3. 验收场景 (Acceptance Scenarios)
+
+| 场景 | 输入 Candidate | 冶炼动作 | 预期结果 (验收点) |
 | :--- | :--- | :--- | :--- |
-| **L1** | **路径验证 (Existence)** | `fs.exists` 检查提到的文件路径。 | `VerifiedPath` |
-| **L2** | **内容还原 (Content)** | 读取文件指定行，提取真实 `snippet`。 | `VerifiedSnippet` |
-| **L3** | **静态扫描 (Static)** | 运行 `tsc` / `lint` / `grep` 验证逻辑。 | `StaticVerifiedAsset` |
-| **L4** | **Git 固化 (Git Anchoring)** | 绑定 `commit_sha` 和 `diff`。 | `AnchoredAsset` |
+| **执行缺口** | 建议修复 `Auth.ts` | 检查 Git 指向该文件且无新 commit | 资产状态: `VERIFIED`, 理由: `Implementation Gap Found` |
+| **已被修复** | 建议修改 `CSS` | 发现对话后已有相关 commit | 资产状态: `ARCHIVED`, 理由: `Already Implemented` |
+| **证据缺失补全** | 提到 `npm test` 失败 | 检索同一时间的终端日志快照 | 资产状态: `VERIFIED`, 证据链包含真实的终端报错文本 |
 
 ---
 
-## 3. 冶炼逻辑：事实核查清单 (Fact-check List)
+## 4. 技术方案 (Technical Plan)
 
-每一个 `verifier` 插件必须执行以下核查：
+### 4.1 核心 Verifier 插件
+1.  **GitGapVerifier (P0)**：
+    - 利用 `git log --since=<captured_at> -- <file_path>`。
+    - 结合本地 `fs.stat` 检查未提交的变更。
+2.  **LogWeaveVerifier (P1)**：
+    - 查询 `ArchiveIndex` 寻找同一时间窗口 (`captured_at` ± 5min) 的非对话类 Snapshot。
+    - 对 Snapshot 内容执行关键词匹配。
 
-1.  **路径有效性**：`candidate.evidence_guesses.path` 必须在 `repo_path` 下可寻址。
-2.  **符号检测**：若提到函数 `foo()`，在相应文件中 `grep` 是否存在该字符。
-3.  **时空一致性**：确保验证时使用的代码版本与 Session 捕获时尽量接近（通过 `vcs_context` 对齐）。
-
----
-
-## 4. 冶炼报告与信心修正式
-
-冶炼结果将生成一个 `VerificationReport`，并直接影响资产的“品位”（品位 = 品质分数）：
-
-```text
-Final_Score = Candidate_Confidence * (1.0 + Score_Modifier)
+### 4.2 冶炼报告 (Verification Report)
+```typescript
+{
+  status: "verified" | "archived" | "unverified";
+  mining_score: number; // 挖掘价值分：缺口越大、证据越硬，分值越高
+  evidence: {
+    dialogue_ref: string;   // 意图来源
+    physical_log_ref?: string; // 织补得到的物理证据
+    git_gap_status: string;    // 对账状态
+  }
+}
 ```
 
-- **Status: VERIFIED** -> `Score_Modifier: +0.2` (事实确凿)
-- **Status: UNVERIFIED** -> `Score_Modifier: 0` (无法验证，保持原样)
-- **Status: REJECTED** -> `Score_Modifier: -0.8` (路径不存在或已被证伪)
-
 ---
 
-## 5. 验收场景 (Proof Scenarios)
+## 5. 待决问题 (Open Questions)
 
-| 场景 | 验证动作 | 预期报告 |
-| :--- | :--- | :--- |
-| **正确引用** | AI 提到 `src/index.ts` 第 12 行有错，且文件确实存在。 | `status: verified`, 自动附带第 12 行代码片段。 |
-| **路径幻觉** | AI 提到 `src/non-existent.ts`。 | `status: rejected`, `reason: path not found`. |
-| **Git 自动关联** | Session 无 Hash，但 Repo 处于 Git 仓库。 | `status: verified`, 自动补全最近一次提交的 `sha1`. |
-
----
-
-## 6. 待决问题 (Open Questions)
-
-- **性能隔离**：L3 级的 `tsc` 运行太慢，是否应该仅在 `Continuous` 模式下异步运行？
-- **环境隔离**：是否需要支持在 Docker 或临时容器中运行验证以防副作用？
-- **初判**：第一阶段仅支持本地 `ReadOnly` 验证（L1-L2），L3/L4 放在集成阶段。
+- **模糊对账**：如果用户改了代码，但改得不全，P0 如何识别“部分缺口”？
+- **初判**：Stage 1 采用简单时间戳对账，Stage 2 引入 `git diff` 语义对比。
