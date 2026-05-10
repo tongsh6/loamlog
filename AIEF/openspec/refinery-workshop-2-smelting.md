@@ -1,80 +1,72 @@
-# Refinery Workshop 2: Smelting (Verifier) — 冶炼车间设计文档
+# Refinery Workshop 2: Smelting (Verifier) — 冶炼车间规格说明书
 
-> **Workshop Role:** Logical Smelting / 逻辑还原与验证
-> **Goal:** 将精矿 (Asset Candidate) 还原为带证据、经确认的粗金属 (Verified Asset)，消除 AI 幻觉。
-
-## 1. 需求定义 (Requirements)
-
-### 1.1 业务背景
-LLM 产出的资产草稿（Candidate）虽然语义正确，但往往包含“事实噪音”：
-1. **路径幻觉**：提到的代码文件路径在磁盘上并不存在。
-2. **逻辑误报**：宣称某个函数有 Bug，但实际该函数在最新版本中已重构或修复。
-3. **证据空泛**：仅引用对话文字，缺乏真实的 Git 提交记录或代码片段支撑。
-
-### 1.2 核心功能
-- **事实对齐 (Fact Reconciliation)**：自动检查 Candidate 提到的文件、类、函数是否在当前 Repo 中真实存在。
-- **证据补全 (Evidence Enrichment)**：自动拉取与信号时间点匹配的 Git Commit Hash、Diff 和代码片段。
-- **静态扫描 (Static Verification)**：调用本地 `tsc`、`lint` 或 `grep` 验证 AI 的猜想。
-- **可信度定级**：根据验证结果，将资产标记为 `VERIFIED`（已验证）、`UNVERIFIED`（未验证）或 `REJECTED`（已证伪）。
+> **状态：** 设计中 (2026-05-11)
+>
+> **角色：** 定义精矿 (Asset Candidate) 到粗金属 (Verified Asset) 的逻辑还原与物理验证流程。这是炼矿中心的核心增值环节，旨在通过“事实还原”消除 LLM 幻觉。
+>
+> **关联契约：** `CP-03 (VerifiedAsset Contract)`
 
 ---
 
-## 2. 验收场景 (Acceptance Scenarios)
+## 1. 冶炼目标 (Workshop Goals)
 
-| 场景 | Candidate 状态 | 预期结果 (验收点) |
-| :--- | :--- | :--- |
-| **文件路径正确** | 提到 `src/parser.ts` 有错 | Verifier 找到该文件，并自动提取相关代码行作为 `EvidenceSpan`。 |
-| **路径幻觉** | 提到一个不存在的路径 `legacy/core.js` | Verifier 标记该资产为 `REJECTED`，原因：路径不存在。 |
-| **Git 证据缺失** | 仅有文字描述，无 Hash | Verifier 根据会话时间点，自动匹配最近的 Git Commit 并挂载到资产上。 |
-| **逻辑验证 (Grep)** | 宣称某处使用了 `deprecated_api()` | Verifier 运行 `grep` 确认源码中确实存在该调用。 |
-| **静态门禁 (TSC)** | 宣称某处有类型错误 | Verifier 针对该文件运行 `tsc`，若发现相同错误，标记为 `VERIFIED` 并附带编译器输出。 |
+冶炼车间不负责“挖掘新想法”，其职责是**事实核查与证据固化**：
+
+- **事实回归 (Fact Grounding)**：验证 Candidate 提到的所有路径、代码、符号在磁盘上是否真实存在。
+- **证据冷冻 (Evidence Freezing)**：拉取当前时间点的 Git Hash，确保存量资产不因代码演进而失效。
+- **逻辑证伪 (Falsification)**：通过静态工具证明 Candidate 的猜想是否在逻辑上成立。
 
 ---
 
-## 3. 业务约束 (Business Constraints)
+## 2. 冶炼等级 (Verification Tiers)
 
-- **本地优先**：冶炼过程主要依赖本地文件系统和工具链。
-- **性能阈值**：冶炼环节是异步的，但单个资产的验证不应超过 30 秒。
-- **非侵入性**：Verifier 只读源码，不得修改用户代码或产生副作用（如提交代码）。
-- **可扩展性**：支持通过插件方式接入不同的验证工具（如 Semgrep, SonarQube）。
+并不是所有资产都需要全量冶炼，系统支持三级验证深度：
+
+| 等级 | 名称 | 动作 | 产物 |
+| :--- | :--- | :--- | :--- |
+| **L1** | **路径验证 (Existence)** | `fs.exists` 检查提到的文件路径。 | `VerifiedPath` |
+| **L2** | **内容还原 (Content)** | 读取文件指定行，提取真实 `snippet`。 | `VerifiedSnippet` |
+| **L3** | **静态扫描 (Static)** | 运行 `tsc` / `lint` / `grep` 验证逻辑。 | `StaticVerifiedAsset` |
+| **L4** | **Git 固化 (Git Anchoring)** | 绑定 `commit_sha` 和 `diff`。 | `AnchoredAsset` |
 
 ---
 
-## 4. 技术方案 (Technical Plan)
+## 3. 冶炼逻辑：事实核查清单 (Fact-check List)
 
-### 4.1 核心契约
-```typescript
-interface VerifierPlugin {
-  name: string;
-  /** 执行验证，将 Candidate 升级为 VerifiedAsset */
-  verify(candidate: AssetCandidate, ctx: VerifierContext): Promise<VerificationReport>;
-}
+每一个 `verifier` 插件必须执行以下核查：
 
-interface VerificationReport {
-  status: "verified" | "unverified" | "rejected";
-  evidence: EvidenceSpan[]; // 补全后的证据链
-  reason?: string;         // 验证失败或证伪的理由
-  score_modifier: number;  // 对资产信心的修正值（-1.0 到 1.0）
-}
-```
+1.  **路径有效性**：`candidate.evidence_guesses.path` 必须在 `repo_path` 下可寻址。
+2.  **符号检测**：若提到函数 `foo()`，在相应文件中 `grep` 是否存在该字符。
+3.  **时空一致性**：确保验证时使用的代码版本与 Session 捕获时尽量接近（通过 `vcs_context` 对齐）。
 
-### 4.2 冶炼节点集成 (DAG Node)
-在 `packages/pipeline` 中新增 `verifier` 节点，位于 `run_distiller` 之后。
+---
+
+## 4. 冶炼报告与信心修正式
+
+冶炼结果将生成一个 `VerificationReport`，并直接影响资产的“品位”（品位 = 品质分数）：
 
 ```text
-[run_distiller] ──> [process_results (Filter)] ──> [verifier (Smelting)]
+Final_Score = Candidate_Confidence * (1.0 + Score_Modifier)
 ```
 
-### 4.3 预置 Verifier 实现
-1. **GitVerifier**：调用本地 `git` 命令，根据会话时间戳和 Repo 信息，补全 `vcs_ref` 和 `diff`。
-2. **FileVerifier**：验证文件路径是否存在，并利用 `fs.readFile` 提取代码片段作为证据。
-3. **StaticVerifier**：支持运行预定义的扫描命令（如 `pnpm lint`），匹配 Candidate 描述的问题。
+- **Status: VERIFIED** -> `Score_Modifier: +0.2` (事实确凿)
+- **Status: UNVERIFIED** -> `Score_Modifier: 0` (无法验证，保持原样)
+- **Status: REJECTED** -> `Score_Modifier: -0.8` (路径不存在或已被证伪)
 
 ---
 
-## 5. 风险与规避 (Risks)
+## 5. 验收场景 (Proof Scenarios)
 
-- **风险 1：环境不一致。**
-  - **规避**：Verifier 必须记录执行环境信息（Node 版本、OS、Git 分支），确保证据的可追溯性。
-- **风险 2：验证工具耗时过长。**
-  - **规避**：支持设置超时机制；对于重量级工具（如全量编译），仅在 `Continuous` 模式或手动触发时运行。
+| 场景 | 验证动作 | 预期报告 |
+| :--- | :--- | :--- |
+| **正确引用** | AI 提到 `src/index.ts` 第 12 行有错，且文件确实存在。 | `status: verified`, 自动附带第 12 行代码片段。 |
+| **路径幻觉** | AI 提到 `src/non-existent.ts`。 | `status: rejected`, `reason: path not found`. |
+| **Git 自动关联** | Session 无 Hash，但 Repo 处于 Git 仓库。 | `status: verified`, 自动补全最近一次提交的 `sha1`. |
+
+---
+
+## 6. 待决问题 (Open Questions)
+
+- **性能隔离**：L3 级的 `tsc` 运行太慢，是否应该仅在 `Continuous` 模式下异步运行？
+- **环境隔离**：是否需要支持在 Docker 或临时容器中运行验证以防副作用？
+- **初判**：第一阶段仅支持本地 `ReadOnly` 验证（L1-L2），L3/L4 放在集成阶段。

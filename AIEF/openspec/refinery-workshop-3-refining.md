@@ -1,70 +1,71 @@
-# Refinery Workshop 3: Refining (Aggregator) — 精炼车间设计文档
+# Refinery Workshop 3: Refining (Aggregator) — 精炼车间规格说明书
 
-> **Workshop Role:** Temporal Refining / 跨会话聚合与纯化
-> **Goal:** 将来自不同会话的碎片资产合并为完整、唯一的纯金属 (Refined Asset)，消除冗余与碎片化。
-
-## 1. 需求定义 (Requirements)
-
-### 1.1 业务背景
-在真实开发中，同一个工程问题（如一个复杂的 Bug 或一个大特性的设计）往往分布在多个时间点、多个 AI 工具的会话中：
-1. **碎片化**：Claude 里讨论了 A 部分，OpenCode 里讨论了 B 部分。
-2. **冗余性**：多次询问同一个问题，产出了内容相似但 ID 不同的草稿。
-3. **缺乏演进**：无法看到一个问题从“发现”到“修复验证”的完整全生命周期。
-
-### 1.2 核心功能
-- **跨会话关联 (Correlation)**：通过标识符（Repo, File, Topic）识别属于同一个工程话题的资产。
-- **资产合并 (Merging)**：将多个相似资产的证据链（Evidence Spans）和描述文本进行逻辑合并。
-- **指纹去重 (Deduplication)**：利用内容哈希防止相同结果被多次重复投递。
-- **版本演进记录**：追踪资产从 `DRAFT` 到 `VERIFIED` 再到 `REFINED` 的变化过程。
+> **状态：** 设计中 (2026-05-11)
+>
+> **角色：** 定义跨会话 (Cross-session) 的资产关联、合并与纯化逻辑。这是炼矿中心的终极增值环节，旨在通过“多矿脉合并”解决碎片化和冗余问题。
+>
+> **关联契约：** `CP-04 (RefinedAsset Contract)`
 
 ---
 
-## 2. 验收场景 (Acceptance Scenarios)
+## 1. 精炼目标 (Workshop Goals)
 
-| 场景 | 输入状态 | 预期结果 (验收点) |
-| :--- | :--- | :--- |
-| **多会话讨论同一 Bug** | Session A (发现) + Session B (定位) | 生成一个聚合后的 Issue，包含 A 的现象描述和 B 的定位证据。 |
-| **重复提问** | 两次完全相同的对话产出的 Candidate | 自动合并，保留置信度最高的一个，并将另一个标记为 `MERGED`。 |
-| **跨工具链协作** | Claude (设计) + Cursor (实现) | 生成一个 PRD 草稿，整合两者的上下文信息。 |
-| **证据累加** | 新 Session 提供了更具体的报错堆栈 | 将新证据追加到已有的 `VerifiedAsset` 中，不创建新记录。 |
+精炼车间不负责“挖掘原始信号”，其职责是**跨域聚合与去重**：
 
----
-
-## 3. 业务约束 (Business Constraints)
-
-- **唯一性原则**：同一个目标（如 GitHub Repo）在同一时间段内不应收到重复的 Issue。
-- **可回溯性**：合并后的资产必须保留所有原始 Session 的引用。
-- **增量处理**：精炼过程应支持增量扫描，不应每次都重新处理全量历史。
+- **跨会话关联 (Cross-session Correlation)**：识别分布在不同时间、不同 AI 工具中的同话题资产。
+- **价值升华 (Synthesis)**：将碎片化的证据链和描述合并为更完整的工程洞察。
+- **冗余控制 (Deduplication)**：确保一个 Repo 的同一逻辑问题只产生一份主资产。
 
 ---
 
-## 4. 技术方案 (Technical Plan)
+## 2. 资产身份指纹 (Asset Identity Fingerprint)
 
-### 4.1 关联主键定义
-资产关联采用 **“三段式指纹”**：
-`AssetIdentity = SHA256(TargetRepo : DistillerType : SemanticTopic)`
-- `SemanticTopic` 可由 LLM 提取或基于核心文件路径生成。
+精炼的第一步是确定资产的“身份证号”，防止“同物不同名”：
 
-### 4.2 聚合策略
-1. **证据链合并 (Evidence Append)**：简单地将所有 `EvidenceSpan` 数组合并并去重。
-2. **描述文本合成 (Text Synthesis)**：若冲突较小，直接拼接；若冲突较大，调用一次“廉价”的 LLM（如 GPT-4o-mini）进行文本总结。
-3. **状态晋升**：若其中一个资产已通过 `Smelting` 验证，则聚合后的资产继承 `VERIFIED` 状态。
-
-### 4.3 执行位置
-在 DAG 的 `aggregator` 节点运行，该节点具有跨 Session 访问权限。
-
-```typescript
-interface Aggregator {
-  /** 扫描资产库，执行合并动作 */
-  refine(assets: VerifiedAsset[]): Promise<RefinedAsset[]>;
-}
+```text
+Refined_ID = SHA256(Target_Repo : Distiller_Type : Semantic_Topic_Key)
 ```
 
+- **Target_Repo**：资产归属的 Repo 路径。
+- **Distiller_Type**：萃取器类型（如 `issue-draft`）。
+- **Semantic_Topic_Key**：由选矿阶段提取的语义主键（如 `React-Query-StaleTime-Bug`）。
+
 ---
 
-## 5. 风险与规避 (Risks)
+## 3. 合并与精炼策略 (Merging Strategies)
 
-- **风险 1：误合并。** 将两个不同但相似的问题合并在了一起。
-  - **规避**：引入“语义相似度”阈值（如 Jaccard > 0.8）；合并后的资产在 `review` 界面显示合并来源，允许人工拆分。
-- **风险 2：处理大规模历史资产时的性能问题。**
-  - **规避**：使用 `loam list --pending` 仅处理未审批的活跃资产。
+当多个 `VerifiedAsset` 命中同一个 `Refined_ID` 时，执行以下“精炼”动作：
+
+| 维度 | 处理策略 | 说明 |
+| :--- | :--- | :--- |
+| **证据链 (Evidence)** | **Set Append** | 合并所有 `EvidenceSpan`，按时间序排列，去除重复的 Hash。 |
+| **描述 (Content)** | **Incremental Synthesis** | 保留最详细的一份，并以“补丁”形式增加其他会话中的独特发现。 |
+| **状态 (Status)** | **Priority Inheritance** | 只要有一个输入是 `VERIFIED`，精炼后的资产即为 `VERIFIED`。 |
+| **信心 (Score)** | **Cumulative Bonus** | 更多来源的证据会小幅提升最终信心分（上限 1.0）。 |
+
+---
+
+## 4. 验收场景 (Proof Scenarios)
+
+| 场景 | 输入数据 | 预期精炼结果 |
+| :--- | :--- | :--- |
+| **跨工具协同** | Claude 发现 Bug + Cursor 提供修复思路。 | 产生一个合并后的 Issue，标题含两者摘要，描述含完整修复建议。 |
+| **重复萃取** | 两次完全相同的对话。 | `is_duplicate: true`，不产生新资产，仅更新旧资产的 `updated_at`。 |
+| **矿脉演进** | 第一天讨论 Bug，第二天讨论其根因。 | 自动合并，描述从“现象”演进为“现象+根因”。 |
+
+---
+
+## 5. 负面约束 (Forbidden Behaviors)
+
+- **禁止强行合并低相似度资产**：若 `SemanticTopic` 差异较大，严禁合并，宁可保留两条。
+- **禁止丢失原始溯源**：`RefinedAsset` 必须保留所有参与合并的 `sessionId`。
+- **禁止自动覆盖已审批资产**：若用户已 Review 并批准了资产 A，精炼环节不得在未提醒的情况下直接修改 A。
+
+---
+
+## 6. 待决问题 (Open Questions)
+
+- **多 Distiller 交叉精炼**：例如 `Pitfall` 和 `Issue` 是否可以合并？
+- **初判**：Stage 1 仅支持同类型 Distiller 内部精炼，跨类精炼留待 M6。
+- **向量检索依赖**：当资产规模 > 1000 时，是否需要引入向量检索来辅助 `Identity Matching`？
+- **初判**：当前基于 `Topic_Key` 的字符串匹配足以支撑 v0.6.0。
