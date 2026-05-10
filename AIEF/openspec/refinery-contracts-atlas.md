@@ -6,7 +6,20 @@
 
 ---
 
-## 1. 资产状态图 (State Map)
+## 1. CP-00: Asset Ledger Schema (资产账目契约)
+
+### 1.1 核心字段
+| 字段 | 类型 | 说明 |
+| :--- | :--- | :--- |
+| `asset_id` | UUID | 账面唯一 ID |
+| `identity_hash` | SHA256 | 演进主键 (Repo:Type:Entity) |
+| `status` | enum | `DRAFT` -> `VERIFIED` -> `REFINED` |
+| `provenance` | array | 原始溯源 (SessionRefs) |
+| `audit_log` | array | 加工履历 |
+
+---
+
+## 2. 资产状态图 (State Map)
 
 ```text
 RAW (Archive) 
