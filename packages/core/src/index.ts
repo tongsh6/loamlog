@@ -670,6 +670,42 @@ export interface DistillerRunInput {
   config?: Record<string, unknown>;
   distiller_id?: string;
   distiller_version?: string;
+  /**
+   * Physically processed session data from the Normalizer workshop.
+   * Optional for backward compatibility with distillers that prefer RAW access.
+   */
+  normalized?: NormalizedSession;
+}
+
+export interface NormalizedSession {
+  header: {
+    sessionId: string;
+    repoPath?: string;
+    vcsContext?: { branch: string; commitSha: string };
+    provider: string;
+    capturedAt: string;
+  };
+  messages: NormalizedMessage[];
+  stats: {
+    totalMessages: number;
+    toolCalls: number;
+    rawChars: number;
+    normalizedChars: number;
+  };
+}
+
+export interface NormalizedMessage {
+  id: string;
+  role: "user" | "assistant" | "system";
+  timestamp: string;
+  text: string;
+  reasoning?: string;
+  tools?: Array<{
+    name: string;
+    summary: string;
+    /** Metadata for future deep-tracing back to RAW logs */
+    source_index?: { raw_size: number };
+  }>;
 }
 
 export interface PrefilterResult {

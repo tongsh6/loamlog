@@ -15,12 +15,12 @@ const factory: DistillerFactory = () =>
     version: "0.1.0",
     supported_types: ["issue-draft"],
 
-    async run({ artifactStore, llm }: DistillerRunInput): Promise<DistillResultDraft<IssueDraftPayload>[]> {
+    async run({ artifactStore, llm, normalized }: DistillerRunInput): Promise<DistillResultDraft<IssueDraftPayload>[]> {
       const results: DistillResultDraft<IssueDraftPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
         try {
-          const prompt = buildPrompt(artifact);
+          const prompt = buildPrompt(normalized ?? artifact);
           const { provider, model } = llm.route({
             task: "extract",
             budget: "cheap",

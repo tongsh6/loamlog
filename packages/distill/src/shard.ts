@@ -1,5 +1,6 @@
 import { DEFAULT_MAX_MESSAGE_CHARS, type DistillResultDraft, type DistillerPlugin, type DistillerRunInput, type SessionArtifact } from "@loamlog/core";
 import { createSingleArtifactStore } from "./query.js";
+import { normalizeSession } from "./normalizer.js";
 
 /** Format overhead per message: `[message-id] (role) ` ≈ 50 chars + newline */
 const MESSAGE_FORMAT_OVERHEAD = 60;
@@ -222,6 +223,7 @@ export async function mapDistiller(
             config: distillerRunInput.config,
             distiller_id: distillerRunInput.distiller_id,
             distiller_version: distillerRunInput.distiller_version,
+            normalized: normalizeSession(shard),
           });
         } catch (error) {
           console.error(

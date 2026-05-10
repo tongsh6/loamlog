@@ -28,6 +28,7 @@ import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.
 import { detectLanguage, withLanguageRouter, withSessionAugmentation } from "./augment.js";
 import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
+import { normalizeSession } from "./normalizer.js";
 
 export interface DistillDAGOptions {
 	distiller: DistillerPlugin;
@@ -154,6 +155,7 @@ async function processSessionArtifact(
 			config: ctx.distillerConfig,
 			distiller_id: ctx.distiller.id,
 			distiller_version: ctx.distiller.version,
+			normalized: normalizeSession(artifact),
 		});
 		return { drafts };
 	} catch (error) {
