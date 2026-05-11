@@ -1,5 +1,9 @@
 # Current Focus Spec
 
+> **当前优先级权威来源**：[`docs/project-ledger.md` §0 当前门禁](../../docs/project-ledger.md#0-当前门禁-product-gate--2026-05-11)
+>
+> 简明结论：**代码闭环 ✅ / 产品闭环 ❌**。当前最高优先级 = 完成 Dogfooding Phase 2 Go/No-Go 决策。**MCP / FTS5 / 增量冶炼在产品门禁通过前不启动。**
+
 ## Purpose
 
 Keep the repository aligned around the current product question without pretending unfinished features already exist.
