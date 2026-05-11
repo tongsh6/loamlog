@@ -30,6 +30,7 @@ import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
 import { normalizeSession } from "./normalizer.js";
 import { GitGapVerifier } from "./verifier/git-gap.js";
+import { TopicAggregator } from "./aggregator.js";
 
 export interface DistillDAGOptions {
 	distiller: DistillerPlugin;
@@ -293,75 +294,8 @@ export function createDistillDAG(
 					}
 				}
 
-				// Deliver to sinks immediately for this session
-				if (sessionResults.length > 0) {
-					const approvedResults: DistillResult[] = [];
-					const auditRecords: AuditRecord[] = [];
-
-					// In a streaming session, the last N items in acc belong to this session
-					const startIndex = acc.results.length - sessionResults.length;
-
-					for (let i = 0; i < sessionResults.length; i++) {
-						const r = acc.results[startIndex + i];
-						const candidate = acc.candidates[startIndex + i];
-						const quality = acc.qualityReports[startIndex + i];
-
-						if (candidate && quality) {
-							const decision = {
-								candidate_id: candidate.id,
-								decision: "approved" as const,
-								decided_at: new Date().toISOString(),
-							};
-
-							if (allowExt === undefined) {
-								approvedResults.push(r);
-							} else {
-								const approval = approvalGate(candidate, decision, quality, { allowExternal: allowExt });
-								if (approval.allowed) {
-									approvedResults.push(r);
-								} else if (approval.requires_explicit_optin && hasFileSink) {
-									approvedResults.push(r);
-								} else {
-									ctx.logger.warn(`[dag:distill] blocked: ${r.id} reason=${approval.reason}`);
-								}
-							}
-
-							const audit = createAuditRecord(candidate, decision, quality, sinks[0]?.plugin.id ?? "unknown");
-							auditRecords.push(audit);
-						} else {
-							approvedResults.push(r);
-						}
-					}
-
-					if (approvedResults.length > 0) {
-						const sinkReports = await runSinks(sinks, approvedResults, {
-							dump_dir: dumpDir,
-							repo: artifact.context.repo ?? effectiveRepo,
-						});
-
-						let delivered = 0;
-						for (const report of sinkReports) {
-							delivered += report.delivered;
-							for (const e of report.errors ?? []) {
-								acc.errors.push({ message: e.error });
-							}
-						}
-
-						const finalAudit = auditRecords.map((a, idx) => {
-							if (idx < delivered) return auditRecordDelivered(a);
-							return auditRecordFailed(a, `delivery failed: ${sinkReports[idx]?.errors?.[0]?.error ?? "unknown"}`);
-						});
-
-						await writeAuditRecords(dumpDir, artifact.context.repo ?? effectiveRepo, finalAudit);
-						acc.audit.push(...finalAudit);
-					}
-
-						totalProduced += approvedResults.length;
-					}
-
-				// Persist state after each session so progress survives crashes
+				// Persist processed marker so progress survives crashes
 				acc.artifactsProcessed += 1;
-				await state.set("fingerprints", knownFingerprints);
 				await state.markProcessed(distiller.id, [artifact.meta.session_id]);
 
 				writeProcessJournal(dumpDir, artifact.context.repo ?? effectiveRepo, {
@@ -382,35 +316,118 @@ export function createDistillDAG(
 
 			acc.skipped = totalSkipped;
 			ctx.logger.info(
-				`[dag:distill] produced=${totalProduced} skipped=${totalSkipped} sessions=${processedSessionIds.size}`,
+				`[dag:distill] verified_candidates=${acc.candidates.length} skipped=${totalSkipped} sessions=${processedSessionIds.size}`,
 			);
-			return { processedSessionIds: [...processedSessionIds], produced: totalProduced, skipped: totalSkipped };
+			return { processedSessionIds: [...processedSessionIds], produced: acc.candidates.length, skipped: totalSkipped };
 		},
 	};
 
-	// ── Node 3: process_results (thin shell — processing moved to Node 2) ──
+	// ── Node 3: process_results (Workshop 3: Refining / Aggregation) ──
 	const processNode: PipelineNode<
 		Record<string, unknown>,
-		{ results: number; skipped: number; errors: number }
+		{ refined: number; skipped: number; errors: number }
 	> = {
 		id: "process_results",
 		async run(_input, ctx) {
+			const aggregator = new TopicAggregator();
+			const refinedAssets = await aggregator.refine(acc.candidates, {
+				repo_path: repo ?? "_global",
+				logger: ctx.logger,
+			});
+
+			// Update accumulator results with refined data
+			acc.results = refinedAssets.map(asset => ({
+				...asset,
+				// Ensure compatibility with legacy Sinks
+				id: asset.id,
+				fingerprint: asset.fingerprint,
+			} as DistillResult));
+
 			ctx.logger.info(
-				`[dag:process] results=${acc.results.length} skipped=${acc.skipped} errors=${acc.errors.length} qualityPassed=${acc.qualityReports.filter((q) => q.passed).length}/${acc.qualityReports.length}`,
+				`[dag:refine] input=${acc.candidates.length} refined=${acc.results.length} qualityPassed=${acc.qualityReports.filter((q) => q.passed).length}/${acc.qualityReports.length}`,
 			);
-			return { results: acc.results.length, skipped: acc.skipped, errors: acc.errors.length };
+			return { refined: acc.results.length, skipped: acc.skipped, errors: acc.errors.length };
 		},
 	};
 
-	// ── Node 4: deliver_to_sinks (thin shell — delivery moved to Node 2) ──
+	// ── Node 4: deliver_to_sinks (Sink Workshop) ──
 	const sinkNode: PipelineNode<
 		Record<string, unknown>,
 		{ delivered: number; audit: number }
 	> = {
 		id: "deliver_to_sinks",
 		async run(_input, ctx) {
-			ctx.logger.info(`[dag:sink] delivered=${acc.results.length} audit=${acc.audit.length}`);
-			return { delivered: acc.results.length, audit: acc.audit.length };
+			if (acc.results.length === 0) {
+				return { delivered: 0, audit: 0 };
+			}
+
+			const effectiveRepo = repo ?? "_global";
+			const knownFingerprints = (await state.get<Record<string, true>>("fingerprints")) ?? {};
+			const allowExt = options.allowExternal;
+			const hasFileSink = sinks.some((s) => s.plugin.id === "@loamlog/sink-file");
+
+			const approvedResults: DistillResult[] = [];
+			const auditRecords: AuditRecord[] = [];
+
+			for (let i = 0; i < acc.results.length; i++) {
+				const r = acc.results[i];
+				const candidate = acc.candidates.find(c => c.id === r.id) || acc.candidates[i]; // Fallback to index if ID changed during aggregation
+				const quality = acc.qualityReports.find(q => q.name === "has_evidence") || acc.qualityReports[i];
+
+				const decision = {
+					candidate_id: candidate.id,
+					decision: "approved" as const,
+					decided_at: new Date().toISOString(),
+				};
+
+				if (allowExt === undefined) {
+					approvedResults.push(r);
+				} else {
+					const approval = approvalGate(candidate, decision, quality, { allowExternal: allowExt });
+					if (approval.allowed) {
+						approvedResults.push(r);
+					} else if (approval.requires_explicit_optin && hasFileSink) {
+						approvedResults.push(r);
+					} else {
+						ctx.logger.warn(`[dag:sink] blocked: ${r.id} reason=${approval.reason}`);
+					}
+				}
+
+				const audit = createAuditRecord(candidate, decision, quality, sinks[0]?.plugin.id ?? "unknown");
+				auditRecords.push(audit);
+			}
+
+			if (approvedResults.length > 0) {
+				const sinkReports = await runSinks(sinks, approvedResults, {
+					dump_dir: dumpDir,
+					repo: effectiveRepo,
+				});
+
+				let deliveredCount = 0;
+				for (const report of sinkReports) {
+					deliveredCount += report.delivered;
+					for (const e of report.errors ?? []) {
+						acc.errors.push({ message: e.error });
+					}
+				}
+
+				const finalAudit = auditRecords.map((a, idx) => {
+					if (idx < deliveredCount) return auditRecordDelivered(a);
+					return auditRecordFailed(a, `delivery failed: ${sinkReports[idx]?.errors?.[0]?.error ?? "unknown"}`);
+				});
+
+				await writeAuditRecords(dumpDir, effectiveRepo, finalAudit);
+				acc.audit.push(...finalAudit);
+
+				// Only now persist fingerprints for published assets
+				for (const r of approvedResults) {
+					knownFingerprints[r.fingerprint] = true;
+				}
+				await state.set("fingerprints", knownFingerprints);
+			}
+
+			ctx.logger.info(`[dag:sink] delivered=${approvedResults.length} audit=${acc.audit.length}`);
+			return { delivered: approvedResults.length, audit: acc.audit.length };
 		},
 	};
 

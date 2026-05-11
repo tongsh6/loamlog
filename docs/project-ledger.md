@@ -11,11 +11,12 @@
 
 | 车间 (工序) | 状态 | 关键组件/证据 | 当前缺口 |
 | :--- | :--- | :--- | :--- |
-| **破碎 (Normalizer)** | **开发中** | `AIEF/openspec/session-normalizer.md` | 尚未集成进 `distill` 主引擎。 |
-| **选矿 (Distiller)** | **已闭环** | `packages/distill`, `issue-draft` V1 | 输出含杂质，缺乏上下文。 |
-| **冶炼 (Verifier)** | **缺失** | 仅有 `static-scan-gate.md` 计划 | 缺乏将 AI 猜想与磁盘事实对齐的逻辑。 |
-| **精炼 (Aggregator)** | **缺失** | 仅在 `current-focus.md` 中提及 | 无法处理跨会话的信号合并。 |
-| **储运 (Sink)** | **已闭环** | `packages/sinks/github`, `notion` | 缺乏验证证据的自动挂载。 |
+| **破碎 (Normalizer)** | ✅ **已闭环** | `packages/distill/src/normalizer.ts` | 物理层降噪已集成 (VS-01)。 |
+| **选矿 (Distiller)** | ✅ **已闭环** | `packages/distill`, `issue-draft` | 核心信号提取稳定。 |
+| **冶炼 (Verifier)** | ✅ **已闭环 (P0)** | `packages/distill/src/verifier/git-gap.ts` | 实现状态对账已通 (VS-02)。 |
+| **精炼 (Aggregator)** | ✅ **已闭环** | `packages/distill/src/aggregator.ts` | 跨会话聚合与去重已通 (VS-03)。 |
+| **储运 (Sink)** | ✅ **已闭环** | `packages/distill/src/dag-runner.ts` (Node 4) | 交付管道已重构为批次交付模式。 |
+
 
 ---
 

@@ -361,6 +361,29 @@ export interface VerifiedAsset extends AssetCandidate {
   verification: VerificationReport;
 }
 
+export interface RefinedAsset extends VerifiedAsset {
+  /** Global identity hash across sessions: SHA256(Repo:Distiller:Topic) */
+  identity_hash: string;
+  /** List of all original session IDs that contributed to this refined asset */
+  contributing_sessions: string[];
+  /** Flag indicating if this asset was merged with others during the run */
+  is_merged: boolean;
+  /** Iterative version of the asset (e.g. 1, 2, 3...) */
+  version: number;
+}
+
+export interface AggregatorContext {
+  repo_path: string;
+  logger: Logger;
+}
+
+export interface AggregatorPlugin {
+  id: string;
+  name: string;
+  /** Refine a batch of verified assets, returning a deduplicated and merged list */
+  refine(assets: VerifiedAsset[], ctx: AggregatorContext): Promise<RefinedAsset[]>;
+}
+
 export interface VerifierContext {
   repoPath: string;
   capturedAt: string;
