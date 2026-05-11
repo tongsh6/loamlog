@@ -52,6 +52,10 @@ export interface DistillDAGOptions {
 	session_ids?: string[];
 	/** Allow delivery to external sinks (e.g. GitHub). Default: false. */
 	allowExternal?: boolean;
+	/** Stop after this many sessions are pulled from the queue. */
+	maxSessions?: number;
+	/** Skip sessions whose serialized size in bytes exceeds this threshold. */
+	skipLargerThan?: number;
 }
 
 export interface DistillDAGResult {
@@ -221,6 +225,41 @@ export function createDistillDAG(
 			const evidenceRegistry = new TemporalEvidenceRegistry(dumpDir);
 
 			for await (const artifact of artifactStore.getUnprocessed(distiller.id)) {
+				// Hard cap: stop accepting new sessions once maxSessions reached
+				if (
+					options.maxSessions !== undefined &&
+					processedSessionIds.size >= options.maxSessions
+				) {
+					ctx.logger.info(
+						`[dag:distill] max-sessions cap reached: ${options.maxSessions}`,
+					);
+					break;
+				}
+
+				// Skip oversized sessions before any LLM call (saves time + tokens)
+				if (options.skipLargerThan !== undefined) {
+					const approxBytes = JSON.stringify(artifact).length;
+					if (approxBytes > options.skipLargerThan) {
+						ctx.logger.warn(
+							`[dag:distill] skipping oversized session ${artifact.meta.session_id} (${approxBytes} > ${options.skipLargerThan} bytes)`,
+						);
+						writeProcessJournal(dumpDir, artifact.context.repo ?? effectiveRepo, {
+							session_id: artifact.meta.session_id,
+							distiller_id: distiller.id,
+							processed_at: new Date().toISOString(),
+							status: "prefiltered",
+							drafts_count: 0,
+							error_message: `oversize: ${approxBytes} bytes > --skip-larger-than ${options.skipLargerThan}`,
+						}).catch((err) => {
+							ctx.logger.warn(
+								`[dag:journal] write failed: ${err instanceof Error ? err.message : String(err)}`,
+							);
+						});
+						await state.markProcessed(distiller.id, [artifact.meta.session_id]);
+						continue;
+					}
+				}
+
 				processedSessionIds.add(artifact.meta.session_id);
 				progressCount += 1;
 				if (progressCount % 10 === 0) {
@@ -359,18 +398,25 @@ export function createDistillDAG(
 		id: "process_results",
 		async run(_input, ctx) {
 			const aggregator = new TopicAggregator();
-			const refinedAssets = await aggregator.refine(acc.candidates, {
+			// All candidates in acc are smelted (verification assigned in run_distiller),
+			// so casting to VerifiedAsset[] is safe; filter as belt-and-braces.
+			const verifiedCandidates = acc.candidates.filter(
+				(c): c is import("@loamlog/core").VerifiedAsset => c.verification !== undefined,
+			);
+			const refinedAssets = await aggregator.refine(verifiedCandidates, {
 				repo_path: repo ?? "_global",
 				logger: ctx.logger,
 			});
 
 			// Update accumulator results with refined data
-			acc.results = refinedAssets.map(asset => ({
+			acc.results = refinedAssets.map((asset) => ({
 				...asset,
-				// Ensure compatibility with legacy Sinks
-				id: asset.id,
-				fingerprint: asset.fingerprint,
-			} as DistillResult));
+				// Required by DistillResult but not present on RefinedAsset
+				distiller_version: distiller.version,
+				type: asset.candidate_type,
+				// EvidenceSpan[] -> DistillEvidence[] best-effort (legacy sink path)
+				evidence: asset.evidence as unknown as DistillResult["evidence"],
+			} as unknown as DistillResult));
 
 			ctx.logger.info(
 				`[dag:refine] input=${acc.candidates.length} refined=${acc.results.length} qualityPassed=${acc.qualityReports.filter((q) => q.passed).length}/${acc.qualityReports.length}`,
@@ -401,7 +447,8 @@ export function createDistillDAG(
 			for (let i = 0; i < acc.results.length; i++) {
 				const r = acc.results[i];
 				const candidate = acc.candidates.find(c => c.id === r.id) || acc.candidates[i]; // Fallback to index if ID changed during aggregation
-				const quality = acc.qualityReports.find(q => q.name === "has_evidence") || acc.qualityReports[i];
+				// QualityReport has no `name` — match by index (parallel to candidates)
+				const quality = acc.qualityReports[i] ?? acc.qualityReports[acc.qualityReports.length - 1];
 
 				const decision = {
 					candidate_id: candidate.id,
