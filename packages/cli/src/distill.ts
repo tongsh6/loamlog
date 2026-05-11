@@ -22,6 +22,10 @@ interface DistillArgs {
   dryRun?: boolean;
   dag?: boolean;
   legacy?: boolean;
+  /** Stop processing after this many sessions are pulled from the queue. */
+  maxSessions?: number;
+  /** Skip sessions whose serialized size in bytes exceeds this threshold. */
+  skipLargerThan?: number;
 }
 
 type PluginSpec = string | { plugin: string; config: Record<string, unknown> };
@@ -103,6 +107,8 @@ export function parseArgs(args: string[]): DistillArgs {
     dryRun: args.includes("--dry-run"),
     dag: args.includes("--dag"),
     legacy: args.includes("--legacy"),
+    maxSessions: parseOptionalInt(getArg(args, "--max-sessions"), "--max-sessions"),
+    skipLargerThan: parseOptionalInt(getArg(args, "--skip-larger-than"), "--skip-larger-than"),
   };
 }
 
@@ -454,6 +460,8 @@ async function runDistillWithDAG(
       contextWindow,
       since: parsed.since,
       until: parsed.until,
+      maxSessions: parsed.maxSessions,
+      skipLargerThan: parsed.skipLargerThan,
     });
 
     totalProcessed += result.artifactsProcessed;

@@ -50,6 +50,28 @@ describe("distill cli helpers", () => {
     assert.equal(parsed.legacy, true);
   });
 
+  test("parseArgs reads --max-sessions and --skip-larger-than", () => {
+    const parsed = parseArgs([
+      "--max-sessions",
+      "20",
+      "--skip-larger-than",
+      "500000",
+    ]);
+    assert.equal(parsed.maxSessions, 20);
+    assert.equal(parsed.skipLargerThan, 500000);
+  });
+
+  test("parseArgs rejects non-positive --max-sessions", () => {
+    assert.throws(() => parseArgs(["--max-sessions", "0"]));
+    assert.throws(() => parseArgs(["--max-sessions", "abc"]));
+  });
+
+  test("parseArgs leaves --max-sessions unset by default", () => {
+    const parsed = parseArgs([]);
+    assert.equal(parsed.maxSessions, undefined);
+    assert.equal(parsed.skipLargerThan, undefined);
+  });
+
   test("applyLlmOverride moves selected provider to highest priority", () => {
     const next = applyLlmOverride(
       {
