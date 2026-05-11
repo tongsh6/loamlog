@@ -224,11 +224,14 @@ export function createDistillDAG(
 			const assetStore = new LocalAssetStore(dumpDir, effectiveRepo, ctx.logger);
 			const evidenceRegistry = new TemporalEvidenceRegistry(dumpDir);
 
-			for await (const artifact of artifactStore.getUnprocessed(distiller.id)) {
-				// Hard cap: stop accepting new sessions once maxSessions reached
+			let llmProcessedCount = 0;
+				for await (const artifact of artifactStore.getUnprocessed(distiller.id)) {
+				// Hard cap: stop accepting new sessions once maxSessions reached.
+				// Counts sessions that actually reach (or completed) the LLM stage —
+				// prefilter/oversize skips do not count toward the cap.
 				if (
 					options.maxSessions !== undefined &&
-					processedSessionIds.size >= options.maxSessions
+					llmProcessedCount >= options.maxSessions
 				) {
 					ctx.logger.info(
 						`[dag:distill] max-sessions cap reached: ${options.maxSessions}`,
@@ -293,6 +296,7 @@ export function createDistillDAG(
 					contextWindow: options.contextWindow,
 					artifactStore,
 				});
+				llmProcessedCount += 1;
 
 				// ── Per-session processing (validate → dedup → deliver) ──
 				const sessionResults: DistillResult[] = [];
