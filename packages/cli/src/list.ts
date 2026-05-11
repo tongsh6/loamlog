@@ -2,6 +2,9 @@ import type { Dirent } from "node:fs";
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
 import { readArchiveIndex, type ArchiveIndexEntry } from "@loamlog/archive";
+import { renderCardMarkdown } from "./show.js";
+
+type OutputFormat = "table" | "json" | "md";
 
 interface ListOptions {
   dumpDir: string;
@@ -11,7 +14,7 @@ interface ListOptions {
   pending?: boolean;
   scan?: boolean;
   limit: number;
-  json: boolean;
+  format: OutputFormat;
 }
 
 interface ScanReportSummary {
@@ -40,6 +43,10 @@ interface DistillResultSummary {
   confidence: number;
   distiller_id: string;
   repo: string;
+  /** Full record (only populated when --format md is requested). */
+  full?: unknown;
+  filePath?: string;
+  status?: string;
 }
 
 interface JournalStats {
@@ -384,6 +391,7 @@ async function listDistillResults(
           title?: string;
           confidence?: number;
           distiller_id?: string;
+          [k: string]: unknown;
         };
         try {
           parsed = JSON.parse(text) as typeof parsed;
@@ -395,6 +403,7 @@ async function listDistillResults(
           continue;
         }
 
+        const includeFull = opts.format === "md" || opts.format === "json";
         results.push({
           id: parsed.id,
           type: typeof parsed.type === "string" ? parsed.type : "unknown",
@@ -406,6 +415,9 @@ async function listDistillResults(
               ? parsed.distiller_id
               : "unknown",
           repo: repoDir,
+          full: includeFull ? parsed : undefined,
+          filePath: includeFull ? filePath : undefined,
+          status: includeFull ? typeDir : undefined,
         });
       }
     }
@@ -520,7 +532,21 @@ function formatTable(headers: string[], rows: string[][]): string {
 
 export async function runListCommand(args: string[]): Promise<void> {
   const scan = args.includes("--scan");
+  const formatRaw = getArg(args, "--format");
   const json = args.includes("--json");
+
+  let format: OutputFormat;
+  if (formatRaw) {
+    if (formatRaw !== "table" && formatRaw !== "json" && formatRaw !== "md") {
+      console.error(`Error: invalid --format value: ${formatRaw} (allowed: table, json, md)`);
+      process.exitCode = 1;
+      return;
+    }
+    format = formatRaw;
+  } else {
+    format = json ? "json" : "table";
+  }
+
   const limitRaw = getArg(args, "--limit");
   const limit = limitRaw ? Number.parseInt(limitRaw, 10) : 20;
 
@@ -532,11 +558,16 @@ export async function runListCommand(args: string[]): Promise<void> {
 
   // --scan reads from project directory, does not require LOAM_DUMP_DIR
   if (scan) {
-    const opts: ListOptions = { dumpDir: "", limit, json, scan: true };
+    const opts: ListOptions = { dumpDir: "", limit, format, scan: true };
     const reports = await listScanReports(opts);
 
-    if (json) {
+    if (format === "json") {
       console.log(JSON.stringify(reports, null, 2));
+      return;
+    }
+    if (format === "md") {
+      console.error("Error: --format md is only available with --distill");
+      process.exitCode = 1;
       return;
     }
 
@@ -582,15 +613,38 @@ export async function runListCommand(args: string[]): Promise<void> {
     pending,
     scan,
     limit,
-    json,
+    format,
   };
 
   if (distill) {
     const results = await listDistillResults(dumpDir, opts);
     const journal = await readJournalStats(dumpDir, repo);
 
-    if (json) {
+    if (format === "json") {
       console.log(JSON.stringify({ results, journal }, null, 2));
+      return;
+    }
+
+    if (format === "md") {
+      console.log(`# Loam distill — ${results.length} ${pending ? "pending" : "all"} results\n`);
+      console.log(
+        `> Processed ${journal.total} sessions · produced ${journal.produced} · no-signal ${journal.no_signal} · errors ${journal.error}\n`,
+      );
+      console.log("---\n");
+      for (const r of results) {
+        if (!r.full) continue;
+        console.log(
+          renderCardMarkdown(
+            r.full as Parameters<typeof renderCardMarkdown>[0],
+            {
+              filePath: r.filePath ?? "?",
+              repo: r.repo,
+              status: r.status ?? "?",
+            },
+          ),
+        );
+        console.log("---\n");
+      }
       return;
     }
 
@@ -631,8 +685,13 @@ export async function runListCommand(args: string[]): Promise<void> {
   } else {
     const sessions = await listSessions(dumpDir, opts);
 
-    if (json) {
+    if (format === "json") {
       console.log(JSON.stringify(sessions, null, 2));
+      return;
+    }
+    if (format === "md") {
+      console.error("Error: --format md is only available with --distill");
+      process.exitCode = 1;
       return;
     }
 

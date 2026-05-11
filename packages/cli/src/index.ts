@@ -4,6 +4,7 @@ import { runCaptureCommand } from "./capture.js";
 import { runDistillCommand, loadAICConfig, buildRuntimeDistillConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
 import { runListCommand } from "./list.js";
 import { runReviewCommand } from "./review.js";
+import { runShowCommand } from "./show.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
 import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loamlog/provider-claude-code";
 import { pullCodexSessionFromFilePath, startCodexWatcher } from "@loamlog/provider-codex";
@@ -15,9 +16,10 @@ function printUsage(): void {
   console.log("Usage: loam <command> [options]");
   console.log("Commands:");
   console.log("  daemon  [--port <number>] [--dump-dir <path>] [--providers <list>] [--backfill-on-startup]");
-  console.log("  list    [--repo <name>] [--since <duration>] [--distill] [--pending] [--scan] [--limit <n>] [--json] [--dump-dir <path>]");
+  console.log("  list    [--repo <name>] [--since <duration>] [--distill] [--pending] [--scan] [--limit <n>] [--format table|json|md] [--json] [--dump-dir <path>]");
+  console.log("  show    <id-prefix> [--dump-dir <path>] [--json]");
   console.log("  capture [--provider <name>] [--session-id <id>] [--dump-dir <path>] [--trigger <name>]");
-  console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>] [--legacy]");
+  console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>] [--legacy] [--max-sessions <n>] [--skip-larger-than <bytes>]");
   console.log("  review  [--list] [--repo <name>] [--approve <id> | --reject <id>] [--dump-dir <path>] [--limit <n>]");
 }
 
@@ -79,6 +81,11 @@ async function main(): Promise<void> {
 
   if (command === "list") {
     await runListCommand(args);
+    return;
+  }
+
+  if (command === "show") {
+    await runShowCommand(args);
     return;
   }
 
