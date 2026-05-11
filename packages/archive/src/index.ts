@@ -338,3 +338,6 @@ async function countJsonFiles(dir: string): Promise<number> {
     return 0;
   }
 }
+
+// ── Evidence registry ──
+export { TemporalEvidenceRegistry } from "./registry.js";

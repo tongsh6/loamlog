@@ -33,9 +33,7 @@ import { GitGapVerifier } from "./verifier/git-gap.js";
 import { LogWeaveVerifier } from "./verifier/log-weave.js";
 import { TopicAggregator } from "./aggregator.js";
 import { LocalAssetStore } from "./store.js";
-// Temporal fix for cross-package import in local dev
-// @ts-ignore
-import { TemporalEvidenceRegistry } from "../../archive/src/registry.js";
+import { TemporalEvidenceRegistry } from "@loamlog/archive";
 
 export interface DistillDAGOptions {
 	distiller: DistillerPlugin;
