@@ -396,6 +396,23 @@ export interface VerifierPlugin {
   verify(candidate: AssetCandidate, ctx: VerifierContext): Promise<VerificationReport>;
 }
 
+/** Central ledger for managing evolving engineering assets */
+export interface AssetStore {
+  repoPath: string;
+  get(assetId: string): Promise<VerifiedAsset | undefined>;
+  update(assetId: string, update: Partial<VerifiedAsset>): Promise<void>;
+  list(filter?: { status?: string[] }): Promise<VerifiedAsset[]>;
+}
+
+/** Searchable fact-grid for cross-session evidence weaving */
+export interface GlobalEvidenceRegistry {
+  findPhysicalEvidence(query: {
+    time_window: [string, string];
+    entities: string[];
+    keywords: string[];
+  }): Promise<EvidenceSpan[]>;
+}
+
 export type DecisionType = "approved" | "rejected" | "deferred";
 
 export interface Decision {

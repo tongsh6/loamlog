@@ -38,11 +38,13 @@ export class TopicAggregator implements AggregatorPlugin {
 
   private computeIdentityHash(asset: VerifiedAsset, repo: string): string {
     // Identity = Repo + Distiller + TopicKey
-    // TopicKey is prioritized: Title -> Tags -> Entities
-    const topicKey = asset.title.toLowerCase().replace(/\s+/g, "-") || 
-                     asset.tags.sort().join("|") || 
-                     "default-topic";
+    // Normalize topic key: remove punctuation, lowercase, and limit length to prevent hash pollution
+    const topicKey = (asset.title || asset.candidate_type)
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-")
+      .slice(0, 50);
     
+    // Explicitly include repo and distiller_id to prevent cross-project or cross-tool collisions
     return createHash("sha256")
       .update(`${repo}:${asset.distiller_id}:${topicKey}`)
       .digest("hex");
@@ -87,6 +89,9 @@ export class TopicAggregator implements AggregatorPlugin {
     // Verification status inheritance (Verified > Unverified)
     const isVerified = group.some(a => a.verification.status === "verified");
 
+    // Versioning: in a stateless batch run, we start at 1 or use existing version if available in payload
+    const maxVersion = Math.max(...group.map(a => (a as any).version || 1));
+
     return {
       ...primary,
       confidence: finalConfidence,
@@ -99,7 +104,7 @@ export class TopicAggregator implements AggregatorPlugin {
       identity_hash: hash,
       contributing_sessions: Array.from(sessions),
       is_merged: true,
-      version: 1
+      version: group.length > 1 ? maxVersion : maxVersion
     };
   }
 }

@@ -43,12 +43,30 @@ export class GitGapVerifier implements VerifierPlugin {
         if (!isGit) return { path: p, status: "pending" }; // Assume pending if not a git repo but file exists
 
         try {
-          // Check for commits since the session was captured
+          // L1: Existence check (already done via fs.access)
+          
+          // L2: Content Verification (Mining-aligned: Anchoring)
+          let snippet: string | undefined;
+          try {
+            const content = await fs.readFile(fullPath, "utf8");
+            const lines = content.split("\n");
+            // Take a small snippet around the beginning for verification proof
+            snippet = lines.slice(0, 10).join("\n");
+          } catch (readErr) {
+            ctx.logger.warn(`[verifier:smelt] could not read file content for ${p}: ${readErr}`);
+          }
+
+          // L3: Git Context Check
           const { stdout } = await execAsync(
             `git log -1 --since="${capturedAt}" --pretty=format:"%H" -- "${p}"`,
             { cwd: repoPath }
           );
-          return { path: p, status: stdout ? "implemented" : "pending" };
+          
+          return { 
+            path: p, 
+            status: stdout ? "implemented" : "pending",
+            snippet
+          };
         } catch (err) {
           ctx.logger.warn(`[verifier:git] failed to check log for ${p}: ${err}`);
           return { path: p, status: "pending" }; // Fallback to pending on error

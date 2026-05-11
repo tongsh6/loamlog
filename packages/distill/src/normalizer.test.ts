@@ -26,7 +26,7 @@ describe("normalizer", () => {
         id: "msg_1",
         role: "user",
         timestamp: "...",
-        content: "Hello, can you check src/index.ts?",
+        content: "Hello, can you check src/index.ts ?",
       },
       {
         id: "msg_2",

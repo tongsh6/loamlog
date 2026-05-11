@@ -86,9 +86,18 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
 
   // Basic Topic Fingerprinting: use repo and the first few unique file paths mentioned
   const entities = new Set<string>();
+  // Refined regex: strictly match standard file paths with common extensions, 
+  // preventing greedy matching that causes ReDoS.
+  const pathRegex = /(?:^|\s)([\w\-\.\/]+\.(?:ts|js|py|go|rs|md|json|tsx|jsx|html|css))(?:\s|$)/g;
+  
   for (const m of messages) {
-    const paths = m.text.match(/[a-zA-Z0-9_\-\.\/]+\.(ts|js|py|go|rs|md|json)/g);
-    if (paths) for (const p of paths) entities.add(p);
+    let match: RegExpExecArray | null;
+    // Reset index for global regex
+    pathRegex.lastIndex = 0;
+    while ((match = pathRegex.exec(m.text)) !== null) {
+      if (match[1]) entities.add(match[1]);
+      if (entities.size > 10) break; // Optimization: stop after 10 entities
+    }
   }
   const fingerprint = Array.from(entities).slice(0, 3).sort().join("|");
 
