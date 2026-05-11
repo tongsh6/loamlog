@@ -31,6 +31,6 @@
 
 ## 4. 下一步 Top 3 优先级
 
-1. **[P0] 炼矿中心管道集成**：在 `distill` 引擎中插入 `Normalizer` 接口，强制降噪。
-2. **[P0] 冶炼环节 (Verifier) 原型**：实现第一个能去磁盘检查文件是否存在的 Verifier。
-3. **[P1] 跨会话标识符定义**：定义如何判断两个 Session 属于同一“矿脉”。
+1. **[P0] MCP 接入层实现 (Issue #24)**：将炼好的“纯金属”资产通过 MCP 协议暴露给 Claude/Cursor 等工具。
+2. **[P1] 工业级检索优化 (FTS5)**：将 `TemporalEvidenceRegistry` 升级为基于 SQLite FTS5 的高性能实现。
+3. **[P1] 增量冶炼逻辑**：优化 DAG，仅针对 `AssetStore` 中未验证或有新信号的资产执行冶炼。
