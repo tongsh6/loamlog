@@ -30,7 +30,12 @@ import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
 import { normalizeSession } from "./normalizer.js";
 import { GitGapVerifier } from "./verifier/git-gap.js";
+import { LogWeaveVerifier } from "./verifier/log-weave.js";
 import { TopicAggregator } from "./aggregator.js";
+import { LocalAssetStore } from "./store.js";
+// Temporal fix for cross-package import in local dev
+// @ts-ignore
+import { TemporalEvidenceRegistry } from "../../archive/src/registry.js";
 
 export interface DistillDAGOptions {
 	distiller: DistillerPlugin;
@@ -211,6 +216,10 @@ export function createDistillDAG(
 			const allowExt = options.allowExternal;
 			const hasFileSink = sinks.some((s) => s.plugin.id === "@loamlog/sink-file");
 
+			// ── Initialize Industrial Base (VS-04) ──
+			const assetStore = new LocalAssetStore(dumpDir, effectiveRepo, ctx.logger);
+			const evidenceRegistry = new TemporalEvidenceRegistry(dumpDir);
+
 			for await (const artifact of artifactStore.getUnprocessed(distiller.id)) {
 				processedSessionIds.add(artifact.meta.session_id);
 				progressCount += 1;
@@ -265,22 +274,42 @@ export function createDistillDAG(
 
 					knownFingerprints[r.fingerprint] = true;
 					const candidate = mapDistillResultToCandidate(r);
-					const verifier = new GitGapVerifier();
-					const verification = await verifier.verify(candidate, {
-						repoPath: artifact.context.worktree,
-						capturedAt: artifact.meta.captured_at,
-						logger: ctx.logger,
-					});
-					candidate.verification = verification;
+
+					// ── Layer 2: Smelting (Verification) ──
+					// Combine multiple verifiers (Mining-aligned)
+					const gitVerifier = new GitGapVerifier();
+					const logVerifier = new LogWeaveVerifier(evidenceRegistry);
+
+					const [gitRep, logRep] = await Promise.all([
+						gitVerifier.verify(candidate, {
+							repoPath: artifact.context.worktree,
+							capturedAt: artifact.meta.captured_at,
+							logger: ctx.logger,
+						}),
+						logVerifier.verify(candidate, {
+							repoPath: artifact.context.worktree,
+							capturedAt: artifact.meta.captured_at,
+							logger: ctx.logger,
+						})
+					]);
+
+					// Merge Verification Results: Verified wins over Unverified
+					candidate.verification = logRep.status === "verified" ? logRep : gitRep;
+					if (logRep.status === "verified") {
+						candidate.verification.mining_score = Math.max(gitRep.mining_score, logRep.mining_score);
+					}
 
 					const quality = validateAssetCandidate(candidate);
 
 					// Block only rejected (hallucinated) or archived (already done) assets.
-					if (verification.status === "rejected" || verification.status === "archived") {
+					if (candidate.verification.status === "rejected" || candidate.verification.status === "archived") {
 						totalSkipped += 1;
-						ctx.logger.info(`[dag:smelt] asset skipped: ${candidate.id} status=${verification.status} reason=${verification.reason}`);
+						ctx.logger.info(`[dag:smelt] asset skipped: ${candidate.id} status=${candidate.verification.status} reason=${candidate.verification.reason}`);
 						continue;
 					}
+
+					// Persist to AssetStore (Industrial Base)
+					await assetStore.update(candidate.id, candidate);
 
 					sessionResults.push(r);
 					acc.results.push(r);

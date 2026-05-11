@@ -13,9 +13,10 @@
 | :--- | :--- | :--- | :--- |
 | **破碎 (Normalizer)** | ✅ **已闭环** | `packages/distill/src/normalizer.ts` | 物理层降噪已集成 (VS-01)。 |
 | **选矿 (Distiller)** | ✅ **已闭环** | `packages/distill`, `issue-draft` | 核心信号提取稳定。 |
-| **冶炼 (Verifier)** | ✅ **已闭环 (P0)** | `packages/distill/src/verifier/git-gap.ts` | 实现状态对账已通 (VS-02)。 |
+| **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1)** | `git-gap.ts`, `log-weave.ts` | 实现状态对账与证据织补已通 (VS-02/04)。 |
 | **精炼 (Aggregator)** | ✅ **已闭环** | `packages/distill/src/aggregator.ts` | 跨会话聚合与去重已通 (VS-03)。 |
-| **储运 (Sink)** | ✅ **已闭环** | `packages/distill/src/dag-runner.ts` (Node 4) | 交付管道已重构为批次交付模式。 |
+| **底座 (Foundations)** | ✅ **已落成** | `store.ts`, `registry.ts` | 持久化账本与全局索引已上线 (VS-04)。 |
+| **储运 (Sink)** | ✅ **已闭环** | `packages/distill/src/dag-runner.ts` | 交付管道已重构为批次交付模式。 |
 
 
 ---
