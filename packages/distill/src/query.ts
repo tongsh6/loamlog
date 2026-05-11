@@ -86,7 +86,13 @@ export function createArtifactQueryClient(
     async *getUnprocessed(targetDistillerId: string, limit?: number): AsyncIterable<SessionArtifact> {
       const effectiveDistillerId = targetDistillerId || distillerId;
       const processed = await getProcessedMap(stateKV, effectiveDistillerId);
-      let yielded = 0;
+
+      // A session_id can have many snapshot files (the daemon writes a new
+      // snapshot every few minutes during a session). Only the most recent
+      // snapshot carries the full message history; earlier ones are prefixes.
+      // Coalesce by session_id, keeping the snapshot with the latest
+      // captured_at, then yield the deduped artifacts in iteration order.
+      const latest = new Map<string, SessionArtifact>();
 
       for await (const snapshot of readSessionSnapshots({
         dumpDir,
@@ -99,7 +105,15 @@ export function createArtifactQueryClient(
         if (processed[artifact.meta.session_id]) {
           continue;
         }
+        const existing = latest.get(artifact.meta.session_id);
+        if (existing && existing.meta.captured_at >= artifact.meta.captured_at) {
+          continue;
+        }
+        latest.set(artifact.meta.session_id, artifact);
+      }
 
+      let yielded = 0;
+      for (const artifact of latest.values()) {
         yield artifact;
         yielded += 1;
         if (limit !== undefined && yielded >= limit) {
