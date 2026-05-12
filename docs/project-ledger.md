@@ -35,7 +35,8 @@
 **战略重点**：用真实数据证明「本机多 AI 工具会话 → 结构化证据 → 多类型本地资产草稿 → 人工 review → 后续复用」这条主流程的持续价值。
 
 **最新 tag**：`v0.7.0`（2026-05-11，45 commits since v0.6.0）
-**GitHub tracking issue**：[#56](https://github.com/tongsh6/loamlog/issues/56)
+**已完成 tracking issue**：[#56](https://github.com/tongsh6/loamlog/issues/56)
+**当前 tracking issue**：[#57](https://github.com/tongsh6/loamlog/issues/57)
 
 ---
 
@@ -97,7 +98,8 @@
 - `/tmp/loam-phase2-batch6-review.md` — 10 张卡人类可读视图（`loam list --distill --pending --format md` 输出）
 
 ### GitHub
-- **追踪 issue**：[#56](https://github.com/tongsh6/loamlog/issues/56) — Refinery Pipeline 全量 audit trail
+- **已完成追踪 issue**：[#56](https://github.com/tongsh6/loamlog/issues/56) — Refinery Pipeline 全量 audit trail，2026-05-12 已关闭
+- **当前追踪 issue**：[#57](https://github.com/tongsh6/loamlog/issues/57) — Cross-Asset Dogfooding
 - **tag**：`v0.7.0`（annotated，已推 origin）
 - **CHANGELOG**：`CHANGELOG.md` §[0.7.0]
 
@@ -158,12 +160,13 @@
 | **#19** | Signal Extraction Design | 被 distill 引擎 + Verifier 工序覆盖 | `verifier/git-gap.ts`, `verifier/log-weave.ts`, noise filter v0.2 |
 | **#21** | 下一阶段 P0/P1/P2 规划 | P0 项全部 close（#22/#23/#26） | Sanitization / Trigger / Evaluation 均已实现 |
 | **#46** | 里程碑进度报告 | 自动生成报告的数据源已失真，2026-05-12 以 `not planned` 关闭 | GitHub 评论已说明后续报告必须改读 ledger + active tracking issue |
+| **#56** | Refinery Pipeline — VS-01~04 + dogfooding Phase 1/2 | Phase 2 final、#46 关闭、下一阶段 #57 tracking 均已落位，2026-05-12 以 `completed` 关闭 | `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, #57 |
 
 ### 6.2 当前主线
 
 | # | 标题 | 用途 |
 | :--- | :--- | :--- |
-| **#56** | [Tracking] Refinery Pipeline — VS-01~04 + dogfooding Phase 1/2 | 已更新 Phase 2 Go / 中文评分结果 / 下一阶段 Cross-Asset Dogfooding 方向 |
+| **#57** | [Tracking] Cross-Asset Dogfooding — knowledge-card + issue-draft + prd-draft/pitfall-card | 验证 Loamlog 能否从真实本地 AI 会话中稳定产出多种可复用资产 |
 
 ### 6.3 下一阶段候选
 
@@ -192,10 +195,10 @@
 
 ### 6.6 待新建 tracking
 
-建议新增：
+已新增：
 
 ```text
-[Tracking] Cross-Asset Dogfooding — knowledge-card + issue-draft + prd-draft/pitfall-card
+#57 [Tracking] Cross-Asset Dogfooding — knowledge-card + issue-draft + prd-draft/pitfall-card
 ```
 
 验收重点：
