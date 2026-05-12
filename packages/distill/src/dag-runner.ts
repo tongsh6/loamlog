@@ -25,7 +25,7 @@ import type { DistillerStateKV } from "@loamlog/core";
 import { injectMetadata } from "./metadata.js";
 import { runSinks, type ConfiguredSink } from "./sink-runner.js";
 import { mapDistiller, reduceResults, shouldShard, shardSession } from "./shard.js";
-import { detectLanguage, withLanguageRouter, withSessionAugmentation } from "./augment.js";
+import { resolveOutputLanguage, type OutputLanguage, withLanguageRouter, withSessionAugmentation } from "./augment.js";
 import { writeProcessJournal } from "./journal.js";
 import { createSingleArtifactStore } from "./query.js";
 import { normalizeSession } from "./normalizer.js";
@@ -54,6 +54,8 @@ export interface DistillDAGOptions {
 	maxSessions?: number;
 	/** Skip sessions whose serialized size in bytes exceeds this threshold. */
 	skipLargerThan?: number;
+	/** User-facing output language. `auto` follows source-session detection. */
+	outputLanguage?: OutputLanguage;
 }
 
 export interface DistillDAGResult {
@@ -103,6 +105,7 @@ interface ProcessSessionContext {
 	repo: string;
 	contextWindow?: number;
 	artifactStore: ReturnType<typeof createArtifactQueryClient>;
+	outputLanguage?: OutputLanguage;
 }
 
 /**
@@ -116,8 +119,9 @@ async function processSessionArtifact(
 	artifact: SessionArtifact,
 	ctx: ProcessSessionContext,
 ): Promise<ProcessSessionResult> {
-	const lang = detectLanguage(artifact);
-	const langRouter = withLanguageRouter(ctx.llm, lang);
+	const explicitLanguage = ctx.outputLanguage !== undefined && ctx.outputLanguage !== "auto";
+	const lang = resolveOutputLanguage(artifact, ctx.outputLanguage ?? "auto");
+	const langRouter = withLanguageRouter(ctx.llm, lang, { explicit: explicitLanguage });
 
 	const augmentRouter: LLMRouter = {
 		route(request) {
@@ -210,13 +214,10 @@ export function createDistillDAG(
 		async run(_input, ctx) {
 			const processedSessionIds = new Set<string>();
 			let progressCount = 0;
-			let totalProduced = 0;
 			let totalSkipped = 0;
 			const effectiveRepo = repo ?? "_global";
 			const knownFingerprints =
 				(await state.get<Record<string, true>>("fingerprints")) ?? {};
-			const allowExt = options.allowExternal;
-			const hasFileSink = sinks.some((s) => s.plugin.id === "@loamlog/sink-file");
 
 			// ── Initialize Industrial Base (VS-04) ──
 			const assetStore = new LocalAssetStore(dumpDir, effectiveRepo, ctx.logger);
@@ -291,9 +292,10 @@ export function createDistillDAG(
 					distillerConfig,
 					dumpDir,
 					repo: effectiveRepo,
-					contextWindow: options.contextWindow,
-					artifactStore,
-				});
+						contextWindow: options.contextWindow,
+						artifactStore,
+						outputLanguage: options.outputLanguage,
+					});
 				llmProcessedCount += 1;
 
 				// ── Per-session processing (validate → dedup → deliver) ──

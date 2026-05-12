@@ -1002,6 +1002,10 @@ export interface AICConfig {
     providers: string[];
     debounce_ms?: number;
   };
+  distill?: {
+    /** User-facing output language for distill assets. `auto` follows source-session detection. */
+    output_language?: "auto" | "zh" | "en";
+  };
   distillers: Array<string | { plugin: string; config: Record<string, unknown> }>;
   sinks?: Array<string | { plugin: string; config: Record<string, unknown> }>;
   llm?: {

@@ -18,7 +18,12 @@ const SYSTEM_PROMPT = [
 	"- title: specific, searchable title (max 80 chars)",
 	"- category: one of [pattern, insight, configuration, decision, tooling, debugging, performance, security]",
 	"- summary: one sentence that captures the actionable takeaway",
-	"- detail: 2-4 sentences with concrete specifics, file names, config keys, or code patterns",
+	"- scenario: when this knowledge applies; include the concrete project/tool situation",
+	"- problem: the symptom, failure mode, or decision pressure",
+	"- cause: why the problem happens or why the pattern matters",
+	"- solution: the concrete practice, command, config, or code pattern",
+	"- boundary: when NOT to apply it, caveats, or verification requirements",
+	"- detail: 2-4 sentences combining scenario, problem, cause, solution, and boundary",
 	"- tags: array of lowercase keywords",
 	"- confidence: 0.0-1.0 (use 0.8+ for clearly reusable insights, 0.5-0.7 for tentative ones)",
 	"- evidence_refs: array of {message_id, excerpt}",
@@ -33,6 +38,11 @@ interface KnowledgeCardPayload {
 	title: string;
 	category: string;
 	summary: string;
+	scenario: string;
+	problem: string;
+	cause: string;
+	solution: string;
+	boundary: string;
 	detail: string;
 	tags: string[];
 }
@@ -71,6 +81,8 @@ function buildPrompt(artifact: SessionArtifact): string {
 	return [
 		`session_id: ${artifact.meta.session_id}`,
 		"Extract ONLY genuinely reusable knowledge from this session. Most sessions have none — return [] if nothing qualifies.",
+		"Every card must stand alone without reading the original session.",
+		"Reject thin cards that only state a practice without scenario, problem, cause, solution, and boundary.",
 		"",
 		"messages:",
 		...chunks,
@@ -78,7 +90,7 @@ function buildPrompt(artifact: SessionArtifact): string {
 		"Categories: pattern | insight | configuration | decision | tooling | debugging | performance | security",
 		"",
 		"Output format (return [] if no reusable knowledge found):",
-		'[{"title":"...","category":"...","summary":"...","detail":"...","tags":["..."],"confidence":0.0,"evidence_refs":[{"message_id":"...","excerpt":"..."}]}]',
+		'[{"title":"...","category":"...","summary":"...","scenario":"...","problem":"...","cause":"...","solution":"...","boundary":"...","detail":"...","tags":["..."],"confidence":0.0,"evidence_refs":[{"message_id":"...","excerpt":"..."}]}]',
 	].join("\n");
 }
 
@@ -89,7 +101,7 @@ function extractJsonPayload(content: string): string {
 	}
 
 	const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-	if (fenced && fenced[1]) {
+	if (fenced?.[1]) {
 		return fenced[1].trim();
 	}
 
@@ -125,16 +137,27 @@ function parseKnowledgeCards(content: string): LlmKnowledgeCard[] {
 	return parsed.filter((item): item is LlmKnowledgeCard => {
 		if (!item || typeof item !== "object") return false;
 		const c = item as Record<string, unknown>;
-		return (
-			typeof c.title === "string" &&
-			c.title.trim().length >= MIN_TITLE_LENGTH &&
-			typeof c.summary === "string" &&
-			c.summary.trim().length > 0 &&
-			typeof c.detail === "string" &&
-			c.detail.trim().length >= MIN_DETAIL_LENGTH &&
-			(typeof c.confidence !== "number" || c.confidence >= MIN_CONFIDENCE)
-		);
-	});
+			return (
+				typeof c.title === "string" &&
+				c.title.trim().length >= MIN_TITLE_LENGTH &&
+				typeof c.summary === "string" &&
+				c.summary.trim().length > 0 &&
+				hasReusableContext(c) &&
+				typeof c.detail === "string" &&
+				c.detail.trim().length >= MIN_DETAIL_LENGTH &&
+				(typeof c.confidence !== "number" || c.confidence >= MIN_CONFIDENCE)
+			);
+		});
+}
+
+function hasReusableContext(card: Record<string, unknown>): boolean {
+	for (const field of ["scenario", "problem", "cause", "solution", "boundary"]) {
+		const value = card[field];
+		if (typeof value !== "string" || value.trim().length < 12) {
+			return false;
+		}
+	}
+	return true;
 }
 
 function findMessage(artifact: SessionArtifact, messageId: string): SessionArtifact["messages"][number] | undefined {
@@ -223,13 +246,18 @@ const factory: DistillerFactory = () =>
 						? [...new Set(card.tags.map((t) => String(t).toLowerCase().trim()).filter(Boolean))]
 						: [category];
 
-					const payload: KnowledgeCardPayload = {
-						title: card.title.trim(),
-						category,
-						summary: card.summary.trim(),
-						detail: (card.detail ?? card.summary).trim(),
-						tags,
-					};
+						const payload: KnowledgeCardPayload = {
+							title: card.title.trim(),
+							category,
+							summary: card.summary.trim(),
+							scenario: card.scenario.trim(),
+							problem: card.problem.trim(),
+							cause: card.cause.trim(),
+							solution: card.solution.trim(),
+							boundary: card.boundary.trim(),
+							detail: (card.detail ?? card.summary).trim(),
+							tags,
+						};
 
 					results.push({
 						type: "knowledge-card",

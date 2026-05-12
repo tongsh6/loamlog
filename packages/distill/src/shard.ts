@@ -253,48 +253,77 @@ function titleSimilarity(a: string, b: string): number {
   return intersection / union;
 }
 
-import { TopicAggregator } from "./aggregator.js";
-
 /**
  * Merge distill results from multiple shards of the same session.
- * Delegates to TopicAggregator for consistent refinery-aligned merging.
  */
 export function reduceResults(
   shardResults: import("@loamlog/core").DistillResultDraft[][],
 ): import("@loamlog/core").DistillResultDraft[] {
-  // 1. Flatten results
   const allDrafts = shardResults.flat();
   if (allDrafts.length === 0) return [];
 
-  // 2. Wrap drafts as candidates for the aggregator
-  // (In a real industrial run, these would be VerifiedAssets, 
-  // but for Shard internal reduction we treat them as Candidate-level)
-  const candidates: import("@loamlog/core").VerifiedAsset[] = allDrafts.map((d, idx) => ({
-    ...d,
-    id: `shard-result-${idx}`,
-    fingerprint: `shard-fp-${idx}`,
-    candidate_type: d.type,
-    distiller_id: "@loamlog/shard-internal",
-    signals: [],
-    payload: d.payload as Record<string, unknown>,
-    verification: { 
-      status: "unverified", 
-      mining_score: 0.5, 
-      evidence: { dialogue_ref: d.evidence[0]?.message_id ?? "unknown" },
-      verified_at: new Date().toISOString()
-    }
-  }));
+  const groups: import("@loamlog/core").DistillResultDraft[][] = [];
 
-  // 3. Execute aggregation
-  const aggregator = new TopicAggregator();
-  // We use a dummy repo path for internal shard reduction
-  const refined = (aggregator as any).refine(candidates, { repo_path: "shard-internal", logger: console });
-  
-  // Note: refine is async in the spec, but TopicAggregator is currently sync.
-  // To keep Shard compatible with its existing sync signature, we'll need to handle it.
-  // FIXED: TopicAggregator.refine is async, so we'll wrap it or use a sync variant if possible.
-  // For VS-03, we'll keep shard's sync signature but align the logic.
-  
-  // Actually, let's keep shard.ts minimal and fix the duplication.
-  return allDrafts; // Temporary fallback: Shard reduction is now less critical as global aggregator handles it.
+  for (const draft of allDrafts) {
+    const existing = groups.find((group) => sameShardTopic(group[0], draft));
+    if (existing) {
+      existing.push(draft);
+    } else {
+      groups.push([draft]);
+    }
+  }
+
+  const reduced: import("@loamlog/core").DistillResultDraft[] = [];
+  for (const group of groups) {
+    const sorted = [...group].sort((a, b) => b.confidence - a.confidence);
+    const primary = sorted[0];
+
+    if (group.length === 1 && primary.confidence < 0.5) {
+      continue;
+    }
+
+    const evidence = mergeEvidence(group);
+    const tags = Array.from(new Set(group.flatMap((d) => d.tags)));
+    const confidence = group.length > 1
+      ? Math.min(1, Math.round((primary.confidence + 0.1) * 10) / 10)
+      : primary.confidence;
+
+    reduced.push({
+      ...primary,
+      confidence,
+      tags,
+      evidence,
+    });
+  }
+
+  return reduced;
+}
+
+function sameShardTopic(
+  a: import("@loamlog/core").DistillResultDraft,
+  b: import("@loamlog/core").DistillResultDraft,
+): boolean {
+  const aMessageIds = new Set(a.evidence.map((e) => e.message_id));
+  if (b.evidence.some((e) => aMessageIds.has(e.message_id))) {
+    return true;
+  }
+  return titleSimilarity(a.title, b.title) >= TITLE_SIMILARITY_THRESHOLD;
+}
+
+function mergeEvidence(
+  group: import("@loamlog/core").DistillResultDraft[],
+): import("@loamlog/core").DistillEvidenceDraft[] {
+  const seen = new Set<string>();
+  const merged: import("@loamlog/core").DistillEvidenceDraft[] = [];
+
+  for (const draft of group) {
+    for (const evidence of draft.evidence) {
+      const key = `${evidence.session_id}:${evidence.message_id}:${evidence.excerpt}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(evidence);
+    }
+  }
+
+  return merged;
 }

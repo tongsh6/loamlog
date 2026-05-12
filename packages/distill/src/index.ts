@@ -7,3 +7,4 @@ export { createArtifactQueryClient, createSingleArtifactStore, snapshotToArtifac
 export { createDistillEngine } from "./engine.js";
 export { createDistillDAG, runDistillDAG } from "./dag-runner.js";
 export type { DistillDAGOptions, DistillDAGResult } from "./dag-runner.js";
+export type { OutputLanguage } from "./augment.js";

@@ -9,6 +9,7 @@ import { createLLMRouter } from "@loamlog/distill";
 import { createDistillerStateKV } from "@loamlog/distill";
 import { createArtifactQueryClient } from "@loamlog/distill";
 import { runDistillDAG, type ConfiguredSink } from "@loamlog/distill";
+import type { OutputLanguage } from "@loamlog/distill";
 
 interface DistillArgs {
   distiller?: string;
@@ -26,6 +27,8 @@ interface DistillArgs {
   maxSessions?: number;
   /** Skip sessions whose serialized size in bytes exceeds this threshold. */
   skipLargerThan?: number;
+  /** User-facing output language for distill assets. */
+  outputLanguage?: OutputLanguage;
 }
 
 type PluginSpec = string | { plugin: string; config: Record<string, unknown> };
@@ -94,6 +97,16 @@ function parseOptionalInt(value: string | undefined, flagName: string): number |
   return parsed;
 }
 
+function parseOutputLanguage(value: string | undefined): OutputLanguage | undefined {
+  if (value === undefined) {
+    return undefined;
+  }
+  if (value === "auto" || value === "zh" || value === "en") {
+    return value;
+  }
+  throw new Error(`invalid --output-language value: ${value}; expected auto, zh, or en`);
+}
+
 export function parseArgs(args: string[]): DistillArgs {
   return {
     distiller: getArg(args, "--distiller"),
@@ -109,6 +122,7 @@ export function parseArgs(args: string[]): DistillArgs {
     legacy: args.includes("--legacy"),
     maxSessions: parseOptionalInt(getArg(args, "--max-sessions"), "--max-sessions"),
     skipLargerThan: parseOptionalInt(getArg(args, "--skip-larger-than"), "--skip-larger-than"),
+    outputLanguage: parseOutputLanguage(getArg(args, "--output-language")),
   };
 }
 
@@ -462,6 +476,7 @@ async function runDistillWithDAG(
       until: parsed.until,
       maxSessions: parsed.maxSessions,
       skipLargerThan: parsed.skipLargerThan,
+      outputLanguage: parsed.outputLanguage ?? config.distill?.output_language,
     });
 
     totalProcessed += result.artifactsProcessed;

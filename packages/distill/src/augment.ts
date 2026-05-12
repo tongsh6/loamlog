@@ -18,6 +18,7 @@ const CJK_PATTERN = /[一-鿿㐀-䶿豈-﫿]/g;
 const LATIN_PATTERN = /[a-zA-Z]{3,}/g;
 
 export type DetectedLanguage = "zh" | "en" | "mixed";
+export type OutputLanguage = "auto" | "zh" | "en";
 
 /**
  * Detect the primary human language of a session by sampling user messages.
@@ -44,9 +45,20 @@ export function detectLanguage(artifact: SessionArtifact): DetectedLanguage {
 }
 
 const LANGUAGE_INSTRUCTION_ZH =
-  "IMPORTANT: The source conversation is primarily in Chinese. Output ALL content (title, summary, description) in Chinese. Do NOT translate to English.";
+  "IMPORTANT: Output ALL user-facing content in Chinese, including title, summary, and detail. Keep code identifiers, commands, file paths, API names, package names, and JSON enum values in their original English form when appropriate.";
 
-const LANGUAGE_INSTRUCTION_EN = ""; // default, no instruction needed
+const LANGUAGE_INSTRUCTION_EN =
+  "IMPORTANT: Output ALL user-facing content in English, including title, summary, and detail. Keep code identifiers, commands, file paths, API names, package names, and JSON enum values unchanged when appropriate.";
+
+export function resolveOutputLanguage(
+  artifact: SessionArtifact,
+  preference: OutputLanguage = "auto",
+): DetectedLanguage {
+  if (preference === "zh" || preference === "en") {
+    return preference;
+  }
+  return detectLanguage(artifact);
+}
 
 /**
  * Wrap an LLMProvider to auto-inject language instruction into the system
@@ -56,9 +68,14 @@ const LANGUAGE_INSTRUCTION_EN = ""; // default, no instruction needed
 export function withLanguageInstruction(
   provider: LLMProvider,
   language: DetectedLanguage,
+  options: { explicit?: boolean } = {},
 ): LLMProvider {
   const instruction =
-    language === "zh" ? LANGUAGE_INSTRUCTION_ZH : LANGUAGE_INSTRUCTION_EN;
+    language === "zh"
+      ? LANGUAGE_INSTRUCTION_ZH
+      : language === "en" && options.explicit
+        ? LANGUAGE_INSTRUCTION_EN
+        : "";
 
   if (!instruction) return provider; // no wrapping needed
 
@@ -66,7 +83,7 @@ export function withLanguageInstruction(
     ...provider,
     async complete(input) {
       // Prepend language instruction to the system message
-      const messages = input.messages.map((m, i) => {
+      const messages = input.messages.map((m) => {
         if (m.role === "system") {
           return { ...m, content: `${instruction}\n\n${m.content}` };
         }
@@ -86,13 +103,21 @@ export function withLanguageInstruction(
  * Wrappers are cached per language to avoid creating new closures for every
  * session when most sessions share the same language.
  */
-const languageRouterCache = new Map<DetectedLanguage, LLMRouter>();
+const languageRouterCache = new WeakMap<LLMRouter, Map<string, LLMRouter>>();
 
 export function withLanguageRouter(
   router: LLMRouter,
   language: DetectedLanguage,
+  options: { explicit?: boolean } = {},
 ): LLMRouter {
-  const cached = languageRouterCache.get(language);
+  const cacheKey = `${language}:${options.explicit ? "explicit" : "auto"}`;
+  let routerCache = languageRouterCache.get(router);
+  if (!routerCache) {
+    routerCache = new Map();
+    languageRouterCache.set(router, routerCache);
+  }
+
+  const cached = routerCache.get(cacheKey);
   if (cached) return cached;
 
   const wrapped: LLMRouter = {
@@ -100,7 +125,7 @@ export function withLanguageRouter(
       const result = router.route(request);
       return {
         ...result,
-        provider: withLanguageInstruction(result.provider, language),
+        provider: withLanguageInstruction(result.provider, language, options),
       };
     },
     getDefaultContextWindow() {
@@ -108,7 +133,7 @@ export function withLanguageRouter(
     },
   };
 
-  languageRouterCache.set(language, wrapped);
+  routerCache.set(cacheKey, wrapped);
   return wrapped;
 }
 

@@ -61,6 +61,15 @@ describe("distill cli helpers", () => {
     assert.equal(parsed.skipLargerThan, 500000);
   });
 
+  test("parseArgs reads --output-language", () => {
+    const parsed = parseArgs(["--output-language", "zh"]);
+    assert.equal(parsed.outputLanguage, "zh");
+  });
+
+  test("parseArgs rejects invalid --output-language", () => {
+    assert.throws(() => parseArgs(["--output-language", "fr"]));
+  });
+
   test("parseArgs rejects non-positive --max-sessions", () => {
     assert.throws(() => parseArgs(["--max-sessions", "0"]));
     assert.throws(() => parseArgs(["--max-sessions", "abc"]));
