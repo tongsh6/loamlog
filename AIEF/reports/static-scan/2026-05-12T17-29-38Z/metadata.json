@@ -1,0 +1,57 @@
+{
+  "runId": "2026-05-12T17-29-38Z",
+  "startedAt": "2026-05-12T17:29:38.459Z",
+  "completedAt": "2026-05-12T17:29:51.754Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "e56ea2c",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "ocs/project-ledger.md",
+      "ackages/cli/src/distill.ts",
+      "ackages/distill/src/augment.test.ts",
+      "ackages/distill/src/augment.ts",
+      "ackages/distill/src/shard.test.ts",
+      "ackages/distill/src/shard.ts",
+      "ackages/distillers/knowledge-card/src/index.test.ts",
+      "ackages/distillers/knowledge-card/src/index.ts"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

@@ -7,7 +7,7 @@
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
 | **代码编译** | ✅ 通过 | `pnpm -r build` 全部 22 个包成功 |
-| **测试** | ✅ 203 pass / 0 fail | 2026-05-12 复跑 `pnpm run test` 全绿；`packages/distill/src/shard.test.ts > reduceResults` 回归已修复 |
+| **测试** | ✅ 207 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 output-language / evidence refs / 中文标题去重回归测试 |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` |
 | **产品闭环** | ✅ **Phase 2 Go / 小批量复验通过** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5，总分 41/50，平均 4.1/5 |
 | **下一道门禁** | Cross-Asset Dogfooding | 不再只验证 knowledge-card；下一批要同时覆盖 `knowledge-card`、`issue-draft`，并选择 `prd-draft` 或 `pitfall-card` 做第三条资产线 |
@@ -21,11 +21,17 @@
 - 终版人工评分报告：`AIEF/reports/dogfooding/2026-05-12-validation-phase2-final.md`：6/10 通过，Conditional Go；低分卡暴露前因后果不足、evidence 不支撑、技术解法不严谨、输出语言不符合项目偏好等质量问题
 - 中文复验 review：`AIEF/reports/dogfooding/2026-05-12-validation-phase2-zh-rerun-review.md`：10 张卡逐张人工评分，总分 41/50
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
+- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-12T17-29-38Z`：typescript / biome / pnpm-audit exit 0，blocking 0
 
 ### 0.1 已知缺陷 / 修复状态
 
-- ✅ `packages/distill/src/shard.test.ts > reduceResults`：3 条失败用例已修复（去重 by message_id / 去重 by similar title / drops single-shard low confidence）。2026-05-12 `pnpm run test`：203 pass / 0 fail。
+- ✅ `packages/distill/src/shard.test.ts > reduceResults`：3 条失败用例已修复（去重 by message_id / 去重 by similar title / drops single-shard low confidence），并补充中文标题去重覆盖。2026-05-13 `pnpm run test`：207 pass / 0 fail。
 - `tasks/2026-05-03-issue-draft-v2/progress.md` 与代码不同步：commit `542109f` 已实现 parts data / multi-output / target_repo，但 progress.md 仍写 "Step 1 待开始"。
+
+### 0.2 Review 新发现（2026-05-13）
+
+- ⚠️ **跨资产 evidence fallback 不一致**：`knowledge-card` 已改为无有效 `evidence_refs` 则拒绝；但 `prd-draft` / `pitfall-card` 仍会在 evidence refs 无效时回退到首条 message。影响：Cross-Asset Dogfooding 中可能出现“证据不支撑但仍产出”的资产。处理：不纳入本次 knowledge-card 小修；#57 执行前应统一 distiller evidence 策略并补测试。
+- ⚠️ **DAG 聚合后 result / candidate / quality 对齐风险**：`process_results` 会把 `acc.results` 替换为 refined assets，`deliver_to_sinks` 再用 id 或 index 回找 candidate/quality。聚合合并或改 ID 后可能造成 audit / quality 与输出资产错配。影响：多资产 review / sink 审计可信度。处理：不在本次小修中重构 DAG；应在 #57 或单独 task 中设计稳定的 refined asset lineage 映射。
 
 ---
 
@@ -109,10 +115,10 @@
 
 > 以下顺序基于 §0 当前门禁结论。**MCP / FTS5 / 增量冶炼在产品质量稳定前不启动。**
 
-1. **[P0] 新建 Cross-Asset Dogfooding tracking**
+1. **[P0] 执行 Cross-Asset Dogfooding tracking (#57)**
    - 目标：同时验证 `knowledge-card`、`issue-draft`，并选择 `prd-draft` 或 `pitfall-card` 做第三条资产线
    - 每类资产单独人工评分，避免 knowledge-card 成功掩盖其他资产线失败
-   - 产物：tracking issue + 本地 dogfooding 报告模板 + 明确 Go/No-Go 标准
+   - 产物：本地 dogfooding 报告模板 + 明确 Go/No-Go 标准 + review 结果
 2. **[P1] 用真实新增会话跑多资产样本**
    - 输入优先覆盖 OpenCode / Claude Code / Cursor 等本机 provider 路径
    - 每个结果必须保留 evidence backlinks、review 状态和本地输出
