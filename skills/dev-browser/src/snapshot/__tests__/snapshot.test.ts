@@ -32,10 +32,11 @@ async function setContent(html: string): Promise<void> {
 async function getSnapshot(): Promise<string> {
   const script = getSnapshotScript();
   return await page.evaluate((s: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = globalThis as any;
+    const w = globalThis as typeof globalThis & {
+      __devBrowser_getAISnapshot?: () => string;
+    };
     if (!w.__devBrowser_getAISnapshot) {
-      // eslint-disable-next-line no-eval
+      // biome-ignore lint/security/noGlobalEval: browser test intentionally injects the bundled snapshot script.
       eval(s);
     }
     return w.__devBrowser_getAISnapshot();

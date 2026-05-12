@@ -89,7 +89,12 @@ export class TopicAggregator implements AggregatorPlugin {
       return normalizeTopicTokens(txt);
     });
     const parent = groupArr.map((_, i) => i);
-    const find = (i: number): number => (parent[i] === i ? i : (parent[i] = find(parent[i])));
+    const find = (i: number): number => {
+      if (parent[i] === i) return i;
+      const root = find(parent[i]);
+      parent[i] = root;
+      return root;
+    };
     for (let i = 0; i < groupArr.length; i++) {
       for (let j = i + 1; j < groupArr.length; j++) {
         if (sameTopic(tokenSets[i], tokenSets[j], TopicAggregator.TOPIC_THRESHOLD)) {
@@ -171,7 +176,9 @@ export class TopicAggregator implements AggregatorPlugin {
     const isVerified = group.some(a => a.verification.status === "verified");
 
     // Versioning: in a stateless batch run, we start at 1 or use existing version if available in payload
-    const maxVersion = Math.max(...group.map(a => (a as any).version || 1));
+    const maxVersion = Math.max(
+      ...group.map((a) => ("version" in a && typeof a.version === "number" ? a.version : 1)),
+    );
 
     return {
       ...primary,

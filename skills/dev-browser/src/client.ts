@@ -286,7 +286,7 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
   async function findPageByTargetId(b: Browser, targetId: string): Promise<Page | null> {
     for (const context of b.contexts()) {
       for (const page of context.pages()) {
-        let cdpSession;
+        let cdpSession: Awaited<ReturnType<typeof context.newCDPSession>> | undefined;
         try {
           cdpSession = await context.newCDPSession(page);
           const { targetInfo } = await cdpSession.send("Target.getTargetInfo");
@@ -413,7 +413,7 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const w = globalThis as any;
         if (!w.__devBrowser_getAISnapshot) {
-          // eslint-disable-next-line no-eval
+          // biome-ignore lint/security/noGlobalEval: browser automation intentionally injects the bundled snapshot script.
           eval(script);
         }
         return w.__devBrowser_getAISnapshot();

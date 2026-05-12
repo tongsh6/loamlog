@@ -82,6 +82,7 @@ describe("rule engine", () => {
           type: "signal",
           priority: 10,
           when: { any: [{ tags_includes: "core" }, { role_in: ["owner"] }] },
+          // biome-ignore lint/suspicious/noThenProperty: rule DSL intentionally uses "then" for actions.
           then: { add_signal: "core_related" },
         },
         {
@@ -89,6 +90,7 @@ describe("rule engine", () => {
           type: "filter",
           priority: 5,
           when: { not: { urgency_lte: 0.2 } },
+          // biome-ignore lint/suspicious/noThenProperty: rule DSL intentionally uses "then" for actions.
           then: { drop: false },
         },
       ],

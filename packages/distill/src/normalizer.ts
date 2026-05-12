@@ -39,14 +39,14 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
           reasoningParts.push(part.text);
           rawChars += part.text.length;
           break;
-        case "tool":
+        case "tool": {
           toolCalls++;
           const output = part.output ?? "";
           const error = part.error ?? "";
           rawChars += (part.input ? JSON.stringify(part.input).length : 0) + output.length + error.length;
 
           let summary = "";
-          // L1-L2 Tiered Crushing: 
+          // L1-L2 Tiered Crushing:
           // If it's an error, allow much larger context (up to 5000 chars).
           const isError = !!error || /error|failed|exception/i.test(output);
           const limit = isError ? 5000 : maxToolSummaryChars;
@@ -65,6 +65,7 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
             source_index: { raw_size: output.length + error.length }
           });
           break;
+        }
       }
     }
 
@@ -86,17 +87,18 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
 
   // Basic Topic Fingerprinting: use repo and the first few unique file paths mentioned
   const entities = new Set<string>();
-  // Refined regex: strictly match standard file paths with common extensions, 
+  // Refined regex: strictly match standard file paths with common extensions,
   // preventing greedy matching that causes ReDoS.
   const pathRegex = /(?:^|\s)([\w\-\.\/]+\.(?:ts|js|py|go|rs|md|json|tsx|jsx|html|css))(?:\s|$)/g;
-  
+
   for (const m of messages) {
-    let match: RegExpExecArray | null;
     // Reset index for global regex
     pathRegex.lastIndex = 0;
-    while ((match = pathRegex.exec(m.text)) !== null) {
+    let match = pathRegex.exec(m.text);
+    while (match !== null) {
       if (match[1]) entities.add(match[1]);
       if (entities.size > 10) break; // Optimization: stop after 10 entities
+      match = pathRegex.exec(m.text);
     }
   }
   const fingerprint = Array.from(entities).slice(0, 3).sort().join("|");

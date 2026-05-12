@@ -76,7 +76,7 @@ async function findCardByPrefix(
         try {
           const text = await readFile(filePath, "utf8");
           const record = JSON.parse(text) as DistillResultRecord;
-          if (record.id && record.id.startsWith(idPrefix)) {
+          if (record.id?.startsWith(idPrefix)) {
             matches.push({ record, filePath, repo, status });
           }
         } catch {
@@ -105,7 +105,7 @@ export function renderCardMarkdown(
   const title = record.title ?? record.payload?.title ?? "(untitled)";
   const summary = record.summary ?? record.payload?.summary ?? "";
   const detail = record.payload?.detail;
-  const tags = record.tags && record.tags.length ? record.tags.join(", ") : "—";
+  const tags = record.tags?.length ? record.tags.join(", ") : "—";
   const conf = typeof record.confidence === "number" ? record.confidence.toFixed(2) : "—";
   const category = record.payload?.category ? ` · category: \`${record.payload.category}\`` : "";
   const ver = record.verification;

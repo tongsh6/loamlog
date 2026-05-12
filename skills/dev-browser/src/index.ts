@@ -263,14 +263,18 @@ export async function serve(options: ServeOptions = {}): Promise<DevBrowserServe
   };
 
   // Register handlers
-  signals.forEach((sig) => process.on(sig, signalHandler));
+  signals.forEach((sig) => {
+    process.on(sig, signalHandler);
+  });
   process.on("uncaughtException", errorHandler);
   process.on("unhandledRejection", errorHandler);
   process.on("exit", syncCleanup);
 
   // Helper to remove all handlers
   const removeHandlers = () => {
-    signals.forEach((sig) => process.off(sig, signalHandler));
+    signals.forEach((sig) => {
+      process.off(sig, signalHandler);
+    });
     process.off("uncaughtException", errorHandler);
     process.off("unhandledRejection", errorHandler);
     process.off("exit", syncCleanup);

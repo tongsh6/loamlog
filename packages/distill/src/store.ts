@@ -2,6 +2,18 @@ import { mkdir, readFile, readdir, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { AssetStore, VerifiedAsset, Logger } from "@loamlog/core";
 
+interface StateHistoryEntry {
+  timestamp: string;
+  workshop: string;
+  action: string;
+  prev_status?: string;
+}
+
+interface StoredAsset extends VerifiedAsset {
+  workshop?: string;
+  state_history?: StateHistoryEntry[];
+}
+
 /**
  * File-based implementation of the Refinery Asset Store.
  * Assets are stored as individual JSON files in {dumpDir}/distill/{repo}/assets/{id}.json.
@@ -12,7 +24,7 @@ export class LocalAssetStore implements AssetStore {
   constructor(
     dumpDir: string,
     public repoPath: string,
-    private logger: Logger
+    _logger: Logger
   ) {
     const safeRepo = (repoPath || "_global").replace(/[^a-zA-Z0-9._-]/g, "_");
     this.baseDir = path.join(dumpDir, "distill", safeRepo, "assets");
@@ -36,12 +48,12 @@ export class LocalAssetStore implements AssetStore {
     await this.ensureDir();
     const filePath = path.join(this.baseDir, `${assetId}.json`);
     
-    let current = await this.get(assetId);
+    let current = (await this.get(assetId)) as StoredAsset | undefined;
     
     if (current) {
       // Logic for merging updates and recording state history
       const action = update.verification?.status || "updated";
-      const workshop = (update as any).workshop || "refinery";
+      const workshop = (update as Partial<StoredAsset>).workshop || "refinery";
       
       const historyEntry = {
         timestamp: new Date().toISOString(),
@@ -54,21 +66,19 @@ export class LocalAssetStore implements AssetStore {
         ...current,
         ...update,
         verification: update.verification ?? current.verification,
-        // @ts-ignore - tracking history in payload or a hidden field
-        state_history: [...((current as any).state_history || []), historyEntry]
+        state_history: [...(current.state_history || []), historyEntry]
       };
     } else {
       // New asset ingestion
       current = {
         ...update,
         id: assetId,
-        // @ts-ignore
         state_history: [{
           timestamp: new Date().toISOString(),
           workshop: "ingestion",
           action: "created"
         }]
-      } as VerifiedAsset;
+      } as StoredAsset;
     }
 
     await writeFile(filePath, JSON.stringify(current, null, 2), "utf8");

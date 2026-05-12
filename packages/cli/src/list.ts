@@ -1,5 +1,5 @@
 import type { Dirent } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
 import { readArchiveIndex, type ArchiveIndexEntry } from "@loamlog/archive";
 import { renderCardMarkdown } from "./show.js";
@@ -378,6 +378,17 @@ async function listDistillResults(
         }
 
         const filePath = path.join(resultsDir, fileName);
+        if (sinceTs !== undefined) {
+          try {
+            const fileStat = await stat(filePath);
+            if (fileStat.mtimeMs < sinceTs) {
+              continue;
+            }
+          } catch {
+            continue;
+          }
+        }
+
         let text: string;
         try {
           text = await readFile(filePath, "utf8");

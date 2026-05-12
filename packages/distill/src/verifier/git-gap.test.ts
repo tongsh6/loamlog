@@ -3,7 +3,6 @@ import assert from "node:assert";
 import type { AssetCandidate, VerifierContext } from "@loamlog/core";
 import { GitGapVerifier } from "./git-gap.js";
 import fs from "node:fs/promises";
-import { exec } from "node:child_process";
 
 // Mocking dependencies
 mock.method(fs, "access", async () => Promise.resolve());

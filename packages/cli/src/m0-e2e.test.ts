@@ -60,6 +60,8 @@ async function findFirstJsonFile(dir: string): Promise<string | undefined> {
 describe("M0 flow: plugin -> daemon", () => {
   test("forwards idle event to /capture and daemon prints session id", async () => {
     tempDumpDir = await mkdtemp(path.join(tmpdir(), "loamlog-m1-e2e-"));
+    type PluginClient = Parameters<typeof LoamlogPlugin>[0]["client"];
+    type PluginEventArg = Parameters<Awaited<ReturnType<typeof LoamlogPlugin>>["event"]>[0];
 
     const provider: SessionProvider = {
       id: "opencode",
@@ -123,15 +125,15 @@ describe("M0 flow: plugin -> daemon", () => {
         vcs: {
           get: async () => ({ data: { branch: "main" } }),
         },
-      } as any,
+      } as unknown as PluginClient,
     });
 
     await plugin.event({
       event: {
         type: "session.idle",
         properties: { sessionID: "ses_m0_e2e_001" },
-      } as any,
-    });
+      },
+    } as unknown as PluginEventArg);
 
     if (originalDaemonUrl) {
       process.env.LOAM_DAEMON_URL = originalDaemonUrl;

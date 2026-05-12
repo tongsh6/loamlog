@@ -76,7 +76,7 @@ function extractJsonPayload(content: string): string {
   if (trimmed.startsWith("[") || trimmed.startsWith("{")) return trimmed;
 
   const fenced = trimmed.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
-  if (fenced && fenced[1]) return fenced[1].trim();
+  if (fenced?.[1]) return fenced[1].trim();
 
   return trimmed;
 }
