@@ -1,0 +1,11 @@
+# Top N Fix Results
+
+Compared with previous run. Every selected finding must end with one of: fixed, deferred, false_positive, not_actionable, failed.
+
+| Rank | Status | Handling | Verification |
+|---|---|---|---|
+| 1 | not_actionable | Unexpected any. Specify a different type. | Awaiting verification |
+| 2 | not_actionable | Unsafe use of the @ts-ignore directive found in this comment. | Awaiting verification |
+| 3 | not_actionable | Unexpected any. Specify a different type. | Awaiting verification |
+| 4 | not_actionable | Unsafe use of the @ts-ignore directive found in this comment. | Awaiting verification |
+| 5 | not_actionable | This import is unused. | Awaiting verification |

@@ -1,0 +1,77 @@
+{
+  "runId": "2026-05-12T15-16-54Z",
+  "startedAt": "2026-05-12T15:16:54.121Z",
+  "completedAt": "2026-05-12T15:17:07.524Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "502668c",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "ocs/project-ledger.md",
+      "ackages/cli/src/distill.test.ts",
+      "ackages/cli/src/distill.ts",
+      "ackages/cli/src/list.ts",
+      "ackages/cli/src/m0-e2e.test.ts",
+      "ackages/cli/src/show.ts",
+      "ackages/core/src/index.ts",
+      "ackages/distill/src/aggregator.ts",
+      "ackages/distill/src/augment.ts",
+      "ackages/distill/src/dag-runner.ts",
+      "ackages/distill/src/index.ts",
+      "ackages/distill/src/normalizer.ts",
+      "ackages/distill/src/shard.ts",
+      "ackages/distill/src/store.ts",
+      "ackages/distillers/knowledge-card/src/index.test.ts",
+      "ackages/distillers/knowledge-card/src/index.ts",
+      "ackages/rules/src/index.test.ts",
+      "kills/dev-browser/src/client.ts",
+      "kills/dev-browser/src/index.ts",
+      "kills/dev-browser/src/snapshot/__tests__/snapshot.test.ts",
+      "AIEF/openspec/knowledge-card-quality-and-language.md",
+      "AIEF/reports/dogfooding/2026-05-12-validation-phase2-final.md",
+      "AIEF/reports/static-scan/2026-05-12T15-06-15Z/",
+      "AIEF/reports/static-scan/2026-05-12T15-09-11Z/",
+      "AIEF/reports/static-scan/2026-05-12T15-10-56Z/",
+      "AIEF/reports/static-scan/2026-05-12T15-13-36Z/",
+      "AIEF/reports/static-scan/2026-05-12T15-15-31Z/",
+      "packages/distill/src/augment.test.ts"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}
