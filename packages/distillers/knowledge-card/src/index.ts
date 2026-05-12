@@ -166,12 +166,23 @@ function findMessage(artifact: SessionArtifact, messageId: string): SessionArtif
 
 /** Simple word-overlap similarity for dedup. */
 function titleSimilarity(a: string, b: string): number {
-	const wordsA = new Set(a.toLowerCase().split(/\s+/).filter(Boolean));
-	const wordsB = new Set(b.toLowerCase().split(/\s+/).filter(Boolean));
+	const wordsA = new Set(titleTokens(a));
+	const wordsB = new Set(titleTokens(b));
 	if (wordsA.size === 0 || wordsB.size === 0) return 0;
 	const intersection = [...wordsA].filter((w) => wordsB.has(w)).length;
 	const union = new Set([...wordsA, ...wordsB]).size;
 	return intersection / union;
+}
+
+function titleTokens(title: string): string[] {
+	const normalized = title.toLowerCase().trim();
+	const latin = normalized.match(/[a-z0-9]+/g) ?? [];
+	const cjkChars = Array.from(normalized.matchAll(/[\p{Script=Han}]/gu), (m) => m[0]);
+	const cjkBigrams: string[] = [];
+	for (let i = 0; i < cjkChars.length - 1; i++) {
+		cjkBigrams.push(`${cjkChars[i]}${cjkChars[i + 1]}`);
+	}
+	return [...latin, ...cjkChars, ...cjkBigrams];
 }
 
 function dedupeByTitle(cards: LlmKnowledgeCard[]): LlmKnowledgeCard[] {
@@ -236,9 +247,7 @@ const factory: DistillerFactory = () =>
 						.filter((item): item is DistillResultDraft["evidence"][number] => Boolean(item));
 
 					if (evidence.length === 0) {
-						const fallback = artifact.messages[0];
-						if (!fallback) continue;
-						evidence.push(createEvidence(artifact, fallback, fallback.content ?? card.title));
+						continue;
 					}
 
 					const category = normalizeCategory(card.category);

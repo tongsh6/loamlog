@@ -82,15 +82,19 @@ export function withLanguageInstruction(
   return {
     ...provider,
     async complete(input) {
-      // Prepend language instruction to the system message
+      let injected = false;
       const messages = input.messages.map((m) => {
         if (m.role === "system") {
+          injected = true;
           return { ...m, content: `${instruction}\n\n${m.content}` };
         }
         return m;
       });
 
-      return provider.complete({ ...input, messages });
+      return provider.complete({
+        ...input,
+        messages: injected ? messages : [{ role: "system", content: instruction }, ...messages],
+      });
     },
   };
 }

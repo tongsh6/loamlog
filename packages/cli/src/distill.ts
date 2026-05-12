@@ -476,7 +476,7 @@ async function runDistillWithDAG(
       until: parsed.until,
       maxSessions: parsed.maxSessions,
       skipLargerThan: parsed.skipLargerThan,
-      outputLanguage: parsed.outputLanguage ?? config.distill?.output_language,
+      outputLanguage: parsed.outputLanguage ?? parseOutputLanguage(config.distill?.output_language),
     });
 
     totalProcessed += result.artifactsProcessed;

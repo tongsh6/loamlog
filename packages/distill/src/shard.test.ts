@@ -223,6 +223,14 @@ describe("reduceResults", () => {
     assert.equal(result[0].confidence, 0.8); // 0.7 + 0.1
   });
 
+  it("deduplicates Chinese titles by CJK character overlap", () => {
+    const shard1 = [makeDraft("集中管理服务端口配置", 0.7, ["m1"])];
+    const shard2 = [makeDraft("集中管理端口配置", 0.6, ["m2"])];
+    const result = reduceResults([shard1, shard2]);
+    assert.equal(result.length, 1);
+    assert.equal(result[0].confidence, 0.8);
+  });
+
   it("drops single-shard low confidence results", () => {
     const shard1 = [makeDraft("Weak signal", 0.3, ["m1"])];
     const result = reduceResults([shard1]);

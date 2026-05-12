@@ -187,6 +187,86 @@ describe("knowledge-card distiller", () => {
 		assert.equal(outputs[0].title, "Using Biome for Linting");
 	});
 
+	test("deduplicates Chinese cards with similar titles", async () => {
+		const plugin = factory();
+
+		const outputs = await plugin.run({
+			artifactStore: {
+				async *getUnprocessed() {
+					yield {
+						schema_version: "1.0",
+						meta: {
+							session_id: "ses_kc_zh_dup",
+							captured_at: "2026-05-01T00:00:00.000Z",
+							capture_trigger: "session.idle",
+							loam_version: "0.1.0",
+							provider: "opencode",
+						},
+						context: { cwd: "/tmp", worktree: "/tmp" },
+						time_range: { start: "2026-05-01T00:00:00.000Z", end: "2026-05-01T00:00:01.000Z" },
+						session: {},
+						messages: [
+							{
+								id: "msg_1",
+								role: "user",
+								timestamp: "2026-05-01T00:00:00.000Z",
+								content: "集中管理服务端口配置。",
+							},
+						],
+						redacted: { patterns_applied: [], redacted_count: 0 },
+					};
+				},
+				query() { return emptyArtifacts(); },
+			},
+			llm: {
+				route() {
+					return {
+						model: "fake-model",
+						provider: {
+							id: "mock",
+							async complete() {
+								return {
+									content: JSON.stringify([
+										{
+											title: "集中管理服务端口配置",
+											category: "configuration",
+											summary: "把服务端口集中到统一配置。",
+											...reusableContext(),
+											detail: "Use one configuration source for service ports so multiple launch paths do not drift across backend, frontend, and desktop wrappers.",
+											tags: ["configuration", "ports"],
+											confidence: 0.8,
+											evidence_refs: [{ message_id: "msg_1", excerpt: "集中管理服务端口配置。" }],
+										},
+										{
+											title: "集中管理端口配置",
+											category: "configuration",
+											summary: "把端口集中到统一配置。",
+											...reusableContext(),
+											detail: "Use one configuration source for ports so multiple launch paths do not drift across backend, frontend, and desktop wrappers.",
+											tags: ["configuration", "ports"],
+											confidence: 0.7,
+											evidence_refs: [{ message_id: "msg_1", excerpt: "集中管理服务端口配置。" }],
+										},
+									]),
+									tokens: { input: 10, output: 10 },
+								};
+							},
+						},
+					};
+				},
+			},
+			state: {
+				async get() { return undefined; },
+				async set() { return; },
+				async update() { return; },
+				async markProcessed() { return; },
+			},
+		});
+
+		assert.equal(outputs.length, 1);
+		assert.equal(outputs[0].title, "集中管理服务端口配置");
+	});
+
 	test("normalizes unknown categories to insight", async () => {
 		const plugin = factory();
 
@@ -374,6 +454,75 @@ describe("knowledge-card distiller", () => {
 											tags: ["configuration", "ports"],
 											confidence: 0.9,
 											evidence_refs: [{ message_id: "msg_1", excerpt: "Centralize service ports in .env." }],
+										},
+									]),
+									tokens: { input: 10, output: 10 },
+								};
+							},
+						},
+					};
+				},
+			},
+			state: {
+				async get() { return undefined; },
+				async set() { return; },
+				async update() { return; },
+				async markProcessed() { return; },
+			},
+		});
+
+		assert.equal(outputs.length, 0);
+	});
+
+	test("filters out cards without valid evidence refs", async () => {
+		const plugin = factory();
+
+		const outputs = await plugin.run({
+			artifactStore: {
+				async *getUnprocessed() {
+					yield {
+						schema_version: "1.0",
+						meta: {
+							session_id: "ses_kc_missing_evidence",
+							captured_at: "2026-05-01T00:00:00.000Z",
+							capture_trigger: "session.idle",
+							loam_version: "0.1.0",
+							provider: "opencode",
+						},
+						context: { cwd: "/tmp", worktree: "/tmp" },
+						time_range: { start: "2026-05-01T00:00:00.000Z", end: "2026-05-01T00:00:01.000Z" },
+						session: {},
+						messages: [
+							{
+								id: "msg_1",
+								role: "user",
+								timestamp: "2026-05-01T00:00:00.000Z",
+								content: "Centralize service ports in .env.",
+							},
+						],
+						redacted: { patterns_applied: [], redacted_count: 0 },
+					};
+				},
+				query() { return emptyArtifacts(); },
+			},
+			llm: {
+				route() {
+					return {
+						model: "fake-model",
+						provider: {
+							id: "mock",
+							async complete() {
+								return {
+									content: JSON.stringify([
+										{
+											title: "Centralize service ports using .env",
+											category: "configuration",
+											summary: "Put all service ports in a single .env file.",
+											...reusableContext(),
+											detail: "Define backend and frontend ports in .env and have every config file read from it instead of hard-coding numbers across files.",
+											tags: ["configuration", "ports"],
+											confidence: 0.9,
+											evidence_refs: [{ message_id: "msg_missing", excerpt: "Centralize service ports in .env." }],
 										},
 									]),
 									tokens: { input: 10, output: 10 },

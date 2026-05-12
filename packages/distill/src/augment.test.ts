@@ -86,4 +86,17 @@ describe("output language augmentation", () => {
 
     assert.match(captured.system ?? "", /Output ALL user-facing content in English/);
   });
+
+  test("explicit language creates a system instruction when provider input has no system message", async () => {
+    const captured: { system?: string } = {};
+    const router = withLanguageRouter(makeRouter(captured), "zh", { explicit: true });
+
+    const { provider, model } = router.route({ task: "extract", budget: "cheap", input_tokens: 10 });
+    await provider.complete({
+      model,
+      messages: [{ role: "user", content: "Return JSON." }],
+    });
+
+    assert.match(captured.system ?? "", /Output ALL user-facing content in Chinese/);
+  });
 });
