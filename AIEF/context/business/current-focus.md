@@ -2,83 +2,100 @@
 
 ## 状态总览 | Status Summary
 
-截至 2026-05-01，Loamlog v0.5.0 已完成 M0-M4 及 Milestone A。架构 DAG 蓝图的 Phase 0-5 代码已全部提交（pipeline、asset graph、approval gate），但尚未集成到产品链路。
-As of 2026-05-01, Loamlog v0.5.0 has completed M0-M4 and Milestone A. Architecture DAG Blueprint Phase 0-5 code is all committed (pipeline, asset graph, approval gate), pending integration into the product flow.
+截至 2026-05-13，Loamlog v0.7.0 已完成 Refinery Pipeline 的代码层闭环，并通过 knowledge-card 资产线的小批量中文复验。
+As of 2026-05-13, Loamlog v0.7.0 has completed the code-level Refinery Pipeline loop and passed a small-batch Chinese rerun for the `knowledge-card` asset line.
 
-最近进展（2026-03-13 至 2026-05-01）：
+关键事实：
+Key facts:
 
-- M4 多数据源接入（Codex、Gemini CLI provider、`loam list`）
-- Phase 1: Provider Map 注册表 + ExecutionContext + withTimeout/withRetry 切面
-- Phase 3: `@loamlog/pipeline` typed DAG executor
-- Phase 4: 资产图领域类型（EvidenceSpan → Signal → AssetCandidate → Decision → Delivery）
-- Phase 5: 审批门禁四层检查 + 审计追踪（AuditRecord）
+- Refinery Pipeline 已从线性 capture-distill 演进为「破碎 → 选矿 → 冶炼 → 精炼」流水线。
+- The Refinery Pipeline has moved from linear capture-distill into a four-stage flow: normalize, distill, verify, refine.
+- VS-01~VS-04 代码层已落成，`AssetStore`、`TemporalEvidenceRegistry`、file/github/notion sinks、`loam show` / `loam list --format md` 已就位。
+- VS-01~VS-04 are implemented at code level, with `AssetStore`, `TemporalEvidenceRegistry`, file/github/notion sinks, and `loam show` / `loam list --format md` in place.
+- Phase 2 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 41/50，平均 4.1/5，10/10 >=3，8/10 >=4。
+- Phase 2 Chinese rerun: 9 real sessions -> 10 knowledge cards, manual score 41/50, average 4.1/5, 10/10 >=3, 8/10 >=4.
+- #46 旧 milestone 自动报告已关闭，因为 issue-count 数据源已失真。
+- #46 has been closed because the old issue-count milestone report no longer reflects project reality.
+- #56 已关闭为 completed；下一阶段主线转入 #57 Cross-Asset Dogfooding。
+- #56 is closed as completed; the active tracking issue is now #57 Cross-Asset Dogfooding.
 
-当前最重要的工程任务是将 Phase 3-5 的基础设施接入产品链路，详见 `tasks/2026-05-01-pipeline-integration/plan.md`。
+当前权威台账：
+Authoritative ledger:
 
-1. **Sanitization Gateway** — 日志脱敏硬前置层，确保敏感数据在进入 AI 处理前被安全脱敏
-   Log sanitization gateway ensuring sensitive data is redacted before AI processing
-
-2. **Triggered Intelligence Pipeline** — 阈值触发、异步批处理、性能隔离的智能萃取管道
-   Threshold-based, async, rate-limited intelligence pipeline for efficient distill
-
-3. **Evaluation Harness** — 质量评估框架，验证萃取准确性与行动建议质量
-   Quality evaluation framework validating distill accuracy and action suggestions
-
-同时，`claude-code` provider 的主路径实现也已进入仓库，说明"多源 provider 抽象是否成立"这个问题已经拿到初步工程答案。
-The main `claude-code` provider path has also landed in the repository, which means the project already has an initial engineering answer for whether the multi-source provider abstraction works.
+- `docs/project-ledger.md`
+- #57 `[Tracking] Cross-Asset Dogfooding — knowledge-card + issue-draft + prd-draft/pitfall-card`
 
 ## 当前产品问题 | Current Product Question
 
-当前最重要的问题不再是“能不能把第一条价值闭环做出来”，而是：这条已经合并到 `develop` 的闭环，是否真的会被用户持续使用，并且值得进入下一阶段自动化与产品化。
-The highest-priority question is no longer whether the first high-value loop can be built, but whether the loop now merged into `develop` will produce sustained user value and justify the next phase of automation.
+当前问题不再是 knowledge-card 能不能产出可读卡片，而是：
+The current question is no longer whether `knowledge-card` can produce readable cards, but:
 
 ```text
-AI conversation -> structured evidence -> local issue draft
+local AI tools
+  -> capture
+  -> archive
+  -> multi-asset distill
+  -> human review
+  -> local asset store
+  -> reuse in later work
+  -> feedback back into the system
 ```
+
+是否能在真实本机多 AI 工具会话中稳定闭环。
+Can this loop work reliably across real local sessions from multiple AI tools?
 
 ## 当前活跃议题 | Current Active Threads
 
-- `#24` — MCP Exposure Layer：作为 Milestone B 的设计入口，当前已在 `AIEF/openspec/mcp-exposure-layer.md` 固化 design-first / mapping-first 边界，但尚不进入完整 MCP Server 实现
-- `#24` — MCP Exposure Layer: now has a formal boundary spec at `AIEF/openspec/mcp-exposure-layer.md`; it is an active Milestone B design track, not a full MCP server implementation effort yet
-- `#5` — umbrella：zero-config discovery 方向
-- `#9` / `#10` / `#11` — 作为后续 discovery 研究与规格拆分
-- `#6` — Auto-Skill Generation，保留为 later-stage idea
+- `#57` — Cross-Asset Dogfooding：当前主线，验证 `knowledge-card`、`issue-draft`，并选择 `prd-draft` 或 `pitfall-card` 做第三条资产线。
+- `#57` — Cross-Asset Dogfooding: current mainline, validating `knowledge-card`, `issue-draft`, and one of `prd-draft` or `pitfall-card`.
+- `#11` — config precedence：下一阶段候选，应先定义 explicit config、env、discovered values、defaults 的优先级。
+- `#11` — config precedence: next candidate; define precedence among explicit config, env, discovered values, and defaults.
+- `#9` — local session provider discovery：与“从本机所有 AI 工具抓会话”愿景强相关，应在 #11 边界清晰后推进。
+- `#9` — local session provider discovery: closely tied to the multi-tool capture vision; should follow #11 boundary clarification.
+- `#44` — instruction-summary distiller：有价值，但需重新定边界，避免与 instruction-rule / Auto-Skill 轨道重叠。
+- `#44` — instruction-summary distiller: valuable, but needs boundary refinement to avoid overlap with instruction-rule / Auto-Skill tracks.
 
-当前已不再有围绕首条 issue-draft MVP 的活跃实现 issue；该闭环已完成并合并。
-There are no longer active implementation issues for the first issue-draft MVP loop; that loop is complete and merged.
+## 已关闭议题 | Closed Topics
 
-## 已关闭议题 | Closed Topic
-
-- `#1` OpenCode plugin reload bug：源码与 npm 发布版本 `opencode-loamlog@0.2.3` 已对齐，因此按“已修复并已发布”关闭
-- `#7` umbrella：AI 对话自动生成 GitHub Issue，已通过 PR #27 合并到 `develop`
-- `#12`：issue-draft distiller MVP，已完成并关闭
-- `#13`：file sink 输出 `.json` + `.md`，已完成并关闭
-- `#14`：issue-draft 用法文档，已完成并关闭
+- `#46` — 里程碑进度报告：数据源失真，已以 `not planned` 关闭。
+- `#46` — Milestone report: closed as `not planned` because the data source was misleading.
+- `#56` — Refinery Pipeline + dogfooding Phase 1/2：Phase 2 final、#46 关闭、#57 tracking 均已落位，已以 `completed` 关闭。
+- `#56` — Refinery Pipeline + dogfooding Phase 1/2: closed as `completed` after Phase 2 final, #46 closure, and #57 creation.
+- `#7` / `#12` / `#13` / `#14` — 首条 issue-draft MVP 闭环已完成。
+- `#7` / `#12` / `#13` / `#14` — first issue-draft MVP loop is complete.
+- `#15` / `#19` / `#21` — 已被 Refinery Pipeline、distill/sink/review 链路和 project ledger 覆盖。
+- `#15` / `#19` / `#21` — covered by the Refinery Pipeline, distill/sink/review flow, and project ledger.
 
 ## 近期非目标 | Near-Term Non-Goals
 
-当前焦点下，以下内容不进入第一条产品闭环的实现范围：
+当前不投入：
+Do not invest in these now:
 
-- GitHub API 自动创建 issue
-- approval / review workflow
-- 多 session 合并 distill
-- repo-specific template mapping
-- discovery / auto-skill 等中长期主题抢占当前主线
+- MCP server 实现
+- MCP server implementation
+- Action Executor 自动执行
+- Action Executor automation
+- Dashboard / Web UI
+- Dashboard / Web UI
+- Auto-Skill Generation
+- Auto-Skill Generation
+- instruction-rule 全链路
+- full instruction-rule pipeline
+- 外部 GitHub / Notion 自动投递
+- automatic external GitHub / Notion publishing
+- 大规模向量搜索或 marketplace
+- large-scale vector search or marketplace work
+
+原因：当前最缺的是跨资产类型真实验证和资产生命周期闭环，不是更多平台能力。
+Reason: the current gap is cross-asset validation and asset lifecycle closure, not more platform surface area.
 
 ## 下一阶段判断点 | Next-Phase Decision Points
 
-在当前 MVP 已合并后，下一阶段的判断重点是：
-
-- issue-draft 输出是否足够稳定、可复用、可读
-- 用户是否真的会把本地 `.md` 草稿复制进 GitHub
-- 是否已经值得推进 Stage 2 的自动化项（例如 GitHub API sink）
-- 是否先继续推进 #24 的协议边界细化（例如 request/response shapes 与 auth tiers），而不是直接重投入服务端实现
-- Whether to continue refining the #24 protocol boundary (for example request/response shapes and auth tiers) before committing to any MCP server implementation
-
-### `#5` umbrella
-
-在以下子项全部完成后关闭：
-
-- `#9` 完成
-- `#10` 完成
-- `#11` 完成
+- `issue-draft`、`prd-draft`、`pitfall-card` 等资产线能否在真实样本上达到可 review、可复用的最低质量线？
+- Can `issue-draft`, `prd-draft`, and `pitfall-card` reach a minimum reviewable and reusable quality bar on real samples?
+- 每类资产是否都有 evidence backlinks、review 状态、本地输出和失败类型记录？
+- Does each asset type preserve evidence backlinks, review status, local output, and failure type records?
+- 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？
+- Can reviewed assets enter a local reuse pool and later be referenced or converted into concrete work items?
+- 本机多个 AI 工具的会话能否被稳定纳入同一条 capture / archive / distill / review 链路？
+- Can sessions from multiple local AI tools reliably enter the same capture / archive / distill / review loop?
