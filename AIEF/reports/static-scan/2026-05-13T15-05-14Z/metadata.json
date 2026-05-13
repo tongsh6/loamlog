@@ -1,0 +1,55 @@
+{
+  "runId": "2026-05-13T15-05-14Z",
+  "startedAt": "2026-05-13T15:05:14.489Z",
+  "completedAt": "2026-05-13T15:05:45.539Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "7073197",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "ackage.json",
+      "ackages/cli/package.json",
+      "ackages/cli/src/distill.test.ts",
+      "ackages/cli/src/distill.ts",
+      "npm-lock.yaml",
+      "packages/distillers/representative-assets/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

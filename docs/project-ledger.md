@@ -6,9 +6,9 @@
 
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
-| **代码编译** | ✅ 通过 | `pnpm -r build` 全部 22 个包成功 |
-| **测试** | ✅ 207 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 output-language / evidence refs / 中文标题去重回归测试 |
-| **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` |
+| **代码编译** | ✅ 通过 | 2026-05-13 `pnpm run build` 全绿，包含 `@loamlog/distiller-representative-assets` |
+| **测试** | ✅ 220 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 5 类代表性资产 distiller 与 CLI built-in 解析回归测试 |
+| **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ✅ **Phase 2 Go / 小批量复验通过** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5，总分 41/50，平均 4.1/5 |
 | **下一道门禁** | Representative Asset Dogfooding | 不再只验证 knowledge-card；下一批用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 验证代表性 AI 协作资产 |
 
@@ -21,12 +21,19 @@
 - 终版人工评分报告：`AIEF/reports/dogfooding/2026-05-12-validation-phase2-final.md`：6/10 通过，Conditional Go；低分卡暴露前因后果不足、evidence 不支撑、技术解法不严谨、输出语言不符合项目偏好等质量问题
 - 中文复验 review：`AIEF/reports/dogfooding/2026-05-12-validation-phase2-zh-rerun-review.md`：10 张卡逐张人工评分，总分 41/50
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
-- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-12T17-29-38Z`：typescript / biome / pnpm-audit exit 0，blocking 0
+- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-13T15-05-14Z`：typescript / biome / pnpm-audit exit 0，blocking 0
 
 ### 0.1 已知缺陷 / 修复状态
 
-- ✅ `packages/distill/src/shard.test.ts > reduceResults`：3 条失败用例已修复（去重 by message_id / 去重 by similar title / drops single-shard low confidence），并补充中文标题去重覆盖。2026-05-13 `pnpm run test`：207 pass / 0 fail。
+- ✅ `packages/distill/src/shard.test.ts > reduceResults`：3 条失败用例已修复（去重 by message_id / 去重 by similar title / drops single-shard low confidence），并补充中文标题去重覆盖。2026-05-13 `pnpm run test`：220 pass / 0 fail。
 - `tasks/2026-05-03-issue-draft-v2/progress.md` 与代码不同步：commit `542109f` 已实现 parts data / multi-output / target_repo，但 progress.md 仍写 "Step 1 待开始"。
+
+### 0.3 代表性资产 distiller 实现状态（2026-05-13）
+
+- ✅ 新增 `@loamlog/distiller-representative-assets`，包含 5 个普通插件 entrypoint：`idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate`。
+- ✅ CLI built-in resolver 已支持 5 个新 specifier：`@loamlog/distiller-idea-seed`、`@loamlog/distiller-practice-pitfall`、`@loamlog/distiller-decision-rationale`、`@loamlog/distiller-follow-up-work-item`、`@loamlog/distiller-skill-candidate`。
+- ✅ 新 distiller 均要求有效 `evidence_refs`，无有效 evidence 时直接丢弃候选，不 fallback 到首条 message。
+- ✅ focused tests：representative-assets + CLI 共 26 pass；全量 `pnpm run test`：220 pass；`pnpm run build`：通过。
 
 ### 0.2 Review 新发现（2026-05-13）
 
@@ -51,7 +58,7 @@
 | 车间 (工序) | 状态 | 关键组件/证据 | 当前缺口 |
 | :--- | :--- | :--- | :--- |
 | **破碎 (Normalizer)** | ✅ **已闭环 (代码)** | `packages/distill/src/normalizer.ts` | 真实样本验证 |
-| **选矿 (Distiller)** | ✅ **小批量复验通过 (产品)** | `packages/distill`, `issue-draft`, `knowledge-card`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md` | 中文复验 10/10 通过；下一步收紧 evidence selection、技术机制验证与推荐资产门槛 |
+| **选矿 (Distiller)** | ✅ **小批量复验通过 (产品) + 代表性资产插件已落地 (代码)** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md` | 下一步用真实新增会话 dogfooding 5 类代表性资产，观察 review 和复用闭环 |
 | **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1)** | `verifier/git-gap.ts`, `verifier/log-weave.ts` | 真实数据下证据织补效果未观察 |
 | **精炼 (Aggregator)** | ✅ **已闭环 (代码)** | `packages/distill/src/aggregator.ts`（含 token-Jaccard 二次合并） | 跨 session 真实数据效果：12→6/7 refined |
 | **底座 (Foundations)** | ✅ **已落成** | `store.ts`, `registry.ts`（已从 `src/` 泄漏产物清理为 package 公共 API） | 当前规模无检索性能瓶颈 |
