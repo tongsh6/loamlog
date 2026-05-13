@@ -9,8 +9,8 @@
 | **代码编译** | ✅ 通过 | 2026-05-13 `pnpm run build` 全绿，包含 `@loamlog/distiller-representative-assets` |
 | **测试** | ✅ 220 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 5 类代表性资产 distiller 与 CLI built-in 解析回归测试 |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
-| **产品闭环** | ✅ **Phase 2 Go / 小批量复验通过** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5，总分 41/50，平均 4.1/5 |
-| **下一道门禁** | Representative Asset Dogfooding | 不再只验证 knowledge-card；下一批用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 验证代表性 AI 协作资产 |
+| **产品闭环** | ✅ **Knowledge-card Phase 2 Go / 跨资产冒烟通过** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；同日 5 类代表性资产在 5 个真实 session 上产出 41 条 pending 资产 |
+| **下一道门禁** | Cross-Asset Review + Reuse | 不再证明“能不能产出”；下一步要人工 review 41 条代表性资产，并验证 accepted 资产能否进入后续工作复用 |
 
 **当前最高优先级 = 跨资产类型 dogfooding，验证「本机多 AI 工具会话 → 多类型可复用资产」能否稳定闭环，而非继续单点优化 knowledge-card 或启动新架构（MCP / Action Executor / Dashboard / Auto-Skill）。**
 
@@ -21,7 +21,8 @@
 - 终版人工评分报告：`AIEF/reports/dogfooding/2026-05-12-validation-phase2-final.md`：6/10 通过，Conditional Go；低分卡暴露前因后果不足、evidence 不支撑、技术解法不严谨、输出语言不符合项目偏好等质量问题
 - 中文复验 review：`AIEF/reports/dogfooding/2026-05-12-validation-phase2-zh-rerun-review.md`：10 张卡逐张人工评分，总分 41/50
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
-- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-13T15-05-14Z`：typescript / biome / pnpm-audit exit 0，blocking 0
+- 代表性资产 Batch 1：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
+- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-13T15-36-33Z`：typescript / biome / pnpm-audit exit 0，blocking 0；本轮修复前两批 Top N 低危 lint，最新 Top N 为历史低危 deferred
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -34,6 +35,8 @@
 - ✅ CLI built-in resolver 已支持 5 个新 specifier：`@loamlog/distiller-idea-seed`、`@loamlog/distiller-practice-pitfall`、`@loamlog/distiller-decision-rationale`、`@loamlog/distiller-follow-up-work-item`、`@loamlog/distiller-skill-candidate`。
 - ✅ 新 distiller 均要求有效 `evidence_refs`，无有效 evidence 时直接丢弃候选，不 fallback 到首条 message。
 - ✅ focused tests：representative-assets + CLI 共 26 pass；全量 `pnpm run test`：220 pass；`pnpm run build`：通过。
+- ✅ Batch 1 dogfooding：隔离临时 dump 跑 5 个真实 Loamlog `claude-code` session，5 类 distiller 均成功，输出 41 条 pending 资产，0 errors。
+- ⚠️ Batch 1 还不是产品 Go：所有资产仍需人工 review；现有 verifier 对 idea / decision / skill 等非代码资产只会给出 `unverified`，需要补非代码资产 evidence-support review。
 
 ### 0.2 Review 新发现（2026-05-13）
 
@@ -58,7 +61,7 @@
 | 车间 (工序) | 状态 | 关键组件/证据 | 当前缺口 |
 | :--- | :--- | :--- | :--- |
 | **破碎 (Normalizer)** | ✅ **已闭环 (代码)** | `packages/distill/src/normalizer.ts` | 真实样本验证 |
-| **选矿 (Distiller)** | ✅ **小批量复验通过 (产品) + 代表性资产插件已落地 (代码)** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md` | 下一步用真实新增会话 dogfooding 5 类代表性资产，观察 review 和复用闭环 |
+| **选矿 (Distiller)** | ✅ **小批量复验通过 (产品) + 代表性资产冒烟通过** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, `AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md` | 下一步人工 review 41 条代表性资产，并验证 accepted 资产能否被后续任务引用 |
 | **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1)** | `verifier/git-gap.ts`, `verifier/log-weave.ts` | 真实数据下证据织补效果未观察 |
 | **精炼 (Aggregator)** | ✅ **已闭环 (代码)** | `packages/distill/src/aggregator.ts`（含 token-Jaccard 二次合并） | 跨 session 真实数据效果：12→6/7 refined |
 | **底座 (Foundations)** | ✅ **已落成** | `store.ts`, `registry.ts`（已从 `src/` 泄漏产物清理为 package 公共 API） | 当前规模无检索性能瓶颈 |
@@ -108,6 +111,7 @@
 - `AIEF/reports/dogfooding/2026-05-12-validation-phase2-final.md` — Phase 2 终版人工评分：10 张 card，6/10 ≥3/5，Conditional Go
 - `AIEF/reports/dogfooding/2026-05-12-validation-phase2-zh-rerun-review.md` — 中文复验逐卡评分：10 张 card，总分 41/50
 - `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md` — 中文复验终版结论：10/10 ≥3/5，Phase 2 Go
+- `AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md` — 代表性资产 Batch 1：5 类 distiller、5 个真实 session、41 条 pending 资产，Execution Smoke Go
 - `/tmp/loam-distill-phase2-batch6.log` — 2026-05-11 终版 batch：12 verified → 10 refined，212s，0 errors
 - `/tmp/loam-phase2-batch6-review.md` — 10 张卡人类可读视图（`loam list --distill --pending --format md` 输出）
 
@@ -123,18 +127,18 @@
 
 > 以下顺序基于 §0 当前门禁结论。**MCP / FTS5 / 增量冶炼在产品质量稳定前不启动。**
 
-1. **[P0] 执行 Cross-Asset Dogfooding tracking (#57)**
-   - 目标：用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 验证代表性 AI 协作资产
-   - 每类资产单独人工评分，避免 knowledge-card 成功或单一资产成功掩盖其他资产线失败
-   - 产物：本地 dogfooding 报告模板 + 明确 Go/No-Go 标准 + review 结果
-2. **[P1] 用真实新增会话跑多资产样本**
-   - 输入优先覆盖 OpenCode / Claude Code / Cursor 等本机 provider 路径
-   - 每个结果必须保留 evidence backlinks、review 状态和本地输出
-   - 抽样验证资产能否被后续任务引用或转成下一步工作项
-3. **[P2] 收紧跨资产质量门禁**
-   - 通用失败类型：evidence 不支撑、上下文缺失、语言不符合偏好、技术结论过度
-   - 技术机制类资产标记“需可复现实验 / 官方文档 / 代码验证”
-   - `>=4/5` 进入推荐资产，`3/5` 进入待修订池，低于 3/5 不进入复用池
+1. **[P0] 人工 review Representative Assets Batch 1 (#57)**
+   - 输入：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md` 与临时 dump 中 41 条 pending 资产
+   - 目标：每类资产按证据支撑、当前价值、可复用性、可执行性、过期风险评分
+   - 产物：accepted / revise / reject 三类结果，以及每类资产的失败类型
+2. **[P1] 补非代码资产 review/verification 规则**
+   - 当前 git-gap verifier 对 idea / decision / skill 等资产只能给 `unverified`
+   - 需要新增 evidence-support review 维度，而不是要求所有资产都包含文件路径
+   - `skill-candidate` 需区分 `runbook`、`codex_skill`、`instruction_rule_candidate`、`too_generic`
+3. **[P2] 跑下一批多 provider 样本并验证复用**
+   - 输入优先覆盖 OpenCode / Claude Code / Codex 等本机 provider 路径
+   - 从 Batch 1 accepted 资产中抽样 5-10 条，在下一轮真实工作中引用或转成下一步工作项
+   - 暂不启动 MCP / Action Executor / Dashboard / Auto-Skill
 
 ### 已废弃 / 降级
 
@@ -153,7 +157,7 @@
 
 1. 经噪声过滤 v0.2/v0.3 后，knowledge-card distiller 在 ≥10 真实样本上能否保持 ≥60% 人工质量评分？ → **已刚好达标：6/10 = 60%，Conditional Go**
 2. 收紧质量门禁后，下一批 knowledge-card 能否达到更稳的 ≥70% 人工质量评分？ → **已达标：中文复验 10/10 = 100%，平均 4.1/5**
-3. `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性资产线能否在真实样本上达到可 review、可复用的最低质量线？
+3. `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性资产线能否在真实样本上达到可 review、可复用的最低质量线？ → **执行链路已冒烟通过：5 类 distiller 产出 41 条 pending 资产；人工质量与复用价值仍待 review**
 4. 本机多个 AI 工具的会话能否被稳定纳入同一条 capture / archive / distill / review 链路？
 5. 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？
 6. 当前 LLM 选型（LM Studio / DeepSeek）在大 session 和多资产 distiller 上是否能稳定完成蒸馏？

@@ -2,8 +2,8 @@
 
 ## 状态总览 | Status Summary
 
-截至 2026-05-13，Loamlog v0.7.0 已完成 Refinery Pipeline 的代码层闭环，并通过 knowledge-card 资产线的小批量中文复验。
-As of 2026-05-13, Loamlog v0.7.0 has completed the code-level Refinery Pipeline loop and passed a small-batch Chinese rerun for the `knowledge-card` asset line.
+截至 2026-05-13，Loamlog v0.7.0 已完成 Refinery Pipeline 的代码层闭环，通过 knowledge-card 资产线的小批量中文复验，并完成 5 类代表性资产萃取器的 Batch 1 冒烟验证。
+As of 2026-05-13, Loamlog v0.7.0 has completed the code-level Refinery Pipeline loop, passed a small-batch Chinese rerun for the `knowledge-card` asset line, and completed Batch 1 smoke validation for five representative asset distillers.
 
 关键事实：
 Key facts:
@@ -14,6 +14,8 @@ Key facts:
 - VS-01~VS-04 are implemented at code level, with `AssetStore`, `TemporalEvidenceRegistry`, file/github/notion sinks, and `loam show` / `loam list --format md` in place.
 - Phase 2 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 41/50，平均 4.1/5，10/10 >=3，8/10 >=4。
 - Phase 2 Chinese rerun: 9 real sessions -> 10 knowledge cards, manual score 41/50, average 4.1/5, 10/10 >=3, 8/10 >=4.
+- Representative Assets Batch 1：5 个真实 Loamlog `claude-code` session → 41 条 pending 资产，5 类 distiller 均跑通，46/46 quality gate 通过，0 errors。
+- Representative Assets Batch 1: 5 real Loamlog `claude-code` sessions -> 41 pending assets; all five distillers ran successfully, 46/46 candidates passed the current quality gate, with 0 errors.
 - #46 旧 milestone 自动报告已关闭，因为 issue-count 数据源已失真。
 - #46 has been closed because the old issue-count milestone report no longer reflects project reality.
 - #56 已关闭为 completed；下一阶段主线转入 #57 Cross-Asset Dogfooding。
@@ -24,6 +26,7 @@ Authoritative ledger:
 
 - `docs/project-ledger.md`
 - `AIEF/openspec/representative-asset-distillers.md`
+- `AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`
 - #57 `[Tracking] Cross-Asset Dogfooding`
 
 ## 当前产品问题 | Current Product Question
@@ -47,8 +50,8 @@ Can this loop work reliably across real local sessions from multiple AI tools?
 
 ## 当前活跃议题 | Current Active Threads
 
-- `#57` — Cross-Asset Dogfooding：当前主线，验证 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 这五类代表性 AI 协作资产。
-- `#57` — Cross-Asset Dogfooding: current mainline, validating five representative AI collaboration assets: `idea-seed`, `practice-pitfall`, `decision-rationale`, `follow-up-work-item`, and `skill-candidate`.
+- `#57` — Cross-Asset Dogfooding：当前主线；Batch 1 已证明 5 类代表性资产可从真实会话产出 pending 资产，下一步是人工 review 与复用验证。
+- `#57` — Cross-Asset Dogfooding: current mainline; Batch 1 proved that five representative asset types can produce pending assets from real sessions, and the next step is human review plus reuse validation.
 - `#11` — config precedence：下一阶段候选，应先定义 explicit config、env、discovered values、defaults 的优先级。
 - `#11` — config precedence: next candidate; define precedence among explicit config, env, discovered values, and defaults.
 - `#9` — local session provider discovery：与“从本机所有 AI 工具抓会话”愿景强相关，应在 #11 边界清晰后推进。
@@ -92,10 +95,12 @@ Reason: the current gap is cross-asset validation and asset lifecycle closure, n
 
 ## 下一阶段判断点 | Next-Phase Decision Points
 
-- `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性资产线能否在真实样本上达到可 review、可复用的最低质量线？
-- Can `idea-seed`, `practice-pitfall`, `decision-rationale`, `follow-up-work-item`, and `skill-candidate` reach a minimum reviewable and reusable quality bar on real samples?
+- `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性资产线已经能在真实样本上产出 pending 资产；它们能否达到可 review、可复用的最低质量线仍待人工评分。
+- `idea-seed`, `practice-pitfall`, `decision-rationale`, `follow-up-work-item`, and `skill-candidate` can now produce pending assets on real samples; whether they meet the minimum reviewable and reusable quality bar still requires manual scoring.
 - 每类资产是否都有 evidence backlinks、review 状态、本地输出和失败类型记录？
 - Does each asset type preserve evidence backlinks, review status, local output, and failure type records?
+- 非代码资产的 verification 是否能从 git-gap 扩展到 evidence-support review？
+- Can verification for non-code assets extend from git-gap checks to evidence-support review?
 - 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？
 - Can reviewed assets enter a local reuse pool and later be referenced or converted into concrete work items?
 - 本机多个 AI 工具的会话能否被稳定纳入同一条 capture / archive / distill / review 链路？
