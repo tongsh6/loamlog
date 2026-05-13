@@ -61,10 +61,6 @@ interface GeminiConversationRecord {
   messages: GeminiMessage[];
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === "object";
-}
-
 function defaultProjectsDir(): string {
   return path.join(homedir(), ".gemini", "tmp");
 }

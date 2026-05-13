@@ -115,8 +115,9 @@ function extractTextFromContent(content: CodexContentItem[] | string | undefined
   }
 
   return content
-    .filter((c) => (c.type === "input_text" || c.type === "output_text") && typeof c.text === "string")
-    .map((c) => c.text!)
+    .flatMap((c) =>
+      (c.type === "input_text" || c.type === "output_text") && typeof c.text === "string" ? [c.text] : [],
+    )
     .join("\n");
 }
 

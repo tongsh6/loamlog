@@ -60,7 +60,10 @@ function topologicalLevels(def: DAGDefinition): RunnableLevel[][] {
 
   for (const [id, degree] of inDegree) {
     if (degree === 0) {
-      currentLevel.push({ node: nodeMap.get(id)!, dependencies: [] });
+      const node = nodeMap.get(id);
+      if (node) {
+        currentLevel.push({ node, dependencies: [] });
+      }
     }
   }
 
@@ -73,7 +76,10 @@ function topologicalLevels(def: DAGDefinition): RunnableLevel[][] {
         const newDegree = (inDegree.get(depId) ?? 1) - 1;
         inDegree.set(depId, newDegree);
         if (newDegree === 0) {
-          const depNode = nodeMap.get(depId)!;
+          const depNode = nodeMap.get(depId);
+          if (!depNode) {
+            throw new Error(`node not found while building level: ${depId}`);
+          }
           // Collect dependency ids for this node
           const deps = def.edges
             .filter(([_, t]) => t === depId)
@@ -148,7 +154,6 @@ export async function executeDAG(
 ): Promise<ExecutionReport> {
   const concurrency = options.concurrency ?? 4;
   const levels = topologicalLevels(def);
-  const nodeMap = new Map(def.nodes.map((n) => [n.id, n]));
   const outputs = new Map<string, unknown>();
   const nodeReports: NodeReport[] = [];
   const failedNodes = new Set<string>();
@@ -189,13 +194,17 @@ export async function executeDAG(
           }
 
           let runFn = () => item.node.run(inputs as unknown, ctx);
+          const aspects = options.aspects;
 
-          if (item.node.timeoutMs && options.aspects) {
-            runFn = () => options.aspects!.withTimeout(runFn, item.node.timeoutMs!, ctx);
+          if (item.node.timeoutMs !== undefined && aspects) {
+            const innerRun = runFn;
+            const timeoutMs = item.node.timeoutMs;
+            runFn = () => aspects.withTimeout(innerRun, timeoutMs, ctx);
           }
 
-          if (item.node.retry && options.aspects) {
-            runFn = () => options.aspects!.withRetry(runFn, item.node.retry, ctx);
+          if (item.node.retry && aspects) {
+            const innerRun = runFn;
+            runFn = () => aspects.withRetry(innerRun, item.node.retry, ctx);
           }
 
           const output = await runFn();

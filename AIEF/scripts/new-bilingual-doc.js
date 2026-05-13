@@ -1,7 +1,8 @@
 #!/usr/bin/env node
 
-const fs = require("node:fs")
-const path = require("node:path")
+import fs from "node:fs"
+import path from "node:path"
+import { fileURLToPath } from "node:url"
 
 function printHelp() {
   console.log(
@@ -89,7 +90,7 @@ function main() {
     process.exit(1)
   }
 
-  const scriptDir = __dirname
+  const scriptDir = path.dirname(fileURLToPath(import.meta.url))
   const aiefDir = path.resolve(scriptDir, "..")
   const templatePath = path.join(aiefDir, "context", "DOC_TEMPLATE.md")
 

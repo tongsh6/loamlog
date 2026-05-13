@@ -1,13 +1,13 @@
 import { evaluateSample } from "./metrics.js";
-import {
-  type EvaluationReport,
-  type EvaluationRunInput,
-  type SampleMetricBreakdown,
-  type SignalMetrics,
-  type IssueDraftMetrics,
-  type ActionMetrics,
-  type KnowledgeMetrics,
-  type RedactionMetrics,
+import type {
+  ActionMetrics,
+  EvaluationReport,
+  EvaluationRunInput,
+  IssueDraftMetrics,
+  KnowledgeMetrics,
+  RedactionMetrics,
+  SampleMetricBreakdown,
+  SignalMetrics,
 } from "./types.js";
 
 export function evaluateRun(input: EvaluationRunInput): EvaluationReport {

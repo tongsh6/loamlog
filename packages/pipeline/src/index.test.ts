@@ -1,7 +1,8 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import { createExecutionContext, TimeoutError } from "@loamlog/core";
-import { executeDAG, type DAGDefinition, type PipelineNode, validateDAG } from "./index.js";
+import { createExecutionContext } from "@loamlog/core";
+import { executeDAG, validateDAG } from "./index.js";
+import type { DAGDefinition, PipelineNode } from "./index.js";
 
 const ctx = createExecutionContext({ logger: { info: () => {}, warn: () => {}, error: () => {} } });
 
@@ -149,7 +150,7 @@ describe("executeDAG", () => {
     const def: DAGDefinition = {
       nodes: [
         { id: "fetch", run: async () => ({ data: [1, 2, 3] }) },
-        { id: "transform", run: async (input: unknown) => ({ result: "done" }) },
+        { id: "transform", run: async () => ({ result: "done" }) },
       ],
       edges: [["fetch", "transform"]],
     };

@@ -1,12 +1,9 @@
 import type {
   ActionCandidate,
-  AllCondition,
-  AnyCondition,
   Condition,
   ConditionEvaluation,
   ConditionInput,
   FieldCondition,
-  NotCondition,
   ComparisonOperator,
 } from "./types.js";
 
@@ -41,7 +38,7 @@ export function parseCondition(input?: ConditionInput): Condition | undefined {
   if (Array.isArray(input)) {
     return {
       kind: "all",
-      nodes: input.map((item) => parseCondition(item)!).filter(Boolean) as Condition[],
+      nodes: parseConditionList(input),
     };
   }
 
@@ -56,7 +53,7 @@ export function parseCondition(input?: ConditionInput): Condition | undefined {
     const nodes = Array.isArray(candidate.all) ? candidate.all : [candidate.all];
     allNodes.push({
       kind: "all",
-      nodes: nodes.map((node) => parseCondition(node)!).filter(Boolean) as Condition[],
+      nodes: parseConditionList(nodes),
     });
   }
 
@@ -64,7 +61,7 @@ export function parseCondition(input?: ConditionInput): Condition | undefined {
     const nodes = Array.isArray(candidate.any) ? candidate.any : [candidate.any];
     allNodes.push({
       kind: "any",
-      nodes: nodes.map((node) => parseCondition(node)!).filter(Boolean) as Condition[],
+      nodes: parseConditionList(nodes),
     });
   }
 
@@ -90,6 +87,12 @@ export function parseCondition(input?: ConditionInput): Condition | undefined {
     kind: "all",
     nodes: allNodes,
   };
+}
+
+function parseConditionList(nodes: unknown[]): Condition[] {
+  return nodes
+    .map((node) => parseCondition(node as ConditionInput))
+    .filter((node): node is Condition => Boolean(node));
 }
 
 export function evaluateCondition(condition: Condition | undefined, candidate: ActionCandidate): ConditionEvaluation {

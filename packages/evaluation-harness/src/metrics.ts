@@ -1,18 +1,18 @@
-import {
-  type ActionMetrics,
-  type ActionPrediction,
-  type EvaluationSample,
-  type IssueDraftMetrics,
-  type IssueDraftPrediction,
-  type KnowledgeMetrics,
-  type KnowledgePrediction,
-  type RedactionMetrics,
-  type RedactionPrediction,
-  type SampleExpected,
-  type SampleMetricBreakdown,
-  type SamplePrediction,
-  type SignalMetrics,
-  type SignalPrediction,
+import type {
+  ActionMetrics,
+  ActionPrediction,
+  EvaluationSample,
+  IssueDraftMetrics,
+  IssueDraftPrediction,
+  KnowledgeMetrics,
+  KnowledgePrediction,
+  RedactionMetrics,
+  RedactionPrediction,
+  SampleExpected,
+  SampleMetricBreakdown,
+  SamplePrediction,
+  SignalMetrics,
+  SignalPrediction,
 } from "./types.js";
 
 const EPSILON = 1e-9;

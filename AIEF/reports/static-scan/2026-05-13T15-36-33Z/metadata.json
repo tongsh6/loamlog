@@ -1,0 +1,64 @@
+{
+  "runId": "2026-05-13T15-36-33Z",
+  "startedAt": "2026-05-13T15:36:33.577Z",
+  "completedAt": "2026-05-13T15:36:47.849Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "8bf5379",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "IEF/context/business/current-focus.md",
+      "IEF/scripts/check-bilingual-docs.js",
+      "IEF/scripts/new-bilingual-doc.js",
+      "ocs/project-ledger.md",
+      "ackages/evaluation-harness/src/index.ts",
+      "ackages/evaluation-harness/src/metrics.ts",
+      "ackages/pipeline/src/index.test.ts",
+      "ackages/pipeline/src/index.ts",
+      "ackages/providers/codex/src/index.ts",
+      "ackages/providers/gemini-cli/src/index.ts",
+      "ackages/rules/src/condition.ts",
+      "AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md",
+      "AIEF/reports/static-scan/2026-05-13T15-30-26Z/",
+      "AIEF/reports/static-scan/2026-05-13T15-32-50Z/",
+      "AIEF/reports/static-scan/2026-05-13T15-35-38Z/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}
