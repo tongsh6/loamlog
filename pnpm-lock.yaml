@@ -44,6 +44,9 @@ importers:
       '@loamlog/distiller-pitfall-card':
         specifier: workspace:*
         version: link:../distillers/pitfall-card
+      '@loamlog/distiller-representative-assets':
+        specifier: workspace:*
+        version: link:../distillers/representative-assets
       '@loamlog/provider-claude-code':
         specifier: workspace:*
         version: link:../providers/claude-code
@@ -121,6 +124,15 @@ importers:
         version: link:../../distiller-sdk
 
   packages/distillers/prd-draft:
+    dependencies:
+      '@loamlog/core':
+        specifier: workspace:*
+        version: link:../../core
+      '@loamlog/distiller-sdk':
+        specifier: workspace:*
+        version: link:../../distiller-sdk
+
+  packages/distillers/representative-assets:
     dependencies:
       '@loamlog/core':
         specifier: workspace:*

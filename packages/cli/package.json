@@ -16,6 +16,7 @@
     "@loamlog/distill": "workspace:*",
     "@loamlog/distiller-issue-draft": "workspace:*",
     "@loamlog/distiller-pitfall-card": "workspace:*",
+    "@loamlog/distiller-representative-assets": "workspace:*",
     "@loamlog/provider-claude-code": "workspace:*",
     "@loamlog/provider-codex": "workspace:*",
     "@loamlog/provider-gemini-cli": "workspace:*",

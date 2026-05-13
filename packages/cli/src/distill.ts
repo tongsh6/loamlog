@@ -52,6 +52,26 @@ const BUILT_IN_PLUGIN_ENTRY_PATHS = {
     dist: "../../distillers/prd-draft/dist/index.js",
     src: "../../distillers/prd-draft/src/index.ts",
   },
+  "@loamlog/distiller-idea-seed": {
+    dist: "../../distillers/representative-assets/dist/idea-seed.js",
+    src: "../../distillers/representative-assets/src/idea-seed.ts",
+  },
+  "@loamlog/distiller-practice-pitfall": {
+    dist: "../../distillers/representative-assets/dist/practice-pitfall.js",
+    src: "../../distillers/representative-assets/src/practice-pitfall.ts",
+  },
+  "@loamlog/distiller-decision-rationale": {
+    dist: "../../distillers/representative-assets/dist/decision-rationale.js",
+    src: "../../distillers/representative-assets/src/decision-rationale.ts",
+  },
+  "@loamlog/distiller-follow-up-work-item": {
+    dist: "../../distillers/representative-assets/dist/follow-up-work-item.js",
+    src: "../../distillers/representative-assets/src/follow-up-work-item.ts",
+  },
+  "@loamlog/distiller-skill-candidate": {
+    dist: "../../distillers/representative-assets/dist/skill-candidate.js",
+    src: "../../distillers/representative-assets/src/skill-candidate.ts",
+  },
   "@loamlog/sink-file": {
     dist: "../../sinks/file/dist/index.js",
     src: "../../sinks/file/src/index.ts",
@@ -71,6 +91,11 @@ const BUILT_IN_PLUGIN_SPECIFIERS = new Set<string>([
   "@loamlog/distiller-issue-draft",
   "@loamlog/distiller-knowledge-card",
   "@loamlog/distiller-prd-draft",
+  "@loamlog/distiller-idea-seed",
+  "@loamlog/distiller-practice-pitfall",
+  "@loamlog/distiller-decision-rationale",
+  "@loamlog/distiller-follow-up-work-item",
+  "@loamlog/distiller-skill-candidate",
   "@loamlog/sink-file",
   "@loamlog/sink-github",
   "@loamlog/sink-notion",

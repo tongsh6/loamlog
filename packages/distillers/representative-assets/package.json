@@ -1,0 +1,38 @@
+{
+  "name": "@loamlog/distiller-representative-assets",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "main": "dist/idea-seed.js",
+  "types": "dist/idea-seed.d.ts",
+  "exports": {
+    "./idea-seed": {
+      "types": "./dist/idea-seed.d.ts",
+      "import": "./dist/idea-seed.js"
+    },
+    "./practice-pitfall": {
+      "types": "./dist/practice-pitfall.d.ts",
+      "import": "./dist/practice-pitfall.js"
+    },
+    "./decision-rationale": {
+      "types": "./dist/decision-rationale.d.ts",
+      "import": "./dist/decision-rationale.js"
+    },
+    "./follow-up-work-item": {
+      "types": "./dist/follow-up-work-item.d.ts",
+      "import": "./dist/follow-up-work-item.js"
+    },
+    "./skill-candidate": {
+      "types": "./dist/skill-candidate.d.ts",
+      "import": "./dist/skill-candidate.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@loamlog/core": "workspace:*",
+    "@loamlog/distiller-sdk": "workspace:*"
+  }
+}

@@ -19,6 +19,26 @@ function createBuiltInResolver(): (specifier: string) => string {
       return "/virtual/distiller-issue-draft/index.js";
     }
 
+    if (specifier === "@loamlog/distiller-idea-seed") {
+      return "/virtual/representative-assets/idea-seed.js";
+    }
+
+    if (specifier === "@loamlog/distiller-practice-pitfall") {
+      return "/virtual/representative-assets/practice-pitfall.js";
+    }
+
+    if (specifier === "@loamlog/distiller-decision-rationale") {
+      return "/virtual/representative-assets/decision-rationale.js";
+    }
+
+    if (specifier === "@loamlog/distiller-follow-up-work-item") {
+      return "/virtual/representative-assets/follow-up-work-item.js";
+    }
+
+    if (specifier === "@loamlog/distiller-skill-candidate") {
+      return "/virtual/representative-assets/skill-candidate.js";
+    }
+
     if (specifier === "@loamlog/sink-file") {
       return "/virtual/sink-file/index.js";
     }
@@ -181,6 +201,31 @@ describe("distill cli helpers", () => {
     assert.match(next.distillers[0] as string, /packages\/(distillers\/pitfall-card\/(src\/index\.ts|dist\/index\.js))$/);
     assert.match(next.sinks?.[0] as string, /^file:\/\//);
     assert.match(next.sinks?.[0] as string, /packages\/(sinks\/file\/(src\/index\.ts|dist\/index\.js))$/);
+  });
+
+  test("normalizeBuiltInPluginSpecifiers rewrites representative asset built-ins", () => {
+    const next = normalizeBuiltInPluginSpecifiers(
+      {
+        dump_dir: "/tmp/loam",
+        distillers: [
+          "@loamlog/distiller-idea-seed",
+          "@loamlog/distiller-practice-pitfall",
+          "@loamlog/distiller-decision-rationale",
+          "@loamlog/distiller-follow-up-work-item",
+          "@loamlog/distiller-skill-candidate",
+        ],
+        sinks: ["@loamlog/sink-file"],
+      },
+      createBuiltInResolver(),
+    );
+
+    assert.deepEqual(next.distillers, [
+      pathToFileURL("/virtual/representative-assets/idea-seed.js").href,
+      pathToFileURL("/virtual/representative-assets/practice-pitfall.js").href,
+      pathToFileURL("/virtual/representative-assets/decision-rationale.js").href,
+      pathToFileURL("/virtual/representative-assets/follow-up-work-item.js").href,
+      pathToFileURL("/virtual/representative-assets/skill-candidate.js").href,
+    ]);
   });
 
   test("buildRuntimeDistillConfig normalizes explicit built-in --distiller", () => {
