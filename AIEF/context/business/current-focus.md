@@ -23,7 +23,8 @@ Key facts:
 Authoritative ledger:
 
 - `docs/project-ledger.md`
-- #57 `[Tracking] Cross-Asset Dogfooding — knowledge-card + issue-draft + prd-draft/pitfall-card`
+- `AIEF/openspec/representative-asset-distillers.md`
+- #57 `[Tracking] Cross-Asset Dogfooding`
 
 ## 当前产品问题 | Current Product Question
 
@@ -46,8 +47,8 @@ Can this loop work reliably across real local sessions from multiple AI tools?
 
 ## 当前活跃议题 | Current Active Threads
 
-- `#57` — Cross-Asset Dogfooding：当前主线，验证 `knowledge-card`、`issue-draft`，并选择 `prd-draft` 或 `pitfall-card` 做第三条资产线。
-- `#57` — Cross-Asset Dogfooding: current mainline, validating `knowledge-card`, `issue-draft`, and one of `prd-draft` or `pitfall-card`.
+- `#57` — Cross-Asset Dogfooding：当前主线，验证 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item` 这四类代表性 AI 协作资产。
+- `#57` — Cross-Asset Dogfooding: current mainline, validating four representative AI collaboration assets: `idea-seed`, `practice-pitfall`, `decision-rationale`, and `follow-up-work-item`.
 - `#11` — config precedence：下一阶段候选，应先定义 explicit config、env、discovered values、defaults 的优先级。
 - `#11` — config precedence: next candidate; define precedence among explicit config, env, discovered values, and defaults.
 - `#9` — local session provider discovery：与“从本机所有 AI 工具抓会话”愿景强相关，应在 #11 边界清晰后推进。
@@ -91,8 +92,8 @@ Reason: the current gap is cross-asset validation and asset lifecycle closure, n
 
 ## 下一阶段判断点 | Next-Phase Decision Points
 
-- `issue-draft`、`prd-draft`、`pitfall-card` 等资产线能否在真实样本上达到可 review、可复用的最低质量线？
-- Can `issue-draft`, `prd-draft`, and `pitfall-card` reach a minimum reviewable and reusable quality bar on real samples?
+- `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item` 等代表性资产线能否在真实样本上达到可 review、可复用的最低质量线？
+- Can `idea-seed`, `practice-pitfall`, `decision-rationale`, and `follow-up-work-item` reach a minimum reviewable and reusable quality bar on real samples?
 - 每类资产是否都有 evidence backlinks、review 状态、本地输出和失败类型记录？
 - Does each asset type preserve evidence backlinks, review status, local output, and failure type records?
 - 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？

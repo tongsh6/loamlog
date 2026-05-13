@@ -12,3 +12,4 @@ Current specs:
 - `distill-builtins-boundary.md` — the active architecture refactor for built-in distiller/sink ownership and CLI bootstrap behavior
 - `issue-draft-module-boundary.md` — internal module split for `@loamlog/distiller-issue-draft` (issue #28)
 - `mcp-exposure-layer.md` — boundary spec for Issue #24, defining conservative MCP resource/tool/prompt mapping without committing to full server implementation
+- `representative-asset-distillers.md` — boundary spec for representative AI collaboration asset distillers and the plugin substrate

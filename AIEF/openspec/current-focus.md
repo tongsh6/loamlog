@@ -1,74 +1,77 @@
-# Current Focus Spec
+# 当前焦点规格 | Current Focus Spec
 
-> **当前优先级权威来源**：[`docs/project-ledger.md` §0 当前门禁](../../docs/project-ledger.md#0-当前门禁-product-gate--2026-05-11)
+> 当前优先级权威来源：[`docs/project-ledger.md` §0 当前门禁](../../docs/project-ledger.md#0-当前门禁-product-gate--2026-05-13)
 >
-> 简明结论：**代码闭环 ✅ / 产品闭环 ❌**。当前最高优先级 = 完成 Dogfooding Phase 2 Go/No-Go 决策。**MCP / FTS5 / 增量冶炼在产品门禁通过前不启动。**
+> 简明结论：代码闭环已落成，knowledge-card 小批量中文复验已通过。下一阶段不是继续单点优化 knowledge-card，也不是启动 MCP / Dashboard / Action Executor，而是验证代表性 AI 协作资产能否稳定进入 review 和复用流程。
 
-## Purpose
+## 1. 已落成事实
 
-Keep the repository aligned around the current product question without pretending unfinished features already exist.
+- Capture、archive、redaction 和本地 file sink 已存在。
+- 多模型 LLM routing 已存在。
+- OpenCode、Claude Code、Gemini CLI、Codex 等 provider 方向已验证过多来源抽象。
+- Refinery Pipeline 已进入 DAG 默认路径。
+- `AssetCandidate` 质量门禁、review、audit、sink delivery 已进入主流程。
+- GitHub sink、Notion sink 已实现，但外部自动投递仍不作为当前主线。
+- `loam show` / `loam list --format md` 已提供人类可读 review 视图。
+- Phase 2 中文复验：9 个真实 session 产出 10 张 knowledge-card，人工评分 41/50，平均 4.1/5。
 
-## Shipped Truth
+## 2. 当前产品问题
 
-- Capture, archive, redaction, and local file-based distill already exist in the repository
-- Multi-model LLM routing already exists
-- Claude Code, Gemini CLI, Codex providers all exist — multi-source abstraction validated
-- Architecture DAG Blueprint Phase 0-5 integrated — DAG is default distill mode
-- Asset graph quality gate (validateAssetCandidate) integrated into DAG pipeline
-- Approval gate (4-layer checks) + audit trail integrated into sink delivery
-- GitHub sink, Notion sink implemented with evidence-required safety checks
-- `loam review` (approve/reject) command with audit records
-- CI quality gate (`pnpm run ai:complete`) with Top N ranking
-- 160 tests passing, 0 failures (v0.6.0)
-- Dogfooding validation is the current active priority
-
-## Active Product Focus
+当前问题是：
 
 ```text
-AI conversation -> structured evidence -> local issue draft
+local AI tools
+  -> capture
+  -> archive
+  -> representative asset distillers
+  -> human review
+  -> local asset store
+  -> reuse in later work
+  -> feedback back into the system
 ```
 
-This means:
+能否在真实本机多 AI 工具会话中稳定闭环。
 
-- generate a local issue draft from a single session
-- keep the first loop local-first
-- validate output quality before automating external delivery
+这不是“生成某几种固定文档”的问题，而是验证 Loamlog 能不能把 AI 协作过程中容易遗忘的内容沉淀下来。
 
-This first loop is now implemented and merged into `develop`. The current focus is evaluating whether it is strong enough to justify the next stage.
+## 3. 当前主线
 
-## Current Active Threads
+当前主线是 #57 Cross-Asset Dogfooding，但验证对象已从旧的 `issue-draft / prd-draft / pitfall-card` 调整为代表性 AI 协作资产：
 
-- `#5` umbrella and `#9/#10/#11` discovery work
-- `#6` auto-skill generation
+- `idea-seed`：捕获还没来得及展开的想法、机会、假设、选题。
+- `practice-pitfall`：沉淀经验、踩坑、修法、可复用工作方式。
+- `decision-rationale`：保存方向判断、取舍、暂缓原因和 revisit trigger。
+- `follow-up-work-item`：提取待办、验证任务、文档更新、review action 或候选 issue。
 
-Completed MVP thread:
+边界规格见：
 
-- `#7` umbrella — closed
-- `#12` issue-draft distiller MVP — closed
-- `#13` file sink Markdown output — closed
-- `#14` post-implementation docs — closed
+- `AIEF/openspec/representative-asset-distillers.md`
 
-## Deferred Topics
+## 4. 当前活跃议题
 
-- multi-session merge distill
-- vector retrieval / semantic search (unlock condition: ≥500 archived sessions)
-- Web UI (unlock condition: ≥3 external users requesting it)
-- Copilot provider (user uses Copilot; evaluate need after dogfooding phase 1)
+- `#57` — Cross-Asset Dogfooding：当前主线，验证代表性 AI 协作资产。
+- `#11` — config precedence：下一阶段候选，应先定义 explicit config、env、discovered values、defaults 的优先级。
+- `#9` — local session provider discovery：与“从本机所有 AI 工具抓会话”愿景强相关，应在 #11 边界清晰后推进。
+- `#44` — instruction-summary distiller：有价值，但需重新定边界，避免与 instruction-rule / Auto-Skill 轨道重叠。
 
-## Current Priority: Dogfooding Validation
+## 5. 近期非目标
 
-The product loop is implemented but not yet validated with real usage. The dogfooding validation phase answers: **does this loop provide sustained user value?**
+当前不投入：
 
-Execution guide: `docs/superpowers/specs/2026-04-29-dogfooding-validation-design.md`
+- MCP server 实现；
+- Action Executor 自动执行；
+- Dashboard / Web UI；
+- Auto-Skill Generation；
+- instruction-rule 全链路；
+- 外部 GitHub / Notion 自动投递；
+- 大规模向量搜索或 marketplace。
 
-Key decision after validation:
-- Quality ≥60% at ≥3/5 → proceed to automated GitHub sink delivery
-- Quality below threshold → invest in evaluation-harness + prompt tuning
-- Provider issues → bug fixes
-- Coverage gaps → add Copilot provider
+原因：当前最缺的是跨资产类型真实验证和资产生命周期闭环，不是更多平台能力。
 
-Close `#5` only after:
+## 6. 下一阶段判断点
 
-- `#9` is done
-- `#10` is done
-- `#11` is done
+- 四类代表性资产能否在真实样本上达到可 review、可复用的最低质量线？
+- 每类资产是否都有 evidence backlinks、review 状态、本地输出和失败类型记录？
+- 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？
+- 本机多个 AI 工具的会话能否被稳定纳入同一条 capture / archive / distill / review 链路？
+- 插件底座是否允许继续接入任意新资产类型，而不修改核心流程分支？
