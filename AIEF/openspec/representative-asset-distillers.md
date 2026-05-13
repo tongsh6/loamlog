@@ -46,12 +46,13 @@ SessionArtifact
 
 ## 3. 首批代表性萃取器
 
-首批选择 4 个 distiller，覆盖 AI 工具使用过程中最容易遗失的四类内容：
+首批选择 5 个 distiller，覆盖 AI 工具使用过程中最容易遗失的五类内容：
 
 - 想到什么；
 - 学到什么；
 - 为什么这么选；
-- 接下来做什么。
+- 接下来做什么；
+- 哪些流程可以沉淀成可复用 skill。
 
 | Distiller | 核心问题 | 代表人群 | 资产价值 |
 |---|---|---|---|
@@ -59,6 +60,7 @@ SessionArtifact
 | `practice-pitfall` | 这次学到了什么，踩了什么坑？ | 工程师、AI power user、运营自动化使用者 | 沉淀经验、踩坑、修法、可复用工作方式 |
 | `decision-rationale` | 为什么选择或暂缓某个方向？ | 技术负责人、产品负责人、独立开发者 | 保存取舍、约束、反对理由和 revisit trigger |
 | `follow-up-work-item` | 会话之后应该继续做什么？ | 所有 AI 工具用户 | 把会话转成待办、验证任务、文档更新、review action 或候选 issue |
+| `skill-candidate` | 哪个重复流程值得沉淀成 skill？ | AI power user、团队负责人、平台维护者 | 捕获可产品化为 agent skill、项目规则、prompt workflow 或 runbook 的能力候选 |
 
 ### 3.1 `idea-seed`
 
@@ -169,6 +171,38 @@ SessionArtifact
 - 可以是待办、open question、验证任务、文档更新、review action 或候选 issue；
 - 不应自动外发到 GitHub / Jira，必须先进入 review。
 
+### 3.5 `skill-candidate`
+
+用途：
+
+- 捕获会话中反复出现、可复用、可教给后续 AI 的操作套路；
+- 把“这次怎么协作才有效”沉淀成 skill 候选，而不是直接生成可安装 skill；
+- 连接 workflow rule、prompt pattern、runbook 和未来 Auto-Skill Generation，但当前只做候选资产。
+
+建议 payload：
+
+```ts
+{
+  skill_name: string;
+  trigger: string;
+  capability: string;
+  workflow_steps: string[];
+  required_context?: string[];
+  inputs?: string[];
+  outputs?: string[];
+  constraints?: string[];
+  negative_cases?: string[];
+  promotion_target?: "codex_skill" | "agents_rule" | "prompt_template" | "runbook" | "project_doc";
+}
+```
+
+质量门槛：
+
+- 必须包含明确 trigger，说明什么时候应该使用这个 skill；
+- 必须描述可复用流程，不能只是单条偏好或一次性建议；
+- 必须写清适用边界和不适用场景，避免把局部经验泛化成全局规则；
+- 只能产出候选资产，不能自动写入 `AGENTS.md`、skills 目录或项目规则。
+
 ## 4. 插件底座边界
 
 当前代码已经有最小底座：
@@ -200,7 +234,7 @@ SessionArtifact
 
 规则：
 
-- core 不硬编码 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`；
+- core 不硬编码 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate`；
 - 插件特有字段留在 `payload`；
 - 共享检查只负责 evidence、confidence、title、summary、schema、review policy；
 - 无效 evidence refs 必须拒绝或丢弃候选资产，不能静默 fallback 到无关 message；
@@ -211,7 +245,7 @@ SessionArtifact
 本阶段做：
 
 - 定义下一阶段 dogfooding 的代表性资产 taxonomy；
-- 实现首批 4 个 distiller，且都作为普通插件接入；
+- 实现首批 5 个 distiller，且都作为普通插件接入；
 - 保持 local-first 和 review-first；
 - 增加 schema、evidence validation、代表性提取行为的聚焦测试；
 - 用真实本机 AI 工具会话 dogfooding；
@@ -225,9 +259,9 @@ SessionArtifact
 - 外部自动发布；
 - plugin marketplace；
 - 向量搜索；
-- Auto-Skill Generation；
+- Auto-Skill Generation，包括自动创建、安装或发布 skill；
 - 替换所有现有 distiller；
-- 把首批 4 个 distiller 当成封闭资产宇宙。
+- 把首批 5 个 distiller 当成封闭资产宇宙。
 
 ## 7. 实施 DAG
 
@@ -237,8 +271,9 @@ A. Contract alignment
   -> C. First vertical slice: idea-seed
   -> D. Second vertical slice: practice-pitfall
   -> E. Decision and follow-up slices
-  -> F. Cross-asset dogfooding batch
-  -> G. Feedback into ledger, review policy, and page structure
+  -> F. Skill candidate slice
+  -> G. Cross-asset dogfooding batch
+  -> H. Feedback into ledger, review policy, and page structure
 ```
 
 节点说明：
@@ -248,12 +283,13 @@ A. Contract alignment
 - C：输入包含产品、内容、研究想法的真实 session；输出 reviewed `idea-seed` 本地资产。
 - D：输入包含实现经验或工作流经验的真实 session；输出 reviewed `practice-pitfall` 本地资产。
 - E：输入包含取舍和后续动作的 session；输出 reviewed `decision-rationale` 与 `follow-up-work-item` 资产。
-- F：输入四个 distiller 和至少一个现有 baseline，例如 `knowledge-card`；输出按资产类型拆分的评分报告。
-- G：输入 review 结果和复用观察；输出台账更新、下一步页面优先级和底座缺口。
+- F：输入包含重复协作套路、工具使用方式或项目规则演化的 session；输出 reviewed `skill-candidate` 资产。
+- G：输入五个 distiller 和至少一个现有 baseline，例如 `knowledge-card`；输出按资产类型拆分的评分报告。
+- H：输入 review 结果和复用观察；输出台账更新、下一步页面优先级和底座缺口。
 
 ## 8. 验收标准
 
-- 四个代表性 distiller 都能通过现有 registry / CLI 路径运行，不需要 engine 特判。
+- 五个代表性 distiller 都能通过现有 registry / CLI 路径运行，不需要 engine 特判。
 - 每条资产都有有效 evidence backlinks。
 - 每类资产都有 payload schema 和人类可读 markdown render。
 - dogfooding 使用真实本机会话，不只用 synthetic prompt。
@@ -267,6 +303,7 @@ A. Contract alignment
 - `issue-draft` 继续保留，但更适合作为 `follow-up-work-item` 的 delivery/rendering path，而不是下一阶段代表性资产本体。
 - `prd-draft` 暂缓到真实产品规划会话成为主要样本后再验证。
 - `pitfall-card` 可以复用或演进为 `practice-pitfall`，取决于它的 payload 和 evidence policy 是否符合本 spec。
+- `instruction-summary`、instruction-rule 和 Auto-Skill Generation 相关方向继续保留；`skill-candidate` 只负责产出人工 review 的 skill 候选，不负责自动生成或发布 skill。
 
 关键变化是：
 

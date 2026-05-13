@@ -10,7 +10,7 @@
 | **测试** | ✅ 207 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 output-language / evidence refs / 中文标题去重回归测试 |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` |
 | **产品闭环** | ✅ **Phase 2 Go / 小批量复验通过** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5，总分 41/50，平均 4.1/5 |
-| **下一道门禁** | Representative Asset Dogfooding | 不再只验证 knowledge-card；下一批用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item` 验证代表性 AI 协作资产 |
+| **下一道门禁** | Representative Asset Dogfooding | 不再只验证 knowledge-card；下一批用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 验证代表性 AI 协作资产 |
 
 **当前最高优先级 = 跨资产类型 dogfooding，验证「本机多 AI 工具会话 → 多类型可复用资产」能否稳定闭环，而非继续单点优化 knowledge-card 或启动新架构（MCP / Action Executor / Dashboard / Auto-Skill）。**
 
@@ -117,7 +117,7 @@
 > 以下顺序基于 §0 当前门禁结论。**MCP / FTS5 / 增量冶炼在产品质量稳定前不启动。**
 
 1. **[P0] 执行 Cross-Asset Dogfooding tracking (#57)**
-   - 目标：用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item` 验证代表性 AI 协作资产
+   - 目标：用 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 验证代表性 AI 协作资产
    - 每类资产单独人工评分，避免 knowledge-card 成功或单一资产成功掩盖其他资产线失败
    - 产物：本地 dogfooding 报告模板 + 明确 Go/No-Go 标准 + review 结果
 2. **[P1] 用真实新增会话跑多资产样本**
@@ -146,7 +146,7 @@
 
 1. 经噪声过滤 v0.2/v0.3 后，knowledge-card distiller 在 ≥10 真实样本上能否保持 ≥60% 人工质量评分？ → **已刚好达标：6/10 = 60%，Conditional Go**
 2. 收紧质量门禁后，下一批 knowledge-card 能否达到更稳的 ≥70% 人工质量评分？ → **已达标：中文复验 10/10 = 100%，平均 4.1/5**
-3. `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item` 等代表性资产线能否在真实样本上达到可 review、可复用的最低质量线？
+3. `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性资产线能否在真实样本上达到可 review、可复用的最低质量线？
 4. 本机多个 AI 工具的会话能否被稳定纳入同一条 capture / archive / distill / review 链路？
 5. 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？
 6. 当前 LLM 选型（LM Studio / DeepSeek）在大 session 和多资产 distiller 上是否能稳定完成蒸馏？
@@ -173,7 +173,7 @@
 
 | # | 标题 | 用途 |
 | :--- | :--- | :--- |
-| **#57** | [Tracking] Cross-Asset Dogfooding | 验证 Loamlog 能否从真实本地 AI 会话中稳定产出 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item` 等代表性可复用资产 |
+| **#57** | [Tracking] Cross-Asset Dogfooding | 验证 Loamlog 能否从真实本地 AI 会话中稳定产出 `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性可复用资产 |
 
 ### 6.3 下一阶段候选
 

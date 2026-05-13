@@ -42,6 +42,7 @@ local AI tools
 - `practice-pitfall`：沉淀经验、踩坑、修法、可复用工作方式。
 - `decision-rationale`：保存方向判断、取舍、暂缓原因和 revisit trigger。
 - `follow-up-work-item`：提取待办、验证任务、文档更新、review action 或候选 issue。
+- `skill-candidate`：提取可沉淀为 agent skill、项目规则、prompt workflow 或 runbook 的重复能力候选。
 
 边界规格见：
 
@@ -70,7 +71,7 @@ local AI tools
 
 ## 6. 下一阶段判断点
 
-- 四类代表性资产能否在真实样本上达到可 review、可复用的最低质量线？
+- 五类代表性资产能否在真实样本上达到可 review、可复用的最低质量线？
 - 每类资产是否都有 evidence backlinks、review 状态、本地输出和失败类型记录？
 - 人工 review 后的资产能否进入本地复用池，并在后续任务中被引用或转化为工作项？
 - 本机多个 AI 工具的会话能否被稳定纳入同一条 capture / archive / distill / review 链路？
