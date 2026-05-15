@@ -1,0 +1,56 @@
+{
+  "runId": "2026-05-15T06-06-21Z",
+  "startedAt": "2026-05-15T06:06:21.118Z",
+  "completedAt": "2026-05-15T06:06:34.851Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "851fedb",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "ocs/project-ledger.md",
+      "ackages/core/src/index.ts",
+      "ackages/distill/src/store.ts",
+      "AIEF/reports/static-scan/2026-05-15T06-03-50Z/",
+      "AIEF/reports/static-scan/2026-05-15T06-04-20Z/",
+      "AIEF/reports/static-scan/2026-05-15T06-05-02Z/",
+      "packages/distill/src/store.test.ts"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}
