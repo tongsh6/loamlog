@@ -1,7 +1,13 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { SessionArtifact } from "@loamlog/core";
-import { buildSessionPrompt, collectEvidence, extractJsonArray, normalizeConfidence } from "./shared.js";
+import {
+	buildSessionPrompt,
+	collectEvidence,
+	extractJsonArray,
+	normalizeConfidence,
+	shouldKeepRepresentativeAsset,
+} from "./shared.js";
 
 describe("representative asset shared helpers", () => {
 	test("extractJsonArray reads fenced JSON arrays", () => {
@@ -26,9 +32,92 @@ describe("representative asset shared helpers", () => {
 		assert.match(prompt, /session_id: ses_rep_1/);
 		assert.match(prompt, /\[msg_1\] \(user\)/);
 	});
+
+	test("shared post-filter rejects assistant process log evidence", () => {
+		const artifact = makeArtifact({
+			messages: [
+				{
+					id: "msg_1",
+					role: "assistant",
+					timestamp: "2026-05-13T00:00:00.000Z",
+					content: "Now I will inspect files and update the implementation.",
+				},
+			],
+		});
+
+		assert.equal(
+			shouldKeepRepresentativeAsset({
+				type: "follow-up-work-item",
+				title: "inspect_files",
+				summary: "AI process step",
+				payload: {
+					action: "Inspect files",
+					reason: "The assistant said it would inspect files.",
+					acceptance: ["files inspected"],
+				},
+				evidence: [
+					{
+						session_id: "ses_rep_1",
+						message_id: "msg_1",
+						excerpt: "inspect files",
+					},
+				],
+				artifact,
+			}),
+			false,
+		);
+	});
+
+	test("shared post-filter requires concrete follow-up acceptance", () => {
+		assert.equal(
+			shouldKeepRepresentativeAsset({
+				type: "follow-up-work-item",
+				title: "Implement signal routing",
+				summary: "Wire selected signals into representative asset distillers.",
+				payload: {
+					action: "Implement signal routing",
+					reason: "Representative distillers need cleaner inputs.",
+				},
+				evidence: [
+					{
+						session_id: "ses_rep_1",
+						message_id: "msg_1",
+						excerpt: "We should capture ideas",
+					},
+				],
+				artifact: makeArtifact(),
+			}),
+			false,
+		);
+	});
+
+	test("shared post-filter rejects one-off command skill candidates", () => {
+		assert.equal(
+			shouldKeepRepresentativeAsset({
+				type: "skill-candidate",
+				title: "git_push_branch",
+				summary: "Use git push to publish a branch.",
+				payload: {
+					skill_name: "git_push_branch",
+					trigger: "When a branch needs pushing",
+					capability: "Run git push.",
+					workflow_steps: ["Run git status", "Run git push"],
+				},
+				evidence: [
+					{
+						session_id: "ses_rep_1",
+						message_id: "msg_1",
+						excerpt: "We should capture ideas",
+					},
+				],
+				artifact: makeArtifact(),
+			}),
+			false,
+		);
+	});
 });
 
-function makeArtifact(): SessionArtifact {
+function makeArtifact(overrides: Partial<SessionArtifact> = {}): SessionArtifact {
 	return {
 		schema_version: "1.0",
 		meta: {
@@ -53,5 +142,6 @@ function makeArtifact(): SessionArtifact {
 			},
 		],
 		redacted: { patterns_applied: [], redacted_count: 0 },
+		...overrides,
 	};
 }

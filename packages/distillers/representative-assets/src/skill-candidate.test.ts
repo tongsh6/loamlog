@@ -41,6 +41,21 @@ describe("skill-candidate distiller", () => {
 
 		assert.equal(outputs.length, 0);
 	});
+
+	test("drops one-off command skill candidates", async () => {
+		const outputs = await factory().run(makeRunInput([
+			{
+				skill_name: "git_push_branch",
+				trigger: "When a branch needs pushing",
+				capability: "Run a normal git push command.",
+				workflow_steps: ["Run git status", "Run git push"],
+				promotion_target: "runbook",
+				evidence_refs: [{ message_id: "msg_1", excerpt: "文档写着写着就变成英文了" }],
+			},
+		]));
+
+		assert.equal(outputs.length, 0);
+	});
 });
 
 function makeRunInput(items: unknown[]) {

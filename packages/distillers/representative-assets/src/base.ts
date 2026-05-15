@@ -12,6 +12,7 @@ import {
   extractJsonArray,
   getEvidenceRefs,
   normalizeConfidence,
+  shouldKeepRepresentativeAsset,
 } from "./shared.js";
 
 interface RepresentativeDistillerSpec<
@@ -72,6 +73,18 @@ export function createRepresentativeDistiller<
 
             const title = spec.title(payload).slice(0, 100);
             const summary = spec.summary(payload);
+            if (
+              !shouldKeepRepresentativeAsset({
+                type: spec.type,
+                title,
+                summary,
+                payload,
+                evidence,
+                artifact,
+              })
+            ) {
+              continue;
+            }
 
             results.push({
               type: spec.type,

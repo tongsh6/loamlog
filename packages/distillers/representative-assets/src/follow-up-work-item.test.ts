@@ -34,6 +34,19 @@ describe("follow-up-work-item distiller", () => {
 
 		assert.equal(outputs.length, 0);
 	});
+
+	test("drops follow-up items without acceptance criteria", async () => {
+		const outputs = await factory().run(makeRunInput([
+			{
+				action: "Implement a broad roadmap item",
+				reason: "The session mentioned it might be useful later.",
+				confidence: 0.8,
+				evidence_refs: [{ message_id: "msg_1", excerpt: "继续推进" }],
+			},
+		]));
+
+		assert.equal(outputs.length, 0);
+	});
 });
 
 function makeRunInput(items: unknown[]) {
