@@ -6,5 +6,6 @@ export { runSinks, type ConfiguredSink } from "./sink-runner.js";
 export { createArtifactQueryClient, createSingleArtifactStore, snapshotToArtifact } from "./query.js";
 export { createDistillEngine } from "./engine.js";
 export { createDistillDAG, runDistillDAG } from "./dag-runner.js";
+export { LocalAssetStore } from "./store.js";
 export type { DistillDAGOptions, DistillDAGResult } from "./dag-runner.js";
 export type { OutputLanguage } from "./augment.js";

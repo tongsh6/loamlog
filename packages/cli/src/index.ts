@@ -4,6 +4,7 @@ import { runCaptureCommand } from "./capture.js";
 import { runDistillCommand, loadAICConfig, buildRuntimeDistillConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
 import { runListCommand } from "./list.js";
 import { runReviewCommand } from "./review.js";
+import { runSignalCommand } from "./signal.js";
 import { runShowCommand } from "./show.js";
 import { parseProviderList, createSessionProviders } from "./providers.js";
 import { pullClaudeCodeSessionFromFilePath, startClaudeCodeWatcher } from "@loamlog/provider-claude-code";
@@ -21,6 +22,7 @@ function printUsage(): void {
   console.log("  capture [--provider <name>] [--session-id <id>] [--dump-dir <path>] [--trigger <name>]");
   console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>] [--legacy] [--max-sessions <n>] [--skip-larger-than <bytes>]");
   console.log("  review  [--list] [--repo <name>] [--approve <id> | --reject <id>] [--dump-dir <path>] [--limit <n>]");
+  console.log("  signal  <list|show|review> [--dump-dir <path>]");
 }
 
 function parsePort(args: string[]): number | undefined {
@@ -96,6 +98,11 @@ async function main(): Promise<void> {
 
   if (command === "review") {
     await runReviewCommand(args);
+    return;
+  }
+
+  if (command === "signal") {
+    await runSignalCommand(args);
     return;
   }
 
