@@ -102,6 +102,14 @@
 | Signal contract 切片 | ✅ 已落成 | `@loamlog/core` 已新增 SignalKind/SignalTag/SignalReview/SignalConsumption/DistillerManifest contract、默认 review status 与 `validateSignal`；代表性资产 distiller 已声明 `consumes_signals`，后续 routing 可按 manifest 消费 signal |
 | SignalStore 切片 | ✅ 已落成 | `AssetStore` contract 与 `LocalAssetStore` 已支持 signal 写入、列表/详情、人工 review、consumption 记录和基础 lineage 查询；classifier 重跑不会覆盖人工 review |
 | Signal CLI 切片 | ✅ 已落成 | `loam signal list/show/review` 已支持读取 `LocalAssetStore` signals、按 kind/status/session/distiller/promotable 过滤、默认隐藏 `raw_model_output`、人工 review 覆盖 classification |
+| Signal classifier schema 切片 | ✅ 已落成 | `@loamlog/distill` 已新增 `signal-classifier` 模块，导出 Signal Gate LLM 输出 JSON schema、prompt builder、LLM classify helper、deterministic normalize/policy check；无有效 evidence 的 classifier item 不落库，非法 tag 进入 `raw_tags` |
+| Signal-based distiller routing 切片 | ✅ 已落成 | `runDistillDAG` 对声明 `consumes_signals` 的 distiller 先执行 Signal classifier、写入 `LocalAssetStore`、按 manifest 选择可消费 signal、将 distiller 输入缩小到 signal evidence messages，并记录 `SignalConsumption` lineage；未声明 signal 消费的旧 distiller 行为不变 |
+
+### 2.aa 2026-05-15 代表性资产通用过滤层
+
+| 事项 | 状态 | 描述 |
+| :--- | :--- | :--- |
+| Common post-filter v0.1 | ✅ 已落成 | `@loamlog/distiller-representative-assets` 已新增共享 `shouldKeepRepresentativeAsset` post-filter，在 5 类代表性资产共用入口统一过滤 assistant process log evidence、动作壳标题、follow-up 缺少验收标准、done-state / old-roadmap idea、decision 非明确决策、普通 API key 错误经验、one-off command / bug fix / CI skill-candidate |
 
 ---
 
@@ -145,12 +153,11 @@
 1. **[P0] 实现 Signal Gate 设计入口 (#57)**
    - 输入：`AIEF/openspec/signal-gate.md` 与 `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
    - 目标：在 `NormalizedSession` 和 typed distillers 之间补全全局 `Signal` 分级、review、consumption 记录和插件路由契约
-   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点、`loam signal list/show/review` 最小人工审阅入口
-   - 剩余产物：classifier schema、signal-based distiller routing
+   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点、`loam signal list/show/review` 最小人工审阅入口、classifier schema/prompt/normalize helper、DAG 内 signal-based distiller routing
+   - 剩余产物：capture 后自动 Signal Gate job、classifier 重跑命令；当前 dogfooding 主线可先进入 P1 通用过滤层与 distiller repair
 2. **[P1] 增加跨资产通用过滤层**
-   - 过滤 assistant process log、done-state、action-shell、old-roadmap、duplicate-topic、wrong-type
-   - 明确 `follow-up-work-item` 必须是未完成、有对象、有验收标准的用户后续行动
-   - 明确 `skill-candidate` 只保留跨项目稳定流程，不把普通命令、bug 修复、项目内部 runbook 升级为 skill
+   - 已完成 v0.1：过滤 assistant process log、done-state、action-shell、old-roadmap、部分 wrong-type；`follow-up-work-item` 已要求验收标准；`skill-candidate` 已拒绝普通命令、bug fix、CI 等一次性任务
+   - 剩余：duplicate-topic 跨类型去重、更细的 old-roadmap 判定、基于真实样本的 distiller prompt/schema repair
 3. **[P2] 小批量复评而非扩大样本**
    - 用 5-10 条真实 session rerun，目标是每类资产 `>=3` 比例至少 50%
    - 仅当复评达标后，再讨论多 provider 样本、复用池、页面或 MCP 暴露

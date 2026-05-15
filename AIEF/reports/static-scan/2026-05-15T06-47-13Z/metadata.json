@@ -1,0 +1,70 @@
+{
+  "runId": "2026-05-15T06-47-13Z",
+  "startedAt": "2026-05-15T06:47:13.224Z",
+  "completedAt": "2026-05-15T06:47:27.397Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "6adff05",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "IEF/context/business/current-focus.md",
+      "ocs/project-ledger.md",
+      "ackages/core/src/index.ts",
+      "ackages/distill/src/dag-runner.test.ts",
+      "ackages/distill/src/dag-runner.ts",
+      "ackages/distill/src/index.ts",
+      "ackages/distill/src/shard.ts",
+      "ackages/distillers/representative-assets/src/base.ts",
+      "ackages/distillers/representative-assets/src/follow-up-work-item.test.ts",
+      "ackages/distillers/representative-assets/src/shared.test.ts",
+      "ackages/distillers/representative-assets/src/shared.ts",
+      "ackages/distillers/representative-assets/src/skill-candidate.test.ts",
+      "AIEF/reports/static-scan/2026-05-15T06-35-26Z/",
+      "AIEF/reports/static-scan/2026-05-15T06-36-10Z/",
+      "AIEF/reports/static-scan/2026-05-15T06-42-48Z/",
+      "AIEF/reports/static-scan/2026-05-15T06-43-10Z/",
+      "AIEF/reports/static-scan/2026-05-15T06-46-46Z/",
+      "packages/distill/src/signal-classifier.test.ts",
+      "packages/distill/src/signal-classifier.ts",
+      "packages/distill/src/signal-routing.test.ts",
+      "packages/distill/src/signal-routing.ts"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

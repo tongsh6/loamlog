@@ -1,0 +1,55 @@
+{
+  "runId": "2026-05-15T06-36-10Z",
+  "startedAt": "2026-05-15T06:36:10.189Z",
+  "completedAt": "2026-05-15T06:36:25.049Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "6adff05",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "IEF/context/business/current-focus.md",
+      "ocs/project-ledger.md",
+      "ackages/distill/src/index.ts",
+      "AIEF/reports/static-scan/2026-05-15T06-35-26Z/",
+      "packages/distill/src/signal-classifier.test.ts",
+      "packages/distill/src/signal-classifier.ts"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

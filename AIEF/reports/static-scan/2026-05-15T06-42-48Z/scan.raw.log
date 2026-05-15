@@ -1,0 +1,203 @@
+## typescript
+Command: pnpm run typecheck
+Required: yes
+Skipped: no
+Exit code: 0
+
+--- stdout ---
+
+> loamlog@0.7.0 typecheck /Users/loong/workspace/code/github/ai/loamlog
+> pnpm --filter @loamlog/core run build && pnpm --filter @loamlog/sanitizer run build && pnpm --filter @loamlog/archive run build && pnpm --filter @loamlog/distiller-sdk run build && pnpm --filter @loamlog/pipeline run build && pnpm --filter @loamlog/distill run build && pnpm --filter @loamlog/rules run build && pnpm --filter @loamlog/trigger run build && pnpm --filter @loamlog/provider-opencode run build && pnpm --filter @loamlog/provider-claude-code run build && pnpm --filter @loamlog/provider-gemini-cli run build && pnpm --filter @loamlog/provider-codex run build && pnpm --filter @loamlog/evaluation-harness run build && pnpm --filter @loamlog/distiller-representative-assets run build && pnpm --filter @loamlog/core run typecheck && pnpm --filter @loamlog/sanitizer run typecheck && pnpm --filter @loamlog/archive run typecheck && pnpm --filter @loamlog/distiller-sdk run typecheck && pnpm --filter @loamlog/pipeline run typecheck && pnpm --filter @loamlog/distill run typecheck && pnpm --filter @loamlog/rules run typecheck && pnpm --filter @loamlog/trigger run typecheck && pnpm --filter @loamlog/distiller-pitfall-card run typecheck && pnpm --filter @loamlog/distiller-issue-draft run typecheck && pnpm --filter @loamlog/distiller-knowledge-card run typecheck && pnpm --filter @loamlog/distiller-prd-draft run typecheck && pnpm --filter @loamlog/distiller-representative-assets run typecheck && pnpm --filter @loamlog/sink-file run typecheck && pnpm --filter @loamlog/sink-github run typecheck && pnpm --filter @loamlog/sink-notion run typecheck && pnpm --filter @loamlog/provider-opencode run typecheck && pnpm --filter @loamlog/provider-claude-code run typecheck && pnpm --filter @loamlog/provider-gemini-cli run typecheck && pnpm --filter @loamlog/provider-codex run typecheck && pnpm --filter @loamlog/evaluation-harness run typecheck && pnpm --filter @loamlog/cli run typecheck
+
+
+> @loamlog/core@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/core
+> tsc -p tsconfig.json
+
+
+> @loamlog/sanitizer@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/sanitizer
+> tsc -p tsconfig.json
+
+
+> @loamlog/archive@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/archive
+> tsc -p tsconfig.json
+
+
+> @loamlog/distiller-sdk@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/distiller-sdk
+> tsc -p tsconfig.json
+
+
+> @loamlog/pipeline@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/pipeline
+> tsc -p tsconfig.json
+
+
+> @loamlog/distill@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/distill
+> tsc -p tsconfig.json
+
+
+> @loamlog/rules@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/rules
+> tsc -p tsconfig.json && node --input-type=module -e "import { copyFileSync, mkdirSync } from 'node:fs'; import path from 'node:path'; const src = path.resolve('src/default.rules.yaml'); const destDir = path.resolve('dist'); mkdirSync(destDir, { recursive: true }); copyFileSync(src, path.join(destDir, 'default.rules.yaml'));"
+
+
+> @loamlog/trigger@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/trigger
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-opencode@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/opencode
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-claude-code@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/claude-code
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-gemini-cli@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/gemini-cli
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-codex@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/codex
+> tsc -p tsconfig.json
+
+
+> @loamlog/evaluation-harness@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/evaluation-harness
+> tsc -p tsconfig.json
+
+
+> @loamlog/distiller-representative-assets@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/representative-assets
+> tsc -p tsconfig.json
+
+
+> @loamlog/core@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/core
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sanitizer@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sanitizer
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/archive@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/archive
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-sdk@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distiller-sdk
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/pipeline@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/pipeline
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distill@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distill
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/rules@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/rules
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/trigger@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/trigger
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-pitfall-card@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/pitfall-card
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-issue-draft@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/issue-draft
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-knowledge-card@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/knowledge-card
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-prd-draft@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/prd-draft
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-representative-assets@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/representative-assets
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sink-file@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sinks/file
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sink-github@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sinks/github
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sink-notion@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sinks/notion
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-opencode@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/opencode
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-claude-code@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/claude-code
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-gemini-cli@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/gemini-cli
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-codex@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/codex
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/evaluation-harness@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/evaluation-harness
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/cli@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/cli
+> tsc -p tsconfig.json --noEmit
+
+
+
+--- stderr ---
+(empty)
+
+## biome
+Command: pnpm exec biome lint . --reporter=json
+Required: yes
+Skipped: no
+Exit code: 0
+
+--- stdout ---
+{"summary":{"changed":0,"unchanged":202,"matches":0,"duration":40280166,"errors":0,"warnings":23,"infos":42,"skipped":0,"suggestedFixesSkipped":0,"diagnosticsNotPrinted":0,"scannerDuration":9667667},"diagnostics":[{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/archive/src/index.ts","start":{"line":301,"column":13},"end":{"line":301,"column":22}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/archive/src/registry.ts","start":{"line":79,"column":11},"end":{"line":79,"column":20}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/cli/src/distill.ts","start":{"line":196,"column":7},"end":{"line":196,"column":16}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/cli/src/list.ts","start":{"line":263,"column":7},"end":{"line":263,"column":16}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/cli/src/list.ts","start":{"line":330,"column":9},"end":{"line":330,"column":18}},"advices":[]},{"severity":"info","message":"Template literals are preferred over string concatenation.","category":"lint/style/useTemplate","location":{"path":"packages/cli/src/list.ts","start":{"line":688,"column":29},"end":{"line":688,"column":57}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/cli/src/show.ts","start":{"line":83,"column":11},"end":{"line":83,"column":20}},"advices":[]},{"severity":"info","message":"The character doesn't need to be escaped.","category":"lint/complexity/noUselessEscapeInRegex","location":{"path":"packages/distill/src/aggregator.ts","start":{"line":32,"column":24},"end":{"line":32,"column":26}},"advices":[]},{"severity":"info","message":"The character doesn't need to be escaped.","category":"lint/complexity/noUselessEscapeInRegex","location":{"path":"packages/distill/src/normalizer.ts","start":{"line":92,"column":36},"end":{"line":92,"column":38}},"advices":[]},{"severity":"info","message":"The character doesn't need to be escaped.","category":"lint/complexity/noUselessEscapeInRegex","location":{"path":"packages/distill/src/verifier/git-gap.ts","start":{"line":130,"column":53},"end":{"line":130,"column":55}},"advices":[]},{"severity":"info","message":"Prefer Array#indexOf() over Array#findIndex() when looking for the index of an item.","category":"lint/complexity/useIndexOf","location":{"path":"packages/evaluation-harness/src/metrics.ts","start":{"line":40,"column":16},"end":{"line":40,"column":59}},"advices":[]},{"severity":"info","message":"Template literals are preferred over string concatenation.","category":"lint/style/useTemplate","location":{"path":"packages/pipeline/src/index.ts","start":{"line":266,"column":61},"end":{"line":266,"column":87}},"advices":[]},{"severity":"info","message":"The character doesn't need to be escaped.","category":"lint/complexity/noUselessEscapeInRegex","location":{"path":"packages/providers/claude-code/src/index.ts","start":{"line":205,"column":36},"end":{"line":205,"column":38}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/providers/claude-code/src/index.ts","start":{"line":240,"column":7},"end":{"line":240,"column":16}},"advices":[]},{"severity":"info","message":"Template literals are preferred over string concatenation.","category":"lint/style/useTemplate","location":{"path":"packages/providers/codex/src/index.test.ts","start":{"line":18,"column":19},"end":{"line":22,"column":24}},"advices":[]},{"severity":"info","message":"Template literals are preferred over string concatenation.","category":"lint/style/useTemplate","location":{"path":"packages/providers/codex/src/index.test.ts","start":{"line":44,"column":19},"end":{"line":50,"column":24}},"advices":[]},{"severity":"info","message":"Template literals are preferred over string concatenation.","category":"lint/style/useTemplate","location":{"path":"packages/providers/codex/src/index.test.ts","start":{"line":71,"column":19},"end":{"line":76,"column":24}},"advices":[]},{"severity":"info","message":"The character doesn't need to be escaped.","category":"lint/complexity/noUselessEscapeInRegex","location":{"path":"packages/providers/codex/src/index.ts","start":{"line":88,"column":36},"end":{"line":88,"column":38}},"advices":[]},{"severity":"info","message":"Unnecessary continue statement","category":"lint/complexity/noUselessContinue","location":{"path":"packages/providers/codex/src/index.ts","start":{"line":267,"column":9},"end":{"line":267,"column":18}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/buffer-manager.test.ts","start":{"line":6,"column":24},"end":{"line":6,"column":28}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/buffer-manager.test.ts","start":{"line":5,"column":22},"end":{"line":5,"column":28}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/buffer-manager.test.ts","start":{"line":4,"column":36},"end":{"line":4,"column":49}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/buffer-manager.ts","start":{"line":1,"column":75},"end":{"line":1,"column":88}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/buffer-manager.ts","start":{"line":2,"column":22},"end":{"line":2,"column":28}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/buffer-manager.ts","start":{"line":3,"column":25},"end":{"line":3,"column":29}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"plugins/opencode/src/index.ts","start":{"line":1,"column":32},"end":{"line":1,"column":36}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":230,"column":46},"end":{"line":230,"column":57}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":234,"column":42},"end":{"line":234,"column":48}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":234,"column":80},"end":{"line":234,"column":86}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":234,"column":116},"end":{"line":234,"column":122}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":235,"column":40},"end":{"line":235,"column":46}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":235,"column":78},"end":{"line":235,"column":84}},"advices":[]},{"severity":"info","message":"The computed expression can be simplified without the use of a string literal.","category":"lint/complexity/useLiteralKeys","location":{"path":"plugins/opencode/src/index.ts","start":{"line":235,"column":114},"end":{"line":235,"column":120}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/scripts/start-server.ts","start":{"line":5,"column":31},"end":{"line":5,"column":36}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/scripts/start-server.ts","start":{"line":2,"column":26},"end":{"line":2,"column":41}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/scripts/start-server.ts","start":{"line":3,"column":52},"end":{"line":3,"column":56}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/scripts/start-server.ts","start":{"line":4,"column":31},"end":{"line":4,"column":37}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/src/index.ts","start":{"line":3,"column":27},"end":{"line":3,"column":31}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/src/index.ts","start":{"line":4,"column":22},"end":{"line":4,"column":28}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/src/index.ts","start":{"line":5,"column":29},"end":{"line":5,"column":34}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/src/snapshot/browser-script.ts","start":{"line":13,"column":23},"end":{"line":13,"column":29}},"advices":[]},{"severity":"info","message":"A Node.js builtin module should be imported with the node: protocol.","category":"lint/style/useNodejsImportProtocol","location":{"path":"skills/dev-browser/src/snapshot/browser-script.ts","start":{"line":12,"column":21},"end":{"line":12,"column":25}},"advices":[]},{"severity":"warning","message":"Some named imports are only used as types.","category":"lint/style/useImportType","location":{"path":"packages/rules/src/index.test.ts","start":{"line":4,"column":8},"end":{"line":10,"column":20}},"advices":[{"start":{"line":9,"column":3},"end":{"line":9,"column":13},"text":"Safe fix: Add inline type keywords."}]},{"severity":"warning","message":"Several of these imports are unused.","category":"lint/correctness/noUnusedImports","location":{"path":"packages/sanitizer/src/index.ts","start":{"line":2,"column":10},"end":{"line":2,"column":16}},"advices":[]},{"severity":"warning","message":"This parameter is unused.","category":"lint/correctness/noUnusedFunctionParameters","location":{"path":"packages/sanitizer/src/index.ts","start":{"line":231,"column":70},"end":{"line":231,"column":75}},"advices":[]},{"severity":"warning","message":"This parameter is unused.","category":"lint/correctness/noUnusedFunctionParameters","location":{"path":"packages/sanitizer/src/index.ts","start":{"line":256,"column":6},"end":{"line":256,"column":11}},"advices":[]},{"severity":"warning","message":"This parameter is unused.","category":"lint/correctness/noUnusedFunctionParameters","location":{"path":"packages/sanitizer/src/index.ts","start":{"line":282,"column":100},"end":{"line":282,"column":108}},"advices":[]},{"severity":"warning","message":"Several of these imports are unused.","category":"lint/correctness/noUnusedImports","location":{"path":"packages/sinks/github/src/index.test.ts","start":{"line":4,"column":28},"end":{"line":4,"column":49}},"advices":[]},{"severity":"warning","message":"Change to an optional chain.","category":"lint/complexity/useOptionalChain","location":{"path":"packages/sinks/github/src/index.ts","start":{"line":123,"column":11},"end":{"line":123,"column":45}},"advices":[]},{"severity":"warning","message":"This variable err is unused.","category":"lint/correctness/noUnusedVariables","location":{"path":"plugins/opencode/src/buffer-manager.ts","start":{"line":89,"column":14},"end":{"line":89,"column":17}},"advices":[]},{"severity":"warning","message":"Unexpected any. Specify a different type.","category":"lint/suspicious/noExplicitAny","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":126,"column":42},"end":{"line":126,"column":45}},"advices":[]},{"severity":"warning","message":"Unexpected any. Specify a different type.","category":"lint/suspicious/noExplicitAny","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":126,"column":61},"end":{"line":126,"column":64}},"advices":[]},{"severity":"warning","message":"Forbidden non-null assertion.","category":"lint/style/noNonNullAssertion","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":128,"column":18},"end":{"line":128,"column":32}},"advices":[]},{"severity":"warning","message":"Forbidden non-null assertion.","category":"lint/style/noNonNullAssertion","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":129,"column":17},"end":{"line":129,"column":28}},"advices":[]},{"severity":"warning","message":"Forbidden non-null assertion.","category":"lint/style/noNonNullAssertion","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":350,"column":16},"end":{"line":350,"column":28}},"advices":[]},{"severity":"warning","message":"Unexpected any. Specify a different type.","category":"lint/suspicious/noExplicitAny","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":414,"column":33},"end":{"line":414,"column":36}},"advices":[]},{"severity":"warning","message":"Unexpected any. Specify a different type.","category":"lint/suspicious/noExplicitAny","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":433,"column":33},"end":{"line":433,"column":36}},"advices":[]},{"severity":"warning","message":"Change to an optional chain.","category":"lint/complexity/useOptionalChain","location":{"path":"skills/dev-browser/src/client.ts","start":{"line":254,"column":9},"end":{"line":254,"column":41}},"advices":[]},{"severity":"warning","message":"This interface ExtensionCommandMessage is unused.","category":"lint/correctness/noUnusedVariables","location":{"path":"skills/dev-browser/src/relay.ts","start":{"line":50,"column":11},"end":{"line":50,"column":34}},"advices":[]},{"severity":"warning","message":"Unexpected any. Specify a different type.","category":"lint/suspicious/noExplicitAny","location":{"path":"skills/dev-browser/src/snapshot/__tests__/snapshot.test.ts","start":{"line":49,"column":29},"end":{"line":49,"column":32}},"advices":[]},{"severity":"warning","message":"Unexpected any. Specify a different type.","category":"lint/suspicious/noExplicitAny","location":{"path":"skills/dev-browser/src/snapshot/__tests__/snapshot.test.ts","start":{"line":107,"column":31},"end":{"line":107,"column":34}},"advices":[]},{"severity":"warning","message":"Forbidden non-null assertion.","category":"lint/style/noNonNullAssertion","location":{"path":"skills/dev-browser/src/snapshot/__tests__/snapshot.test.ts","start":{"line":128,"column":12},"end":{"line":128,"column":21}},"advices":[]},{"severity":"warning","message":"Forbidden non-null assertion.","category":"lint/style/noNonNullAssertion","location":{"path":"skills/dev-browser/src/snapshot/__tests__/snapshot.test.ts","start":{"line":129,"column":17},"end":{"line":129,"column":26}},"advices":[]},{"severity":"warning","message":"This import is unused.","category":"lint/correctness/noUnusedImports","location":{"path":"skills/dev-browser/src/snapshot/browser-script.ts","start":{"line":12,"column":13},"end":{"line":12,"column":15}},"advices":[]},{"severity":"warning","message":"This variable snapshotDir is unused.","category":"lint/correctness/noUnusedVariables","location":{"path":"skills/dev-browser/src/snapshot/browser-script.ts","start":{"line":29,"column":9},"end":{"line":29,"column":20}},"advices":[]}],"command":"lint"}
+
+
+--- stderr ---
+The --json option is unstable/experimental and its output might change between patches/minor releases.
+
+
+## pnpm-audit
+Command: pnpm audit --audit-level moderate --json
+Required: yes
+Skipped: no
+Exit code: 0
+
+--- stdout ---
+{
+  "actions": [],
+  "advisories": {},
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "dependencies": 72,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 72
+  }
+}
+
+
+--- stderr ---
+(empty)
