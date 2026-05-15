@@ -8,6 +8,7 @@ import { writeSessionSnapshot } from "@loamlog/archive";
 import { validateDAG } from "@loamlog/pipeline";
 import { createDistillerStateKV } from "./state.js";
 import { createDistillDAG, runDistillDAG } from "./dag-runner.js";
+import { LocalAssetStore } from "./store.js";
 
 let tempDir: string | undefined;
 
@@ -267,6 +268,125 @@ describe("runDistillDAG", () => {
 
     assert.equal(result.skipped, 1);
     assert.equal(result.results.length, 0);
+  });
+
+  test("routes signal-consuming distillers through matched Signal Gate output", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-dag-signal-route-"));
+    const snapshot = buildSnapshot("ses_signal_route");
+    snapshot.messages.push({
+      id: "msg-2",
+      role: "assistant",
+      timestamp: "2026-03-04T00:00:01.000Z",
+      content: "I will inspect files before making edits.",
+    });
+    await writeSessionSnapshot({ dumpDir: tempDir, snapshot });
+
+    let distillerSawSignals = 0;
+    let distillerSawMessages = 0;
+    const llm = {
+      route(request: { task: string }) {
+        return {
+          model: "mock-signal-model",
+          provider: {
+            id: "mock",
+            async complete() {
+              assert.equal(request.task, "classify");
+              return {
+                content: JSON.stringify({
+                  signals: [
+                    {
+                      scope: "message",
+                      kind: "task_delta",
+                      tags: ["created"],
+                      actor: "user",
+                      temporal_state: "future",
+                      confidence: 0.88,
+                      evidence_refs: [
+                        {
+                          message_id: "msg-1",
+                          excerpt: "TODO: refactor",
+                        },
+                      ],
+                      promotion_hints: [],
+                    },
+                  ],
+                }),
+                tokens: { input: 1, output: 1 },
+              };
+            },
+          },
+        };
+      },
+      getDefaultContextWindow() {
+        return undefined;
+      },
+    };
+
+    const result = await runDistillDAG({
+      distiller: {
+        id: "@test/signal-routed",
+        name: "Signal Routed",
+        version: "0.1.0",
+        supported_types: ["follow-up-work-item"],
+        consumes_signals: [
+          {
+            kind: "task_delta",
+            tags: ["created"],
+            min_confidence: 0.6,
+            allowed_actors: ["user"],
+            allowed_temporal_states: ["future"],
+          },
+        ],
+        async run({ artifactStore, signals }) {
+          distillerSawSignals = signals?.length ?? 0;
+          for await (const artifact of artifactStore.getUnprocessed("@test/signal-routed")) {
+            distillerSawMessages = artifact.messages.length;
+            return [
+              {
+                type: "follow-up-work-item",
+                title: "Refactor module",
+                summary: "The selected user signal asked for a refactor.",
+                confidence: 0.9,
+                tags: ["follow-up-work-item"],
+                payload: { action: "Refactor module" },
+                evidence: [
+                  {
+                    session_id: artifact.meta.session_id,
+                    message_id: artifact.messages[0].id,
+                    excerpt: "TODO",
+                  },
+                ],
+              },
+            ];
+          }
+          return [];
+        },
+      },
+      llm,
+      state: createDistillerStateKV(tempDir, "@test/signal-routed"),
+      sinks: [],
+      dumpDir: tempDir,
+    });
+
+    assert.equal(result.report.status, "success");
+    assert.equal(result.results.length, 1);
+    assert.equal(distillerSawSignals, 1);
+    assert.equal(distillerSawMessages, 1);
+    assert.equal(result.candidates[0].signals.length, 1);
+    assert.equal(result.candidates[0].signals[0].kind, "task_delta");
+
+    const store = new LocalAssetStore(tempDir, "_global", {
+      info() {},
+      warn() {},
+      error() {},
+    });
+    const signals = await store.listSignals();
+    assert.equal(signals.length, 1);
+    const consumptions = await store.listSignalConsumptions(signals[0].id);
+    assert.equal(consumptions.length, 1);
+    assert.equal(consumptions[0].result, "produced");
+    assert.equal(consumptions[0].distiller_id, "@test/signal-routed");
+    assert.equal(consumptions[0].asset_id, result.candidates[0].id);
   });
 });
 

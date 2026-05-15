@@ -224,6 +224,7 @@ export async function mapDistiller(
             distiller_id: distillerRunInput.distiller_id,
             distiller_version: distillerRunInput.distiller_version,
             normalized: normalizeSession(shard),
+            signals: distillerRunInput.signals,
           });
         } catch (error) {
           console.error(

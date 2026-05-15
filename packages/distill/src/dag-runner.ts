@@ -8,6 +8,7 @@ import type {
 	DistillerPlugin,
 	LLMRouter,
 	QualityReport,
+	Signal,
 	SessionArtifact,
 } from "@loamlog/core";
 import {
@@ -34,6 +35,12 @@ import { LogWeaveVerifier } from "./verifier/log-weave.js";
 import { TopicAggregator } from "./aggregator.js";
 import { LocalAssetStore } from "./store.js";
 import { TemporalEvidenceRegistry } from "@loamlog/archive";
+import { classifySignals } from "./signal-classifier.js";
+import {
+	recordSignalConsumptions,
+	scopeArtifactToSignals,
+	selectSignalsForDistiller,
+} from "./signal-routing.js";
 
 export interface DistillDAGOptions {
 	distiller: DistillerPlugin;
@@ -94,6 +101,7 @@ interface DistillAccumulator {
 interface ProcessSessionResult {
 	drafts: DistillResultDraft[];
 	error?: string;
+	routedSignals?: Signal[];
 }
 
 interface ProcessSessionContext {
@@ -105,6 +113,7 @@ interface ProcessSessionContext {
 	repo: string;
 	contextWindow?: number;
 	artifactStore: ReturnType<typeof createArtifactQueryClient>;
+	assetStore: LocalAssetStore;
 	outputLanguage?: OutputLanguage;
 }
 
@@ -119,8 +128,37 @@ async function processSessionArtifact(
 	artifact: SessionArtifact,
 	ctx: ProcessSessionContext,
 ): Promise<ProcessSessionResult> {
+	const normalized = normalizeSession(artifact);
+	let runnableArtifact = artifact;
+	let routedSignals: Signal[] | undefined;
+
+	if ((ctx.distiller.consumes_signals?.length ?? 0) > 0) {
+		try {
+			const classified = await classifySignals(normalized, ctx.llm);
+			const storedSignals: Signal[] = [];
+			for (const signal of classified.signals) {
+				await ctx.assetStore.putSignal(signal);
+				storedSignals.push((await ctx.assetStore.getSignal(signal.id)) ?? signal);
+			}
+
+			const matches = selectSignalsForDistiller(storedSignals, ctx.distiller, {
+				sessionId: artifact.meta.session_id,
+			});
+			routedSignals = matches.map((match) => match.signal);
+			if (routedSignals.length === 0) {
+				return { drafts: [], routedSignals };
+			}
+			runnableArtifact = scopeArtifactToSignals(artifact, routedSignals);
+		} catch (error) {
+			return {
+				drafts: [],
+				error: `signal routing failed: ${error instanceof Error ? error.message : String(error)}`,
+			};
+		}
+	}
+
 	const explicitLanguage = ctx.outputLanguage !== undefined && ctx.outputLanguage !== "auto";
-	const lang = resolveOutputLanguage(artifact, ctx.outputLanguage ?? "auto");
+	const lang = resolveOutputLanguage(runnableArtifact, ctx.outputLanguage ?? "auto");
 	const langRouter = withLanguageRouter(ctx.llm, lang, { explicit: explicitLanguage });
 
 	const augmentRouter: LLMRouter = {
@@ -128,7 +166,7 @@ async function processSessionArtifact(
 			const result = langRouter.route(request);
 			return {
 				...result,
-				provider: withSessionAugmentation(result.provider, artifact),
+				provider: withSessionAugmentation(result.provider, runnableArtifact),
 			};
 		},
 		getDefaultContextWindow() {
@@ -136,9 +174,9 @@ async function processSessionArtifact(
 		},
 	};
 
-	if (shouldShard({ artifact, contextWindow: ctx.contextWindow })) {
+	if (shouldShard({ artifact: runnableArtifact, contextWindow: ctx.contextWindow })) {
 		try {
-			const shards = shardSession(artifact, { contextWindow: ctx.contextWindow });
+			const shards = shardSession(runnableArtifact, { contextWindow: ctx.contextWindow });
 			const mapResults = await mapDistiller(
 				ctx.distiller,
 				{
@@ -147,14 +185,17 @@ async function processSessionArtifact(
 					config: ctx.distillerConfig,
 					distiller_id: ctx.distiller.id,
 					distiller_version: ctx.distiller.version,
+					normalized,
+					signals: routedSignals,
 				},
 				shards,
 			);
-			return { drafts: reduceResults(mapResults) };
+			return { drafts: reduceResults(mapResults), routedSignals };
 		} catch (error) {
 			return {
 				drafts: [],
 				error: error instanceof Error ? error.message : String(error),
+				routedSignals,
 			};
 		}
 	}
@@ -162,19 +203,21 @@ async function processSessionArtifact(
 	// Small session: single distiller call
 	try {
 		const drafts = await ctx.distiller.run({
-			artifactStore: createSingleArtifactStore(artifact, ctx.artifactStore),
+			artifactStore: createSingleArtifactStore(runnableArtifact, ctx.artifactStore),
 			llm: augmentRouter,
 			state: ctx.state,
 			config: ctx.distillerConfig,
 			distiller_id: ctx.distiller.id,
 			distiller_version: ctx.distiller.version,
-			normalized: normalizeSession(artifact),
+			normalized,
+			signals: routedSignals,
 		});
-		return { drafts };
+		return { drafts, routedSignals };
 	} catch (error) {
 		return {
 			drafts: [],
 			error: error instanceof Error ? error.message : String(error),
+			routedSignals,
 		};
 	}
 }
@@ -294,6 +337,7 @@ export function createDistillDAG(
 					repo: effectiveRepo,
 						contextWindow: options.contextWindow,
 						artifactStore,
+						assetStore,
 						outputLanguage: options.outputLanguage,
 					});
 				llmProcessedCount += 1;
@@ -317,6 +361,9 @@ export function createDistillDAG(
 
 					knownFingerprints[r.fingerprint] = true;
 					const candidate = mapDistillResultToCandidate(r);
+					if (result.routedSignals && result.routedSignals.length > 0) {
+						candidate.signals = result.routedSignals;
+					}
 
 					// ── Layer 2: Smelting (Verification) ──
 					// Combine multiple verifiers (Mining-aligned)
@@ -353,6 +400,18 @@ export function createDistillDAG(
 
 					// Persist to AssetStore (Industrial Base)
 					await assetStore.update(candidate.id, candidate);
+					if (result.routedSignals && result.routedSignals.length > 0) {
+						await recordSignalConsumptions(
+							assetStore,
+							distiller,
+							result.routedSignals,
+							"produced",
+							{
+								assetId: candidate.id,
+								reason: "matched distiller consumes_signals manifest",
+							},
+						);
+					}
 
 					sessionResults.push(r);
 					acc.results.push(r);
@@ -369,6 +428,22 @@ export function createDistillDAG(
 				// Persist processed marker so progress survives crashes
 				acc.artifactsProcessed += 1;
 				await state.markProcessed(distiller.id, [artifact.meta.session_id]);
+
+				if (
+					result.routedSignals &&
+					result.routedSignals.length > 0 &&
+					sessionResults.length === 0
+				) {
+					await recordSignalConsumptions(
+						assetStore,
+						distiller,
+						result.routedSignals,
+						result.error ? "error" : "skipped",
+						{
+							reason: result.error ?? "distiller produced no asset",
+						},
+					);
+				}
 
 				writeProcessJournal(dumpDir, artifact.context.repo ?? effectiveRepo, {
 					session_id: artifact.meta.session_id,

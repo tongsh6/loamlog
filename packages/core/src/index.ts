@@ -1072,6 +1072,12 @@ export interface DistillerRunInput {
    * Optional for backward compatibility with distillers that prefer RAW access.
    */
   normalized?: NormalizedSession;
+  /**
+   * Signal Gate output selected for this distiller by its manifest.
+   * Distillers without `consumes_signals` can ignore this field and keep
+   * consuming RAW session artifacts through artifactStore.
+   */
+  signals?: Signal[];
 }
 
 export interface NormalizedSession {
