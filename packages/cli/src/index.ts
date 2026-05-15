@@ -22,7 +22,7 @@ function printUsage(): void {
   console.log("  capture [--provider <name>] [--session-id <id>] [--dump-dir <path>] [--trigger <name>]");
   console.log("  distill [--distiller <id|path>] [--llm <provider/model>] [--llm-timeout-ms <number>] [--dump-dir <path>] [--since <ISO>] [--until <ISO>] [--test-session <path>] [--legacy] [--max-sessions <n>] [--skip-larger-than <bytes>]");
   console.log("  review  [--list] [--repo <name>] [--approve <id> | --reject <id>] [--dump-dir <path>] [--limit <n>]");
-  console.log("  signal  <list|show|review> [--dump-dir <path>]");
+  console.log("  signal  <list|show|review|rerun> [--dump-dir <path>]");
 }
 
 function parsePort(args: string[]): number | undefined {

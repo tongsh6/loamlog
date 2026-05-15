@@ -3,13 +3,22 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, test } from "node:test";
-import type { Logger, Signal } from "@loamlog/core";
+import { writeSessionSnapshot } from "@loamlog/archive";
+import type { Logger, SessionSnapshot, Signal } from "@loamlog/core";
 import { LocalAssetStore } from "@loamlog/distill";
 import { runSignalCommand } from "./signal.js";
 
 let tempDir: string | undefined;
+const originalFetch = globalThis.fetch;
+const originalOpenAIKey = process.env.OPENAI_API_KEY;
 
 afterEach(async () => {
+  globalThis.fetch = originalFetch;
+  if (originalOpenAIKey === undefined) {
+    delete process.env.OPENAI_API_KEY;
+  } else {
+    process.env.OPENAI_API_KEY = originalOpenAIKey;
+  }
   if (!tempDir) return;
   const target = tempDir;
   tempDir = undefined;
@@ -64,6 +73,45 @@ function makeSignal(overrides: Partial<Signal> = {}): Signal {
     },
     created_at: "2026-05-15T00:00:00.000Z",
     updated_at: "2026-05-15T00:00:00.000Z",
+    ...overrides,
+  };
+}
+
+function makeSnapshot(
+  overrides: Partial<SessionSnapshot> = {},
+): SessionSnapshot {
+  const now = "2026-05-15T02:00:00.000Z";
+  return {
+    schema_version: "1.0",
+    meta: {
+      session_id: "ses-rerun",
+      captured_at: now,
+      capture_trigger: "manual",
+      aic_version: "0.7.0",
+      provider: "test-provider",
+    },
+    context: {
+      cwd: "/tmp/repo-rerun",
+      worktree: "/tmp/repo-rerun",
+    },
+    time_range: {
+      start: now,
+      end: now,
+    },
+    session: {},
+    messages: [
+      {
+        id: "msg-rerun",
+        role: "user",
+        timestamp: now,
+        content:
+          "We need to rerun the Signal Gate classifier for archived sessions.",
+      },
+    ],
+    redacted: {
+      patterns_applied: [],
+      redacted_count: 0,
+    },
     ...overrides,
   };
 }
@@ -170,6 +218,83 @@ describe("loam signal", () => {
     assert.equal(signal?.kind, "noise");
     assert.deepEqual(signal?.tags, ["process_log"]);
     assert.equal(signal?.reviewed_classification?.reviewer, "tester");
-    assert.equal(signal?.reviewed_classification?.note, "assistant process log");
+    assert.equal(
+      signal?.reviewed_classification?.note,
+      "assistant process log",
+    );
+  });
+
+  test("rerun classifies archived sessions into stored signals", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-signal-rerun-"));
+    process.env.OPENAI_API_KEY = "test-key";
+    await writeSessionSnapshot({
+      dumpDir: tempDir,
+      snapshot: makeSnapshot(),
+    });
+
+    globalThis.fetch = async () =>
+      new Response(
+        JSON.stringify({
+          choices: [
+            {
+              message: {
+                content: JSON.stringify({
+                  signals: [
+                    {
+                      scope: "message",
+                      kind: "task_delta",
+                      tags: ["created"],
+                      actor: "user",
+                      temporal_state: "future",
+                      confidence: 0.91,
+                      evidence_refs: [
+                        {
+                          message_id: "msg-rerun",
+                          excerpt: "rerun the Signal Gate classifier",
+                        },
+                      ],
+                      promotion_hints: [
+                        {
+                          target_distiller:
+                            "@loamlog/distiller-follow-up-work-item",
+                          eligibility: "eligible",
+                          reason: "explicit future task",
+                        },
+                      ],
+                    },
+                  ],
+                }),
+              },
+            },
+          ],
+          usage: { prompt_tokens: 12, completion_tokens: 8 },
+        }),
+        { status: 200, headers: { "content-type": "application/json" } },
+      );
+
+    const logs: string[] = [];
+    const origLog = console.log;
+    console.log = (...args: string[]) => logs.push(args.join(" "));
+
+    try {
+      await runSignalCommand([
+        "rerun",
+        "--dump-dir",
+        tempDir,
+        "--session",
+        "ses-rerun",
+        "--llm",
+        "openai/gpt-test",
+      ]);
+    } finally {
+      console.log = origLog;
+    }
+
+    const store = new LocalAssetStore(tempDir, "_global", logger);
+    const signals = await store.listSignals({ session_id: "ses-rerun" });
+    assert.equal(signals.length, 1);
+    assert.equal(signals[0].kind, "task_delta");
+    assert.equal(signals[0].classifier.model, "gpt-test");
+    assert.ok(logs.join("\n").includes("processed=1 signals=1"));
   });
 });
