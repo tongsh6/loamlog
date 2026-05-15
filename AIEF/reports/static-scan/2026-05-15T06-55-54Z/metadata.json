@@ -1,0 +1,57 @@
+{
+  "runId": "2026-05-15T06-55-54Z",
+  "startedAt": "2026-05-15T06:55:54.089Z",
+  "completedAt": "2026-05-15T06:56:08.050Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "3c7e281",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "IEF/context/business/current-focus.md",
+      "IEF/openspec/signal-gate.md",
+      "ocs/project-ledger.md",
+      "ackages/cli/src/index.ts",
+      "ackages/cli/src/signal.test.ts",
+      "ackages/cli/src/signal.ts",
+      "ackages/distill/src/index.ts",
+      "tasks/2026-05-15-signal-rerun/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}
