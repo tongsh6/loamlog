@@ -487,6 +487,29 @@ export interface SignalConsumption {
   created_at: string;
 }
 
+export interface SignalReviewDecision {
+  review_status: SignalReviewStatus;
+  classification?: SignalClassification;
+  reviewer: string;
+  reviewed_at?: string;
+  note?: string;
+}
+
+export interface SignalListFilter {
+  session_id?: string;
+  kind?: SignalKind[];
+  status?: SignalReviewStatus[];
+  promotable?: boolean;
+  distiller_id?: string;
+}
+
+export interface AssetLineage {
+  asset?: VerifiedAsset;
+  signal?: Signal;
+  signal_consumptions: SignalConsumption[];
+  produced_assets: VerifiedAsset[];
+}
+
 export interface DistillerManifest {
   id: string;
   name: string;
@@ -576,6 +599,16 @@ export interface AssetStore {
   get(assetId: string): Promise<VerifiedAsset | undefined>;
   update(assetId: string, update: Partial<VerifiedAsset>): Promise<void>;
   list(filter?: { status?: string[] }): Promise<VerifiedAsset[]>;
+  putSignal(signal: Signal): Promise<void>;
+  listSignals(filter?: SignalListFilter): Promise<Signal[]>;
+  getSignal(signalId: string): Promise<Signal | undefined>;
+  reviewSignal(
+    signalId: string,
+    decision: SignalReviewDecision,
+  ): Promise<Signal>;
+  recordSignalConsumption(consumption: SignalConsumption): Promise<void>;
+  listSignalConsumptions(signalId?: string): Promise<SignalConsumption[]>;
+  getLineage(id: string): Promise<AssetLineage>;
 }
 
 /** Searchable fact-grid for cross-session evidence weaving */
