@@ -1,18 +1,24 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import {
-  LLMAuthError,
-  approvalGate,
-  buildSessionSnapshot,
-  createAuditRecord,
-  auditRecordDelivered,
-  auditRecordFailed,
-  mapDistillResultToCandidate,
-  validateAssetCandidate,
   type AICConfig,
   type AssetCandidate,
+  approvalGate,
+  auditRecordDelivered,
+  auditRecordFailed,
+  buildSessionSnapshot,
+  createAuditRecord,
   type DistillResult,
   type DistillResultDraft,
+  defaultSignalReviewStatus,
+  getEffectiveSignalClassification,
+  isSignalKind,
+  isSignalTag,
+  LLMAuthError,
+  mapDistillResultToCandidate,
+  type Signal,
+  validateAssetCandidate,
+  validateSignal,
 } from "./index.js";
 
 describe("core distill exports", () => {
@@ -92,21 +98,178 @@ describe("asset graph mapping", () => {
     assert.equal(candidate.evidence.length, 1);
     assert.equal(candidate.evidence[0].session_id, "ses_001");
     assert.equal(candidate.evidence[0].message_id, "msg_42");
-    assert.equal(candidate.evidence[0].excerpt, "the login keeps timing out after 30s");
+    assert.equal(
+      candidate.evidence[0].excerpt,
+      "the login keeps timing out after 30s",
+    );
     assert.deepEqual(candidate.evidence[0].position, { start: 120, end: 160 });
 
     // Signal derived from result
     assert.equal(candidate.signals.length, 1);
     assert.equal(candidate.signals[0].signal_type, "issue-draft");
+    assert.equal(candidate.signals[0].kind, "artifact_reference");
+    assert.equal(candidate.signals[0].spans.length, 1);
     assert.equal(candidate.signals[0].confidence, 0.85);
 
     // Payload preserved
-    assert.equal((candidate.payload as Record<string, unknown>).severity, "high");
+    assert.equal(
+      (candidate.payload as Record<string, unknown>).severity,
+      "high",
+    );
+  });
+});
+
+describe("signal gate contract", () => {
+  function makeSignal(overrides: Partial<Signal> = {}): Signal {
+    const machine_classification = {
+      kind: "task_delta" as const,
+      tags: ["created" as const],
+      actor: "user" as const,
+      temporal_state: "future" as const,
+      confidence: 0.86,
+    };
+
+    return {
+      id: "sig-1",
+      scope: "message",
+      kind: machine_classification.kind,
+      tags: machine_classification.tags,
+      actor: machine_classification.actor,
+      temporal_state: machine_classification.temporal_state,
+      confidence: machine_classification.confidence,
+      spans: [
+        {
+          session_id: "ses_1",
+          message_id: "msg_1",
+          excerpt: "Ship the Signal Gate contract first.",
+        },
+      ],
+      review_status: "accepted",
+      machine_classification,
+      promotion_hints: [
+        {
+          target_distiller: "@loamlog/distiller-follow-up-work-item",
+          eligibility: "eligible",
+          reason: "future task delta with evidence",
+        },
+      ],
+      classifier: {
+        id: "signal-gate",
+        version: "0.1.0",
+        model: "deterministic-test",
+        prompt_version: "none",
+      },
+      created_at: "2026-05-15T00:00:00.000Z",
+      updated_at: "2026-05-15T00:00:00.000Z",
+      ...overrides,
+    };
+  }
+
+  test("recognizes platform signal kinds and tags", () => {
+    assert.equal(isSignalKind("task_delta"), true);
+    assert.equal(isSignalKind("follow-up-work-item"), false);
+    assert.equal(isSignalTag("created"), true);
+    assert.equal(isSignalTag("todo"), false);
+  });
+
+  test("derives default review status from evidence, kind, and confidence", () => {
+    assert.equal(
+      defaultSignalReviewStatus({
+        kind: "task_delta",
+        confidence: 0.9,
+        spans: makeSignal().spans,
+      }),
+      "accepted",
+    );
+    assert.equal(
+      defaultSignalReviewStatus({
+        kind: "task_delta",
+        confidence: 0.6,
+        spans: makeSignal().spans,
+      }),
+      "pending",
+    );
+    assert.equal(
+      defaultSignalReviewStatus({
+        kind: "task_delta",
+        confidence: 0.2,
+        spans: makeSignal().spans,
+      }),
+      "ignored",
+    );
+    assert.equal(
+      defaultSignalReviewStatus({
+        kind: "noise",
+        confidence: 0.95,
+        spans: makeSignal().spans,
+      }),
+      "ignored",
+    );
+    assert.equal(
+      defaultSignalReviewStatus({
+        kind: "task_delta",
+        confidence: 0.95,
+        spans: [],
+      }),
+      "rejected",
+    );
+  });
+
+  test("validates required signal evidence and classifier fields", () => {
+    const report = validateSignal(makeSignal());
+    assert.equal(report.passed, true);
+
+    const emptySpanReport = validateSignal(makeSignal({ spans: [] }));
+    assert.equal(emptySpanReport.passed, false);
+    assert.equal(
+      emptySpanReport.checks.find((check) => check.name === "has_spans")
+        ?.passed,
+      false,
+    );
+
+    const invalidConfidence = validateSignal(
+      makeSignal({
+        machine_classification: {
+          kind: "task_delta",
+          tags: ["created"],
+          actor: "user",
+          temporal_state: "future",
+          confidence: 1.5,
+        },
+      }),
+    );
+    assert.equal(invalidConfidence.passed, false);
+    assert.equal(
+      invalidConfidence.checks.find(
+        (check) => check.name === "confidence_range",
+      )?.passed,
+      false,
+    );
+  });
+
+  test("uses reviewed classification before machine classification", () => {
+    const signal = makeSignal({
+      reviewed_classification: {
+        kind: "commitment",
+        tags: ["reason"],
+        actor: "mixed",
+        temporal_state: "current",
+        confidence: 0.92,
+        reviewer: "human",
+        reviewed_at: "2026-05-15T01:00:00.000Z",
+      },
+    });
+
+    const effective = getEffectiveSignalClassification(signal);
+    assert.equal(effective.kind, "commitment");
+    assert.deepEqual(effective.tags, ["reason"]);
   });
 });
 
 describe("asset candidate quality gate", () => {
-  function makeCandidate(overrides: Partial<import("./index.js").AssetCandidate> = {}): import("./index.js").AssetCandidate {
+  function makeCandidate(
+    overrides: Partial<import("./index.js").AssetCandidate> = {},
+  ): import("./index.js").AssetCandidate {
     return {
       id: "cand-1",
       fingerprint: "fp-1",
@@ -117,7 +280,9 @@ describe("asset candidate quality gate", () => {
       tags: ["test"],
       distiller_id: "@test/distiller",
       signals: [],
-      evidence: [{ session_id: "ses_1", message_id: "msg_1", excerpt: "some text" }],
+      evidence: [
+        { session_id: "ses_1", message_id: "msg_1", excerpt: "some text" },
+      ],
       payload: {},
       ...overrides,
     };
@@ -137,12 +302,13 @@ describe("asset candidate quality gate", () => {
   });
 
   test("fails when confidence is below threshold", () => {
-    const report = validateAssetCandidate(
-      makeCandidate({ confidence: 0.3 }),
-      { minConfidence: 0.6 },
-    );
+    const report = validateAssetCandidate(makeCandidate({ confidence: 0.3 }), {
+      minConfidence: 0.6,
+    });
     assert.equal(report.passed, false);
-    const confCheck = report.checks.find((c) => c.name === "confidence_threshold");
+    const confCheck = report.checks.find(
+      (c) => c.name === "confidence_threshold",
+    );
     assert.equal(confCheck?.passed, false);
     assert.ok(confCheck?.reason?.includes("0.3"));
   });
@@ -164,7 +330,10 @@ describe("asset candidate quality gate", () => {
   test("blocks low-evidence candidates from output", () => {
     // Simulate: confidence too low AND no evidence → should be blocked
     const candidate = makeCandidate({ confidence: 0.2, evidence: [] });
-    const report = validateAssetCandidate(candidate, { minConfidence: 0.5, requireEvidence: true });
+    const report = validateAssetCandidate(candidate, {
+      minConfidence: 0.5,
+      requireEvidence: true,
+    });
     assert.equal(report.passed, false);
     assert.equal(report.checks.length, 4);
     const failed = report.checks.filter((c) => !c.passed);
@@ -184,7 +353,9 @@ describe("approval gate", () => {
       tags: ["bug"],
       distiller_id: "@test/distiller",
       signals: [],
-      evidence: [{ session_id: "ses_1", message_id: "msg_1", excerpt: "the bug is..." }],
+      evidence: [
+        { session_id: "ses_1", message_id: "msg_1", excerpt: "the bug is..." },
+      ],
       payload: {},
     };
   }
@@ -193,7 +364,11 @@ describe("approval gate", () => {
     const quality = validateAssetCandidate(makeCandidate());
     const result = approvalGate(
       makeCandidate(),
-      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      {
+        candidate_id: "cand-1",
+        decision: "approved",
+        decided_at: new Date().toISOString(),
+      },
       quality,
       { allowExternal: true },
     );
@@ -206,7 +381,11 @@ describe("approval gate", () => {
     const quality = validateAssetCandidate(candidate);
     const result = approvalGate(
       candidate,
-      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      {
+        candidate_id: "cand-1",
+        decision: "approved",
+        decided_at: new Date().toISOString(),
+      },
       quality,
       { allowExternal: true },
     );
@@ -218,7 +397,12 @@ describe("approval gate", () => {
     const quality = validateAssetCandidate(makeCandidate());
     const result = approvalGate(
       makeCandidate(),
-      { candidate_id: "cand-1", decision: "rejected", decided_at: new Date().toISOString(), reason: "not needed" },
+      {
+        candidate_id: "cand-1",
+        decision: "rejected",
+        decided_at: new Date().toISOString(),
+        reason: "not needed",
+      },
       quality,
       { allowExternal: true },
     );
@@ -230,7 +414,11 @@ describe("approval gate", () => {
     const quality = validateAssetCandidate(makeCandidate());
     const result = approvalGate(
       makeCandidate(),
-      { candidate_id: "cand-1", decision: "deferred", decided_at: new Date().toISOString() },
+      {
+        candidate_id: "cand-1",
+        decision: "deferred",
+        decided_at: new Date().toISOString(),
+      },
       quality,
       { allowExternal: true },
     );
@@ -242,7 +430,11 @@ describe("approval gate", () => {
     const quality = validateAssetCandidate(makeCandidate());
     const result = approvalGate(
       makeCandidate(),
-      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      {
+        candidate_id: "cand-1",
+        decision: "approved",
+        decided_at: new Date().toISOString(),
+      },
       quality,
     );
     assert.equal(result.allowed, false);
@@ -256,7 +448,11 @@ describe("approval gate", () => {
     const quality = { passed: true, checks: [] }; // bypass quality
     const result = approvalGate(
       candidate,
-      { candidate_id: "cand-1", decision: "approved", decided_at: new Date().toISOString() },
+      {
+        candidate_id: "cand-1",
+        decision: "approved",
+        decided_at: new Date().toISOString(),
+      },
       quality,
       { allowExternal: true },
     );
@@ -277,10 +473,16 @@ describe("audit records", () => {
       tags: ["bug"],
       distiller_id: "@test/distiller",
       signals: [],
-      evidence: [{ session_id: "ses_001", message_id: "msg_1", excerpt: "login broken" }],
+      evidence: [
+        { session_id: "ses_001", message_id: "msg_1", excerpt: "login broken" },
+      ],
       payload: {},
     };
-    const decision = { candidate_id: "cand-1", decision: "approved" as const, decided_at: "2026-05-01T12:00:00Z" };
+    const decision = {
+      candidate_id: "cand-1",
+      decision: "approved" as const,
+      decided_at: "2026-05-01T12:00:00Z",
+    };
     const quality = { passed: true, checks: [] };
 
     const record = createAuditRecord(candidate, decision, quality, "file");
@@ -310,7 +512,11 @@ describe("audit records", () => {
         evidence: [{ session_id: "s1", message_id: "m1", excerpt: "e" }],
         payload: {},
       },
-      { candidate_id: "c-1", decision: "approved", decided_at: new Date().toISOString() },
+      {
+        candidate_id: "c-1",
+        decision: "approved",
+        decided_at: new Date().toISOString(),
+      },
       { passed: true, checks: [] },
       "github",
     );

@@ -29,7 +29,9 @@ const consoleLogger: Logger = {
   },
 };
 
-export function createExecutionContext(options?: { logger?: Logger }): ExecutionContext {
+export function createExecutionContext(options?: {
+  logger?: Logger;
+}): ExecutionContext {
   return {
     traceId: crypto.randomUUID(),
     logger: options?.logger ?? consoleLogger,
@@ -54,7 +56,9 @@ function isRetryable(error: unknown): boolean {
   if (error instanceof TimeoutError) return true;
   // Retry on transient-like errors but not on auth or validation failures
   const message = error instanceof Error ? error.message : String(error);
-  return /timed?[ -]?out|ECONNREFUSED|ECONNRESET|ETIMEDOUT|5[0-9][0-9]|rate[ -]?limit/i.test(message);
+  return /timed?[ -]?out|ECONNREFUSED|ECONNRESET|ETIMEDOUT|5[0-9][0-9]|rate[ -]?limit/i.test(
+    message,
+  );
 }
 
 export async function withTimeout<T>(
@@ -68,7 +72,11 @@ export async function withTimeout<T>(
   let timer: ReturnType<typeof setTimeout> | undefined;
   const timeoutPromise = new Promise<never>((_, reject) => {
     timer = setTimeout(() => {
-      reject(new TimeoutError(`operation timed out after ${timeoutMs}ms trace_id=${traceId}`));
+      reject(
+        new TimeoutError(
+          `operation timed out after ${timeoutMs}ms trace_id=${traceId}`,
+        ),
+      );
     }, timeoutMs);
   });
 
@@ -79,7 +87,9 @@ export async function withTimeout<T>(
   } catch (error) {
     clearTimeout(timer);
     if (error instanceof TimeoutError) {
-      logger?.warn(`[aspect:timeout] trace_id=${traceId} timeout_ms=${timeoutMs}`);
+      logger?.warn(
+        `[aspect:timeout] trace_id=${traceId} timeout_ms=${timeoutMs}`,
+      );
     }
     throw error;
   }
@@ -208,7 +218,13 @@ export interface RedactionSummary {
 export type ArtifactPart =
   | { type: "text"; text: string }
   | { type: "reasoning"; text: string }
-  | { type: "tool"; name: string; input: unknown; output?: string; error?: string }
+  | {
+      type: "tool";
+      name: string;
+      input: unknown;
+      output?: string;
+      error?: string;
+    }
   | { type: "file"; filename: string; mime: string };
 
 export interface SessionArtifact {
@@ -319,12 +335,164 @@ export interface EvidenceSpan {
   position?: { start: number; end: number };
 }
 
+export const SIGNAL_KINDS = [
+  "intent",
+  "insight",
+  "commitment",
+  "task_delta",
+  "problem_event",
+  "workflow_pattern",
+  "artifact_reference",
+  "noise",
+] as const;
+
+export type SignalKind = (typeof SIGNAL_KINDS)[number];
+
+export const SIGNAL_TAGS = [
+  "goal",
+  "requirement",
+  "preference",
+  "constraint",
+  "objection",
+  "created",
+  "updated",
+  "completed",
+  "blocked",
+  "cancelled",
+  "deferred",
+  "obsolete",
+  "reason",
+  "example",
+  "cause",
+  "fix",
+  "metric",
+  "tradeoff",
+  "repeatable",
+  "multi_step",
+  "rule_like",
+  "workflow_like",
+  "content_seed",
+  "process_log",
+  "duplicate",
+  "low_information",
+  "unsupported_inference",
+  "ambiguous_type",
+  "document",
+  "code",
+  "issue",
+  "rule",
+  "skill",
+  "dataset",
+  "config",
+] as const;
+
+export type SignalTag = (typeof SIGNAL_TAGS)[number];
+export type SignalScope = "message" | "session" | "cross_session";
+export type SignalActor = "user" | "assistant" | "tool" | "system" | "mixed";
+export type SignalTemporalState =
+  | "future"
+  | "current"
+  | "in_progress"
+  | "completed"
+  | "obsolete"
+  | "unknown";
+export type SignalReviewStatus =
+  | "accepted"
+  | "pending"
+  | "ignored"
+  | "rejected";
+export type SignalPromotionEligibility =
+  | "eligible"
+  | "needs_review"
+  | "ineligible";
+export type SignalConsumptionResult =
+  | "produced"
+  | "rejected"
+  | "skipped"
+  | "error";
+
+export interface SignalSpan extends EvidenceSpan {}
+
+export interface SignalClassification {
+  kind: SignalKind;
+  tags: SignalTag[];
+  actor: SignalActor;
+  temporal_state: SignalTemporalState;
+  confidence: number;
+}
+
+export interface ReviewedSignalClassification extends SignalClassification {
+  reviewer: string;
+  reviewed_at: string;
+  note?: string;
+}
+
+export interface SignalPromotionHint {
+  target_distiller: string;
+  eligibility: SignalPromotionEligibility;
+  reason: string;
+}
+
+export interface SignalClassifierRef {
+  id: string;
+  version: string;
+  model: string;
+  prompt_version: string;
+}
+
 export interface Signal {
   id: string;
-  signal_type: string;
+  scope: SignalScope;
+  kind: SignalKind;
+  tags: SignalTag[];
+  raw_tags?: string[];
+  notes?: string;
+  actor: SignalActor;
+  temporal_state: SignalTemporalState;
   confidence: number;
-  evidence: EvidenceSpan[];
+  spans: SignalSpan[];
+  parent_signal_id?: string;
+  related_signal_ids?: string[];
+  review_status: SignalReviewStatus;
+  machine_classification: SignalClassification;
+  reviewed_classification?: ReviewedSignalClassification;
+  promotion_hints: SignalPromotionHint[];
+  raw_model_output?: unknown;
+  classifier: SignalClassifierRef;
+  created_at: string;
+  updated_at: string;
+  stale_by_classifier_version?: boolean;
+  /** @deprecated use kind. Kept for legacy AssetCandidate signal mapping. */
+  signal_type?: string;
+  /** @deprecated use spans. Kept for legacy AssetCandidate signal mapping. */
+  evidence?: EvidenceSpan[];
   metadata?: Record<string, unknown>;
+}
+
+export interface SignalConsumptionRule {
+  kind: SignalKind;
+  tags?: SignalTag[];
+  min_confidence?: number;
+  allowed_actors?: SignalActor[];
+  allowed_temporal_states?: SignalTemporalState[];
+}
+
+export interface SignalConsumption {
+  signal_id: string;
+  distiller_id: string;
+  distiller_version: string;
+  result: SignalConsumptionResult;
+  asset_id?: string;
+  reason?: string;
+  created_at: string;
+}
+
+export interface DistillerManifest {
+  id: string;
+  name: string;
+  version: string;
+  supported_types: string[];
+  consumes_signals?: SignalConsumptionRule[];
 }
 
 export interface AssetCandidate {
@@ -381,7 +549,10 @@ export interface AggregatorPlugin {
   id: string;
   name: string;
   /** Refine a batch of verified assets, returning a deduplicated and merged list */
-  refine(assets: VerifiedAsset[], ctx: AggregatorContext): Promise<RefinedAsset[]>;
+  refine(
+    assets: VerifiedAsset[],
+    ctx: AggregatorContext,
+  ): Promise<RefinedAsset[]>;
 }
 
 export interface VerifierContext {
@@ -393,7 +564,10 @@ export interface VerifierContext {
 export interface VerifierPlugin {
   id: string;
   name: string;
-  verify(candidate: AssetCandidate, ctx: VerifierContext): Promise<VerificationReport>;
+  verify(
+    candidate: AssetCandidate,
+    ctx: VerifierContext,
+  ): Promise<VerificationReport>;
 }
 
 /** Central ledger for managing evolving engineering assets */
@@ -442,7 +616,9 @@ export interface QualityCheck {
   reason?: string;
 }
 
-export function mapDistillResultToCandidate(result: DistillResult): AssetCandidate {
+export function mapDistillResultToCandidate(
+  result: DistillResult,
+): AssetCandidate {
   const evidence: EvidenceSpan[] = result.evidence.map((e) => ({
     session_id: e.session_id,
     message_id: e.message_id,
@@ -450,11 +626,41 @@ export function mapDistillResultToCandidate(result: DistillResult): AssetCandida
     position: e.position,
   }));
 
+  const createdAt = new Date().toISOString();
+  const machineClassification: SignalClassification = {
+    kind: "artifact_reference",
+    tags: [],
+    actor: "mixed",
+    temporal_state: "unknown",
+    confidence: result.confidence,
+  };
   const signal: Signal = {
     id: `${result.id}:signal`,
+    scope: "session",
+    kind: machineClassification.kind,
+    tags: machineClassification.tags,
+    raw_tags: result.tags,
+    actor: machineClassification.actor,
+    temporal_state: machineClassification.temporal_state,
     signal_type: result.type,
     confidence: result.confidence,
+    spans: evidence,
     evidence,
+    review_status: defaultSignalReviewStatus({
+      kind: machineClassification.kind,
+      confidence: result.confidence,
+      spans: evidence,
+    }),
+    machine_classification: machineClassification,
+    promotion_hints: [],
+    classifier: {
+      id: "legacy-distill-result-mapper",
+      version: "0.1.0",
+      model: "deterministic",
+      prompt_version: "none",
+    },
+    created_at: createdAt,
+    updated_at: createdAt,
     metadata: { distiller_id: result.distiller_id, tags: result.tags },
   };
 
@@ -474,6 +680,73 @@ export function mapDistillResultToCandidate(result: DistillResult): AssetCandida
   };
 }
 
+const signalKindSet = new Set<string>(SIGNAL_KINDS);
+const signalTagSet = new Set<string>(SIGNAL_TAGS);
+
+export function isSignalKind(value: unknown): value is SignalKind {
+  return typeof value === "string" && signalKindSet.has(value);
+}
+
+export function isSignalTag(value: unknown): value is SignalTag {
+  return typeof value === "string" && signalTagSet.has(value);
+}
+
+export function getEffectiveSignalClassification(
+  signal: Signal,
+): SignalClassification {
+  return signal.reviewed_classification ?? signal.machine_classification;
+}
+
+export function defaultSignalReviewStatus(input: {
+  kind: SignalKind;
+  confidence: number;
+  spans?: SignalSpan[];
+}): SignalReviewStatus {
+  if (input.spans && input.spans.length === 0) return "rejected";
+  if (input.kind === "noise") return "ignored";
+  if (input.confidence >= 0.8) return "accepted";
+  if (input.confidence >= 0.5) return "pending";
+  return "ignored";
+}
+
+export function validateSignal(signal: Signal): QualityReport {
+  const effective = getEffectiveSignalClassification(signal);
+  const checks: QualityCheck[] = [
+    {
+      name: "has_spans",
+      passed: signal.spans.length > 0,
+      reason: signal.spans.length > 0 ? undefined : "no signal spans",
+    },
+    {
+      name: "valid_kind",
+      passed: isSignalKind(effective.kind),
+      reason: isSignalKind(effective.kind)
+        ? undefined
+        : `invalid signal kind: ${String(effective.kind)}`,
+    },
+    {
+      name: "valid_tags",
+      passed: effective.tags.every(isSignalTag),
+      reason: effective.tags.every(isSignalTag)
+        ? undefined
+        : "signal tags must use the platform whitelist",
+    },
+    {
+      name: "confidence_range",
+      passed: effective.confidence >= 0 && effective.confidence <= 1,
+      reason:
+        effective.confidence >= 0 && effective.confidence <= 1
+          ? undefined
+          : `confidence ${effective.confidence} outside range 0..1`,
+    },
+  ];
+
+  return {
+    passed: checks.every((c) => c.passed),
+    checks,
+  };
+}
+
 export function validateAssetCandidate(
   candidate: AssetCandidate,
   options?: { minConfidence?: number; requireEvidence?: boolean },
@@ -485,15 +758,19 @@ export function validateAssetCandidate(
   checks.push({
     name: "has_evidence",
     passed: !requireEvidence || candidate.evidence.length > 0,
-    reason: !requireEvidence || candidate.evidence.length > 0 ? undefined : "no evidence spans",
+    reason:
+      !requireEvidence || candidate.evidence.length > 0
+        ? undefined
+        : "no evidence spans",
   });
 
   checks.push({
     name: "confidence_threshold",
     passed: candidate.confidence >= minConfidence,
-    reason: candidate.confidence >= minConfidence
-      ? undefined
-      : `confidence ${candidate.confidence} below threshold ${minConfidence}`,
+    reason:
+      candidate.confidence >= minConfidence
+        ? undefined
+        : `confidence ${candidate.confidence} below threshold ${minConfidence}`,
   });
 
   checks.push({
@@ -564,7 +841,10 @@ export function auditRecordDelivered(record: AuditRecord): AuditRecord {
   };
 }
 
-export function auditRecordFailed(record: AuditRecord, error: string): AuditRecord {
+export function auditRecordFailed(
+  record: AuditRecord,
+  error: string,
+): AuditRecord {
   return {
     ...record,
     delivery_status: "failed",
@@ -588,12 +868,18 @@ export function approvalGate(
   // Gate 1: quality must pass
   if (!quality.passed) {
     const failed = quality.checks.filter((c) => !c.passed).map((c) => c.name);
-    return { allowed: false, reason: `quality gate failed: ${failed.join(", ")}` };
+    return {
+      allowed: false,
+      reason: `quality gate failed: ${failed.join(", ")}`,
+    };
   }
 
   // Gate 2: decision must be "approved"
   if (decision.decision !== "approved") {
-    return { allowed: false, reason: `decision is '${decision.decision}', not 'approved'` };
+    return {
+      allowed: false,
+      reason: `decision is '${decision.decision}', not 'approved'`,
+    };
   }
 
   // Gate 3: evidence required for external sinks
@@ -603,7 +889,11 @@ export function approvalGate(
 
   // Gate 4: external sinks require explicit opt-in
   if (!options?.allowExternal) {
-    return { allowed: false, reason: "external delivery not enabled", requires_explicit_optin: true };
+    return {
+      allowed: false,
+      reason: "external delivery not enabled",
+      requires_explicit_optin: true,
+    };
   }
 
   return { allowed: true };
@@ -627,7 +917,10 @@ export interface SinkPlugin {
 }
 
 export interface ArtifactQueryClient {
-  getUnprocessed(distillerId: string, limit?: number): AsyncIterable<SessionArtifact>;
+  getUnprocessed(
+    distillerId: string,
+    limit?: number,
+  ): AsyncIterable<SessionArtifact>;
   query(filter: {
     repo?: string;
     since?: string;
@@ -715,11 +1008,11 @@ export interface LLMProvider {
 }
 
 export interface LLMRouter {
-  route(request: {
-    task: LLMTask;
-    budget: LLMBudget;
-    input_tokens: number;
-  }): { provider: LLMProvider; model: string; contextWindow?: number };
+  route(request: { task: LLMTask; budget: LLMBudget; input_tokens: number }): {
+    provider: LLMProvider;
+    model: string;
+    contextWindow?: number;
+  };
   /** Return the context window of the first configured provider, without routing overhead. */
   getDefaultContextWindow(): number | undefined;
 }
@@ -795,6 +1088,7 @@ export interface DistillerPlugin {
   name: string;
   version: string;
   supported_types: string[];
+  consumes_signals?: SignalConsumptionRule[];
   configSchema?: JSONSchema7;
   payloadSchema?: Record<string, JSONSchema7>;
   initialize?(ctx: DistillerContext): Promise<void>;
@@ -815,10 +1109,15 @@ export interface DistillerPlugin {
   teardown?(): Promise<void>;
 }
 
-export type DistillerFactory = (config?: Record<string, unknown>) => DistillerPlugin;
+export type DistillerFactory = (
+  config?: Record<string, unknown>,
+) => DistillerPlugin;
 
 export interface DistillerRegistry {
-  load(specifier: string, config?: Record<string, unknown>): Promise<DistillerPlugin>;
+  load(
+    specifier: string,
+    config?: Record<string, unknown>,
+  ): Promise<DistillerPlugin>;
   register(plugin: DistillerPlugin): void;
   get(id: string): DistillerPlugin | undefined;
   list(): DistillerPlugin[];
@@ -844,7 +1143,12 @@ export interface DistillEngine {
   }): Promise<DistillReport[]>;
 }
 
-export type RuleType = "signal" | "scoring" | "necessity" | "filter" | "execution";
+export type RuleType =
+  | "signal"
+  | "scoring"
+  | "necessity"
+  | "filter"
+  | "execution";
 
 export type NecessityLevel = "must_do" | "should_do" | "nice_to_have";
 
@@ -871,7 +1175,15 @@ export interface ActionCandidate {
   attributes?: Record<string, unknown>;
 }
 
-export type ComparisonOperator = "eq" | "neq" | "gt" | "gte" | "lt" | "lte" | "includes" | "in";
+export type ComparisonOperator =
+  | "eq"
+  | "neq"
+  | "gt"
+  | "gte"
+  | "lt"
+  | "lte"
+  | "includes"
+  | "in";
 
 export interface FieldCondition {
   kind: "field";
@@ -895,7 +1207,11 @@ export interface NotCondition {
   node: Condition;
 }
 
-export type Condition = FieldCondition | AllCondition | AnyCondition | NotCondition;
+export type Condition =
+  | FieldCondition
+  | AllCondition
+  | AnyCondition
+  | NotCondition;
 
 export type ConditionInput =
   | Record<string, unknown>
@@ -958,7 +1274,12 @@ export interface ExecutionRule extends BaseRule {
   };
 }
 
-export type RuleDefinition = SignalRule | ScoringRule | NecessityRule | FilterRule | ExecutionRule;
+export type RuleDefinition =
+  | SignalRule
+  | ScoringRule
+  | NecessityRule
+  | FilterRule
+  | ExecutionRule;
 
 export interface RuleConfig {
   version?: string;
@@ -1006,7 +1327,9 @@ export interface AICConfig {
     /** User-facing output language for distill assets. `auto` follows source-session detection. */
     output_language?: "auto" | "zh" | "en";
   };
-  distillers: Array<string | { plugin: string; config: Record<string, unknown> }>;
+  distillers: Array<
+    string | { plugin: string; config: Record<string, unknown> }
+  >;
   sinks?: Array<string | { plugin: string; config: Record<string, unknown> }>;
   llm?: {
     default_budget?: LLMBudget;
@@ -1041,7 +1364,9 @@ export interface TriggerRateLimitConfig {
 
 export interface TriggeredDistillConfig {
   enabled?: boolean;
-  distillers?: Array<string | { plugin: string; config: Record<string, unknown> }>;
+  distillers?: Array<
+    string | { plugin: string; config: Record<string, unknown> }
+  >;
   sinks?: Array<string | { plugin: string; config: Record<string, unknown> }>;
   llm?: {
     default_budget?: LLMBudget;
@@ -1126,9 +1451,14 @@ function createEmptySummary(): RedactionSummary {
   };
 }
 
-export function buildSessionSnapshot(input: CreateSnapshotInput): SessionSnapshot {
-  const firstTimestamp = input.pulled.messages[0]?.timestamp ?? input.capture.captured_at;
-  const lastTimestamp = input.pulled.messages[input.pulled.messages.length - 1]?.timestamp ?? input.capture.captured_at;
+export function buildSessionSnapshot(
+  input: CreateSnapshotInput,
+): SessionSnapshot {
+  const firstTimestamp =
+    input.pulled.messages[0]?.timestamp ?? input.capture.captured_at;
+  const lastTimestamp =
+    input.pulled.messages[input.pulled.messages.length - 1]?.timestamp ??
+    input.capture.captured_at;
 
   return {
     schema_version: "1.0",
