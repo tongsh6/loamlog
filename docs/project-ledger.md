@@ -23,7 +23,7 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-13T15-36-33Z`：typescript / biome / pnpm-audit exit 0，blocking 0；本轮修复前两批 Top N 低危 lint，最新 Top N 为历史低危 deferred
+- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-15T04-43-00Z`：typescript / biome / pnpm-audit exit 0，blocking 0；Top N 为历史低危 lint，均在 `topN.results.md` 标记 deferred
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -99,6 +99,7 @@
 | :--- | :--- | :--- |
 | Signal Gate 规格 | ✅ 已登记 | `AIEF/openspec/signal-gate.md` 定义 `NormalizedSession -> Signal -> AssetCandidate` 全局分级门，覆盖 Signal 数据模型、review、插件消费、幂等、CLI、实施 DAG 与验收标准 |
 | 台账对齐 | ✅ 已登记 | `docs/project-ledger.md`、`AIEF/context/business/current-focus.md`、`AIEF/context/INDEX.md` 和 `AIEF/openspec/README.md` 已把下一道门禁从直接修 distiller 调整为先做 Signal Gate |
+| Signal contract 切片 | ✅ 已落成 | `@loamlog/core` 已新增 SignalKind/SignalTag/SignalReview/SignalConsumption/DistillerManifest contract、默认 review status 与 `validateSignal`；代表性资产 distiller 已声明 `consumes_signals`，后续 routing 可按 manifest 消费 signal |
 
 ---
 
@@ -142,7 +143,8 @@
 1. **[P0] 实现 Signal Gate 设计入口 (#57)**
    - 输入：`AIEF/openspec/signal-gate.md` 与 `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
    - 目标：在 `NormalizedSession` 和 typed distillers 之间补全全局 `Signal` 分级、review、consumption 记录和插件路由契约
-   - 产物：Signal contract、classifier schema、AssetStore signal 节点、`loam signal` 最小 CLI、插件 `consumes_signals`
+   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`
+   - 剩余产物：classifier schema、AssetStore signal 节点、`loam signal` 最小 CLI、signal-based distiller routing
 2. **[P1] 增加跨资产通用过滤层**
    - 过滤 assistant process log、done-state、action-shell、old-roadmap、duplicate-topic、wrong-type
    - 明确 `follow-up-work-item` 必须是未完成、有对象、有验收标准的用户后续行动
