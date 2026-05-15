@@ -101,6 +101,7 @@
 | 台账对齐 | ✅ 已登记 | `docs/project-ledger.md`、`AIEF/context/business/current-focus.md`、`AIEF/context/INDEX.md` 和 `AIEF/openspec/README.md` 已把下一道门禁从直接修 distiller 调整为先做 Signal Gate |
 | Signal contract 切片 | ✅ 已落成 | `@loamlog/core` 已新增 SignalKind/SignalTag/SignalReview/SignalConsumption/DistillerManifest contract、默认 review status 与 `validateSignal`；代表性资产 distiller 已声明 `consumes_signals`，后续 routing 可按 manifest 消费 signal |
 | SignalStore 切片 | ✅ 已落成 | `AssetStore` contract 与 `LocalAssetStore` 已支持 signal 写入、列表/详情、人工 review、consumption 记录和基础 lineage 查询；classifier 重跑不会覆盖人工 review |
+| Signal CLI 切片 | ✅ 已落成 | `loam signal list/show/review` 已支持读取 `LocalAssetStore` signals、按 kind/status/session/distiller/promotable 过滤、默认隐藏 `raw_model_output`、人工 review 覆盖 classification |
 
 ---
 
@@ -144,8 +145,8 @@
 1. **[P0] 实现 Signal Gate 设计入口 (#57)**
    - 输入：`AIEF/openspec/signal-gate.md` 与 `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
    - 目标：在 `NormalizedSession` 和 typed distillers 之间补全全局 `Signal` 分级、review、consumption 记录和插件路由契约
-   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点
-   - 剩余产物：classifier schema、`loam signal` 最小 CLI、signal-based distiller routing
+   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点、`loam signal list/show/review` 最小人工审阅入口
+   - 剩余产物：classifier schema、signal-based distiller routing
 2. **[P1] 增加跨资产通用过滤层**
    - 过滤 assistant process log、done-state、action-shell、old-roadmap、duplicate-topic、wrong-type
    - 明确 `follow-up-work-item` 必须是未完成、有对象、有验收标准的用户后续行动

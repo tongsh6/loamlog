@@ -12,6 +12,8 @@ Key facts:
 - The Refinery Pipeline has moved from linear capture-distill into a four-stage flow: normalize, distill, verify, refine.
 - VS-01~VS-04 代码层已落成，`AssetStore`、`TemporalEvidenceRegistry`、file/github/notion sinks、`loam show` / `loam list --format md` 已就位。
 - VS-01~VS-04 are implemented at code level, with `AssetStore`, `TemporalEvidenceRegistry`, file/github/notion sinks, and `loam show` / `loam list --format md` in place.
+- Signal Gate 的 contract / store / 最小人工 CLI 已落成：`SignalKind`、`SignalTag`、`LocalAssetStore` signal 节点、`loam signal list/show/review` 已可用于人工审阅；classifier schema 与 signal-based distiller routing 仍待实现。
+- The Signal Gate contract / store / minimal human CLI are implemented: `SignalKind`, `SignalTag`, `LocalAssetStore` signal nodes, and `loam signal list/show/review` can be used for human review; classifier schema and signal-based distiller routing remain.
 - Phase 2 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 41/50，平均 4.1/5，10/10 >=3，8/10 >=4。
 - Phase 2 Chinese rerun: 9 real sessions -> 10 knowledge cards, manual score 41/50, average 4.1/5, 10/10 >=3, 8/10 >=4.
 - Representative Assets Batch 1：5 个真实 Loamlog `claude-code` session → 41 条 pending 资产，5 类 distiller 均跑通，46/46 quality gate 通过，0 errors。
