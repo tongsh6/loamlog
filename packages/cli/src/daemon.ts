@@ -1,4 +1,9 @@
-import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
+import {
+  createServer,
+  type IncomingMessage,
+  type Server,
+  type ServerResponse,
+} from "node:http";
 import type { AddressInfo } from "node:net";
 import { writeSessionSnapshot } from "@loamlog/archive";
 import {
@@ -6,8 +11,10 @@ import {
   DEFAULT_DAEMON_HOST,
   DEFAULT_DAEMON_PORT,
   buildSessionSnapshot,
+  type AICConfig,
   type CaptureRequest,
   type ExecutionContext,
+  type SessionSnapshot,
   type SessionProvider,
   isCaptureRequest,
   createExecutionContext,
@@ -16,8 +23,20 @@ import {
 } from "@loamlog/core";
 import { applySnapshotRedaction, parseRedactIgnore } from "@loamlog/sanitizer";
 import { createOpencodeSessionProvider } from "@loamlog/provider-opencode";
-import { createTriggeredIntelligencePipeline, type TriggeredIntelligencePipeline } from "@loamlog/trigger";
-import { buildRuntimeDistillConfig, loadAICConfig, normalizeBuiltInPluginSpecifiers } from "./distill.js";
+import {
+  createTriggeredIntelligencePipeline,
+  type TriggeredIntelligencePipeline,
+} from "@loamlog/trigger";
+import {
+  createLLMRouter,
+  runSignalGateForArtifact,
+  snapshotToArtifact,
+} from "@loamlog/distill";
+import {
+  buildRuntimeDistillConfig,
+  loadAICConfig,
+  normalizeBuiltInPluginSpecifiers,
+} from "./distill.js";
 
 export interface StartDaemonOptions {
   host?: string;
@@ -29,6 +48,7 @@ export interface StartDaemonOptions {
   sessionProviders?: Record<string, SessionProvider>;
   intelligenceConfig?: TriggeredIntelligenceConfig;
   intelligencePipeline?: TriggeredIntelligencePipeline;
+  signalGateJob?: SignalGateJob | false;
 }
 
 export interface StartedDaemon {
@@ -44,7 +64,18 @@ interface ProcessCaptureOptions {
   sessionProvider?: SessionProvider;
   sessionProviders?: Record<string, SessionProvider>;
   intelligence?: TriggeredIntelligencePipeline;
+  signalGateJob?: SignalGateJob;
   ctx?: ExecutionContext;
+}
+
+export interface SignalGateJobInput {
+  snapshot: SessionSnapshot;
+  snapshotPath: string;
+  dumpDir: string;
+}
+
+export interface SignalGateJob {
+  enqueue(input: SignalGateJobInput): void;
 }
 
 async function readJsonBody(req: IncomingMessage): Promise<unknown> {
@@ -62,14 +93,23 @@ async function readJsonBody(req: IncomingMessage): Promise<unknown> {
   return JSON.parse(text) as unknown;
 }
 
-function sendJson(res: ServerResponse, statusCode: number, body: unknown): void {
+function sendJson(
+  res: ServerResponse,
+  statusCode: number,
+  body: unknown,
+): void {
   res.statusCode = statusCode;
   res.setHeader("content-type", "application/json; charset=utf-8");
   res.end(JSON.stringify(body));
 }
 
-function resolveSessionProviders(options: ProcessCaptureOptions): Record<string, SessionProvider> {
-  if (options.sessionProviders && Object.keys(options.sessionProviders).length > 0) {
+function resolveSessionProviders(
+  options: ProcessCaptureOptions,
+): Record<string, SessionProvider> {
+  if (
+    options.sessionProviders &&
+    Object.keys(options.sessionProviders).length > 0
+  ) {
     return options.sessionProviders;
   }
 
@@ -81,21 +121,74 @@ function resolveSessionProviders(options: ProcessCaptureOptions): Record<string,
   return { [provider.id]: provider };
 }
 
+function createDaemonSignalGateJob(
+  options: {
+    logger?: (message: string) => void;
+    loadConfig?: () => Promise<AICConfig>;
+  } = {},
+): SignalGateJob {
+  const logger = options.logger ?? ((message: string) => console.log(message));
+  const loadConfig = options.loadConfig ?? loadAICConfig;
+  const objectLogger = {
+    info: logger,
+    warn: logger,
+    error: logger,
+  };
+
+  return {
+    enqueue(input) {
+      void (async () => {
+        try {
+          const loaded = await loadConfig();
+          const llm = createLLMRouter(
+            loaded.intelligence?.distill?.llm ?? loaded.llm,
+            { logger: objectLogger },
+          );
+          const result = await runSignalGateForArtifact({
+            artifact: snapshotToArtifact(input.snapshot),
+            dumpDir: input.dumpDir,
+            llm,
+            logger: objectLogger,
+          });
+          logger(
+            `[loam daemon] signal gate complete session_id=${result.session_id} repo=${result.repo} signals=${result.signals.length} rejected_items=${result.rejected_count}`,
+          );
+        } catch (error) {
+          logger(
+            `[loam daemon] signal gate failed path=${input.snapshotPath}: ${error instanceof Error ? error.message : String(error)}`,
+          );
+        }
+      })();
+    },
+  };
+}
+
 export async function processCaptureRequest(
   payload: CaptureRequest,
   options: ProcessCaptureOptions = {},
-): Promise<{ accepted: boolean; session_id?: string; snapshot_path?: string; error?: string }> {
+): Promise<{
+  accepted: boolean;
+  session_id?: string;
+  snapshot_path?: string;
+  error?: string;
+}> {
   const logger = options.logger ?? ((message: string) => console.log(message));
   const dumpDir = options.dumpDir ?? process.env.LOAM_DUMP_DIR;
-  const redactIgnorePatterns = parseRedactIgnore(process.env.LOAM_REDACT_IGNORE);
+  const redactIgnorePatterns = parseRedactIgnore(
+    process.env.LOAM_REDACT_IGNORE,
+  );
   const sessionProviders = resolveSessionProviders(options);
   const traceId = options.ctx?.traceId ?? "-";
 
-  logger(`[loam daemon] trace_id=${traceId} session_id=${payload.session_id} trigger=${payload.trigger} provider=${payload.provider}`);
+  logger(
+    `[loam daemon] trace_id=${traceId} session_id=${payload.session_id} trigger=${payload.trigger} provider=${payload.provider}`,
+  );
   options.onCapture?.(payload);
 
   if (!dumpDir) {
-    logger("[loam daemon] LOAM_DUMP_DIR is not configured; skip snapshot write");
+    logger(
+      "[loam daemon] LOAM_DUMP_DIR is not configured; skip snapshot write",
+    );
     return { accepted: true, session_id: payload.session_id };
   }
 
@@ -105,11 +198,13 @@ export async function processCaptureRequest(
       throw new Error(`unknown provider: ${payload.provider}`);
     }
 
-    const pulled = payload.pulled ?? (await withTimeout(
-      () => provider.pullSession(payload.session_id),
-      60_000,
-      options.ctx,
-    ));
+    const pulled =
+      payload.pulled ??
+      (await withTimeout(
+        () => provider.pullSession(payload.session_id),
+        60_000,
+        options.ctx,
+      ));
     const snapshot = buildSessionSnapshot({
       capture: payload,
       pulled,
@@ -120,7 +215,9 @@ export async function processCaptureRequest(
       snapshot: redacted.snapshot,
     });
 
-    logger(`[loam daemon] snapshot saved path=${persisted.jsonPath} redacted_count=${redacted.redacted_count}`);
+    logger(
+      `[loam daemon] snapshot saved path=${persisted.jsonPath} redacted_count=${redacted.redacted_count}`,
+    );
     try {
       options.intelligence?.enqueue({
         capture: payload,
@@ -128,7 +225,20 @@ export async function processCaptureRequest(
         snapshotPath: persisted.jsonPath,
       });
     } catch (error) {
-      logger(`[loam daemon] intelligence enqueue failed: ${error instanceof Error ? error.message : String(error)}`);
+      logger(
+        `[loam daemon] intelligence enqueue failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
+    }
+    try {
+      options.signalGateJob?.enqueue({
+        snapshot: redacted.snapshot,
+        snapshotPath: persisted.jsonPath,
+        dumpDir,
+      });
+    } catch (error) {
+      logger(
+        `[loam daemon] signal gate enqueue failed: ${error instanceof Error ? error.message : String(error)}`,
+      );
     }
     return {
       accepted: true,
@@ -136,7 +246,8 @@ export async function processCaptureRequest(
       snapshot_path: persisted.jsonPath,
     };
   } catch (error) {
-    const message = error instanceof Error ? error.message : "unexpected daemon error";
+    const message =
+      error instanceof Error ? error.message : "unexpected daemon error";
     logger(`[loam daemon] capture failed: ${message}`);
     return {
       accepted: false,
@@ -145,7 +256,9 @@ export async function processCaptureRequest(
   }
 }
 
-export async function startDaemon(options: StartDaemonOptions = {}): Promise<StartedDaemon> {
+export async function startDaemon(
+  options: StartDaemonOptions = {},
+): Promise<StartedDaemon> {
   const host = options.host ?? DEFAULT_DAEMON_HOST;
   const port = options.port ?? DEFAULT_DAEMON_PORT;
   const intelligence =
@@ -160,10 +273,23 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
         return buildRuntimeDistillConfig(normalized, undefined);
       },
     });
+  const signalGateJob =
+    options.signalGateJob === false
+      ? undefined
+      : (options.signalGateJob ??
+        createDaemonSignalGateJob({ logger: options.logger }));
 
   const server = createServer(async (req, res) => {
     if (req.method === "POST" && req.url === CAPTURE_PATH) {
-      const ctx = createExecutionContext({ logger: options.logger ? { info: options.logger, warn: options.logger, error: options.logger } : undefined });
+      const ctx = createExecutionContext({
+        logger: options.logger
+          ? {
+              info: options.logger,
+              warn: options.logger,
+              error: options.logger,
+            }
+          : undefined,
+      });
       try {
         const payload = await readJsonBody(req);
 
@@ -175,11 +301,17 @@ export async function startDaemon(options: StartDaemonOptions = {}): Promise<Sta
           return;
         }
 
-        const result = await processCaptureRequest(payload, { ...options, intelligence, ctx });
+        const result = await processCaptureRequest(payload, {
+          ...options,
+          intelligence,
+          signalGateJob,
+          ctx,
+        });
         sendJson(res, result.accepted ? 202 : 400, result);
         return;
       } catch (error) {
-        const message = error instanceof Error ? error.message : "unexpected daemon error";
+        const message =
+          error instanceof Error ? error.message : "unexpected daemon error";
         const logger = options.logger ?? ((line: string) => console.log(line));
         logger(`[loam daemon] capture failed: ${message}`);
         sendJson(res, 400, {

@@ -156,14 +156,130 @@ describe("daemon /capture", () => {
     });
 
     assert.equal(response.status, 202);
-    const body = (await response.json()) as { snapshot_path?: string; accepted: boolean };
+    const body = (await response.json()) as {
+      snapshot_path?: string;
+      accepted: boolean;
+    };
     assert.equal(body.accepted, true);
     assert.equal(typeof body.snapshot_path, "string");
 
     const snapshotText = await readFile(body.snapshot_path as string, "utf8");
-    assert.equal(snapshotText.includes("\"session_id\": \"ses_m1_001\""), true);
-    assert.equal(snapshotText.includes("\"redacted\""), true);
+    assert.equal(snapshotText.includes('"session_id": "ses_m1_001"'), true);
+    assert.equal(snapshotText.includes('"redacted"'), true);
     assert.equal(snapshotText.includes("[API_KEY:OPENAI]"), true);
+  });
+
+  test("schedules signal gate after snapshot write without blocking capture", async () => {
+    tempDumpDir = await mkdtemp(path.join(tmpdir(), "loamlog-signal-job-"));
+    const enqueued: string[] = [];
+
+    const started = await startDaemon({
+      port: 0,
+      dumpDir: tempDumpDir,
+      sessionProvider: {
+        id: "opencode",
+        async pullSession(sessionId) {
+          return {
+            session: { id: sessionId, source: "test" },
+            messages: [
+              {
+                id: "msg-1",
+                role: "user",
+                timestamp: "2026-05-15T07:00:00.000Z",
+                content: "Create a post-capture Signal Gate job.",
+              },
+            ],
+            context: {
+              cwd: "/tmp",
+              worktree: "/tmp",
+              repo: "test",
+            },
+          };
+        },
+      },
+      signalGateJob: {
+        enqueue(input) {
+          enqueued.push(input.snapshot.meta.session_id);
+        },
+      },
+      logger: () => undefined,
+    });
+    server = started.server;
+
+    const response = await fetch(`http://127.0.0.1:${started.port}/capture`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        session_id: "ses_signal_job_001",
+        trigger: "session.idle",
+        captured_at: "2026-05-15T07:00:02.000Z",
+        provider: "opencode",
+      }),
+    });
+
+    assert.equal(response.status, 202);
+    assert.deepEqual(enqueued, ["ses_signal_job_001"]);
+  });
+
+  test("signal gate enqueue failure does not fail capture", async () => {
+    tempDumpDir = await mkdtemp(path.join(tmpdir(), "loamlog-signal-fail-"));
+    const logs: string[] = [];
+
+    const started = await startDaemon({
+      port: 0,
+      dumpDir: tempDumpDir,
+      sessionProvider: {
+        id: "opencode",
+        async pullSession(sessionId) {
+          return {
+            session: { id: sessionId, source: "test" },
+            messages: [
+              {
+                id: "msg-1",
+                role: "user",
+                timestamp: "2026-05-15T07:05:00.000Z",
+                content: "Capture should not fail when Signal Gate fails.",
+              },
+            ],
+            context: {
+              cwd: "/tmp",
+              worktree: "/tmp",
+              repo: "test",
+            },
+          };
+        },
+      },
+      signalGateJob: {
+        enqueue() {
+          throw new Error("classifier unavailable");
+        },
+      },
+      logger(message) {
+        logs.push(message);
+      },
+    });
+    server = started.server;
+
+    const response = await fetch(`http://127.0.0.1:${started.port}/capture`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+      },
+      body: JSON.stringify({
+        session_id: "ses_signal_job_fail",
+        trigger: "session.idle",
+        captured_at: "2026-05-15T07:05:02.000Z",
+        provider: "opencode",
+      }),
+    });
+
+    assert.equal(response.status, 202);
+    assert.equal(
+      logs.some((message) => message.includes("signal gate enqueue failed")),
+      true,
+    );
   });
 
   test("routes capture by provider id when multiple providers are configured", async () => {
@@ -219,7 +335,10 @@ describe("daemon /capture", () => {
     });
 
     assert.equal(response.status, 202);
-    const body = (await response.json()) as { snapshot_path?: string; accepted: boolean };
+    const body = (await response.json()) as {
+      snapshot_path?: string;
+      accepted: boolean;
+    };
     const snapshotText = await readFile(body.snapshot_path as string, "utf8");
     assert.equal(snapshotText.includes('"provider": "claude-code"'), true);
     assert.equal(snapshotText.includes('"claude session"'), true);

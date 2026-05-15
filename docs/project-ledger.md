@@ -6,13 +6,13 @@
 
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
-| **代码编译** | ✅ 通过 | 2026-05-13 `pnpm run build` 全绿，包含 `@loamlog/distiller-representative-assets` |
-| **测试** | ✅ 220 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 5 类代表性资产 distiller 与 CLI built-in 解析回归测试 |
+| **代码编译** | ✅ 通过 | 2026-05-15 `pnpm run build` 全绿，包含 Signal Gate rerun CLI 与 post-capture auto job |
+| **测试** | ✅ 250 pass / 0 fail | 2026-05-15 复跑 `pnpm run test` 全绿；新增 Signal Gate rerun CLI、single-artifact signal job、daemon post-capture job 回归测试 |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
-| **下一道门禁** | Signal Gate + Distiller Repair + Re-review | 不再扩大样本；下一步先补 `NormalizedSession -> Signal -> AssetCandidate` 的全局信号分级门，再重写 5 类代表性资产 distiller 的定义、prompt、schema 与通用过滤层 |
+| **下一道门禁** | Distiller Repair + Re-review | Signal Gate 入口已补齐；不再扩大样本，下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、duplicate-topic / old-roadmap 过滤层，并小批量复评 |
 
-**当前最高优先级 = 落实 Signal Gate 设计，先让「本机 AI 工具会话 → Signal → 多类型资产候选 → 人工 review」达到最低可用质量，而非继续单点优化 knowledge-card 或启动新架构（MCP / Action Executor / Dashboard / Auto-Skill）。**
+**当前最高优先级 = 基于已落成的 Signal Gate，修复代表性资产 distiller 质量，先让「本机 AI 工具会话 → Signal → 多类型资产候选 → 人工 review」达到最低可用质量，而非继续单点优化 knowledge-card 或启动新架构（MCP / Action Executor / Dashboard / Auto-Skill）。**
 
 证据：
 - `AIEF/reports/dogfooding/2026-05-04-validation-phase2-knowledge-card.md`：噪声过滤 -90% 已证明；LM Studio 可用性已验证
@@ -23,7 +23,7 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-15T04-43-00Z`：typescript / biome / pnpm-audit exit 0，blocking 0；Top N 为历史低危 lint，均在 `topN.results.md` 标记 deferred
+- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-15T07-11-23Z`：typescript / biome / pnpm-audit exit 0，blocking 0；Top N 为历史低危 lint，均在 `topN.results.md` 标记 deferred
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -64,7 +64,7 @@
 | 车间 (工序) | 状态 | 关键组件/证据 | 当前缺口 |
 | :--- | :--- | :--- | :--- |
 | **破碎 (Normalizer)** | ✅ **已闭环 (代码)** | `packages/distill/src/normalizer.ts` | 真实样本验证 |
-| **选矿 (Distiller)** | ⚠️ **Knowledge-card 通过；代表性资产质量 No-Go** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/openspec/signal-gate.md`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md` | 先补 `NormalizedSession -> Signal -> AssetCandidate` 全局信号分级门，再重写 5 类代表性资产 distiller 的定义、prompt、schema、post-filter；再跑小批量复评 |
+| **选矿 (Distiller)** | ⚠️ **Knowledge-card 通过；代表性资产质量 No-Go** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/openspec/signal-gate.md`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md` | Signal Gate 已补齐；下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、post-filter，并跑小批量复评 |
 | **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1)** | `verifier/git-gap.ts`, `verifier/log-weave.ts` | 真实数据下证据织补效果未观察 |
 | **精炼 (Aggregator)** | ✅ **已闭环 (代码)** | `packages/distill/src/aggregator.ts`（含 token-Jaccard 二次合并） | 跨 session 真实数据效果：12→6/7 refined |
 | **底座 (Foundations)** | ✅ **已落成** | `store.ts`, `registry.ts`（已从 `src/` 泄漏产物清理为 package 公共 API） | 当前规模无检索性能瓶颈 |
@@ -104,6 +104,8 @@
 | Signal CLI 切片 | ✅ 已落成 | `loam signal list/show/review` 已支持读取 `LocalAssetStore` signals、按 kind/status/session/distiller/promotable 过滤、默认隐藏 `raw_model_output`、人工 review 覆盖 classification |
 | Signal classifier schema 切片 | ✅ 已落成 | `@loamlog/distill` 已新增 `signal-classifier` 模块，导出 Signal Gate LLM 输出 JSON schema、prompt builder、LLM classify helper、deterministic normalize/policy check；无有效 evidence 的 classifier item 不落库，非法 tag 进入 `raw_tags` |
 | Signal-based distiller routing 切片 | ✅ 已落成 | `runDistillDAG` 对声明 `consumes_signals` 的 distiller 先执行 Signal classifier、写入 `LocalAssetStore`、按 manifest 选择可消费 signal、将 distiller 输入缩小到 signal evidence messages，并记录 `SignalConsumption` lineage；未声明 signal 消费的旧 distiller 行为不变 |
+| Signal classifier rerun CLI 切片 | ✅ 已落成 | `loam signal rerun` 可按 repo / session / since / until / limit 读取 archive 快照、复用 Signal classifier 重跑、写入 `LocalAssetStore` signals，并输出 processed / signals / rejected_items / errors 摘要；人工 review 仍由 store 保留 |
+| Post-capture Signal Gate job 切片 | ✅ 已落成 | daemon capture 写入 redacted snapshot 后会异步触发单会话 Signal Gate job，复用 `runSignalGateForArtifact` 写入 `LocalAssetStore`；classifier / LLM / enqueue 失败只记录日志，不影响 capture 返回 202 |
 
 ### 2.aa 2026-05-15 代表性资产通用过滤层
 
@@ -153,8 +155,8 @@
 1. **[P0] 实现 Signal Gate 设计入口 (#57)**
    - 输入：`AIEF/openspec/signal-gate.md` 与 `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
    - 目标：在 `NormalizedSession` 和 typed distillers 之间补全全局 `Signal` 分级、review、consumption 记录和插件路由契约
-   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点、`loam signal list/show/review` 最小人工审阅入口、classifier schema/prompt/normalize helper、DAG 内 signal-based distiller routing
-   - 剩余产物：capture 后自动 Signal Gate job、classifier 重跑命令；当前 dogfooding 主线可先进入 P1 通用过滤层与 distiller repair
+   - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点、`loam signal list/show/review/rerun` 最小人工审阅与重跑入口、classifier schema/prompt/normalize helper、DAG 内 signal-based distiller routing、capture 后自动 Signal Gate job
+   - 剩余产物：当前 dogfooding 主线可进入 P1 duplicate-topic / old-roadmap / prompt-schema repair 与小批量复评
 2. **[P1] 增加跨资产通用过滤层**
    - 已完成 v0.1：过滤 assistant process log、done-state、action-shell、old-roadmap、部分 wrong-type；`follow-up-work-item` 已要求验收标准；`skill-candidate` 已拒绝普通命令、bug fix、CI 等一次性任务
    - 剩余：duplicate-topic 跨类型去重、更细的 old-roadmap 判定、基于真实样本的 distiller prompt/schema repair

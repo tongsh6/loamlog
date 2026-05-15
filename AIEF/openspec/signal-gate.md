@@ -91,6 +91,8 @@ capture
 - distill 优先消费 Signal，而不是直接扫整段原始会话；
 - 保留手动命令用于重跑和调试。
 
+实现状态：2026-05-15 已落地 daemon capture 后异步 Signal Gate job。当前实现会在 redacted snapshot 写入后调度单会话 classifier，成功后写入 `LocalAssetStore` signals；LLM / classifier / enqueue 失败只记录日志，不影响 capture 返回。持久化 run history、retry queue 与 `retry_scheduled` 状态仍留给后续切片。
+
 ## 5. Signal 数据模型
 
 ### 5.1 Signal
@@ -476,8 +478,10 @@ stale_by_classifier_version: true
 用户手动选择重跑：
 
 ```bash
-loam signal rerun --stale
+loam signal rerun --session <id>
 ```
+
+实现状态：2026-05-15 已落地显式范围重跑 `loam signal rerun [--repo] [--session] [--since] [--until] [--limit]`；`--stale` 的版本扫描与标记仍留给后续切片。
 
 ## 15. CLI
 
@@ -487,7 +491,7 @@ loam signal rerun --stale
 loam signal list
 loam signal show <id>
 loam signal review <id>
-loam signal run --session <id>
+loam signal rerun --session <id>
 ```
 
 `loam signal list` 默认显示所有 signal，包括 `noise` 和 `ignored`。
@@ -601,4 +605,3 @@ A. Contract update
 - `representative-asset-distillers.md` 定义首批资产萃取器；本规格不把首批 5 类资产写死进核心。
 - `refinery-contracts-atlas.md` 当前从 `NormalizedSession` 直接到 `AssetCandidate`；后续应补 `Signal` contract。
 - `docs/project-ledger.md` 中的 Batch 1 No-Go 结论，是本规格的直接触发证据。
-
