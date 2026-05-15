@@ -10,9 +10,9 @@
 | **测试** | ✅ 220 pass / 0 fail | 2026-05-13 复跑 `pnpm run test` 全绿；新增 5 类代表性资产 distiller 与 CLI built-in 解析回归测试 |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
-| **下一道门禁** | Distiller Definition Repair + Re-review | 不再扩大样本；下一步要按人工评分失败类型重写 5 类代表性资产 distiller 的定义、prompt、schema 与通用过滤层，再小批量复验 |
+| **下一道门禁** | Signal Gate + Distiller Repair + Re-review | 不再扩大样本；下一步先补 `NormalizedSession -> Signal -> AssetCandidate` 的全局信号分级门，再重写 5 类代表性资产 distiller 的定义、prompt、schema 与通用过滤层 |
 
-**当前最高优先级 = 修正代表性资产萃取器的类型定义和质量门禁，先让「本机 AI 工具会话 → 多类型资产候选 → 人工 review」达到最低可用质量，而非继续单点优化 knowledge-card 或启动新架构（MCP / Action Executor / Dashboard / Auto-Skill）。**
+**当前最高优先级 = 落实 Signal Gate 设计，先让「本机 AI 工具会话 → Signal → 多类型资产候选 → 人工 review」达到最低可用质量，而非继续单点优化 knowledge-card 或启动新架构（MCP / Action Executor / Dashboard / Auto-Skill）。**
 
 证据：
 - `AIEF/reports/dogfooding/2026-05-04-validation-phase2-knowledge-card.md`：噪声过滤 -90% 已证明；LM Studio 可用性已验证
@@ -64,7 +64,7 @@
 | 车间 (工序) | 状态 | 关键组件/证据 | 当前缺口 |
 | :--- | :--- | :--- | :--- |
 | **破碎 (Normalizer)** | ✅ **已闭环 (代码)** | `packages/distill/src/normalizer.ts` | 真实样本验证 |
-| **选矿 (Distiller)** | ⚠️ **Knowledge-card 通过；代表性资产质量 No-Go** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md` | 重写 5 类代表性资产 distiller 的定义、prompt、schema、post-filter；再跑小批量复评 |
+| **选矿 (Distiller)** | ⚠️ **Knowledge-card 通过；代表性资产质量 No-Go** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/openspec/signal-gate.md`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md` | 先补 `NormalizedSession -> Signal -> AssetCandidate` 全局信号分级门，再重写 5 类代表性资产 distiller 的定义、prompt、schema、post-filter；再跑小批量复评 |
 | **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1)** | `verifier/git-gap.ts`, `verifier/log-weave.ts` | 真实数据下证据织补效果未观察 |
 | **精炼 (Aggregator)** | ✅ **已闭环 (代码)** | `packages/distill/src/aggregator.ts`（含 token-Jaccard 二次合并） | 跨 session 真实数据效果：12→6/7 refined |
 | **底座 (Foundations)** | ✅ **已落成** | `store.ts`, `registry.ts`（已从 `src/` 泄漏产物清理为 package 公共 API） | 当前规模无检索性能瓶颈 |
@@ -93,6 +93,13 @@
 | registry 清理 | `77b028e` | `TemporalEvidenceRegistry` 纳入 `@loamlog/archive` 公共 API，删除 src/ 泄漏产物 |
 | CHANGELOG + tag | `abde7d8` / `d4508ba` | v0.7.0 CHANGELOG + annotated tag |
 
+### 2.z 2026-05-15 Signal Gate 设计入口
+
+| 事项 | 状态 | 描述 |
+| :--- | :--- | :--- |
+| Signal Gate 规格 | ✅ 已登记 | `AIEF/openspec/signal-gate.md` 定义 `NormalizedSession -> Signal -> AssetCandidate` 全局分级门，覆盖 Signal 数据模型、review、插件消费、幂等、CLI、实施 DAG 与验收标准 |
+| 台账对齐 | ✅ 已登记 | `docs/project-ledger.md`、`AIEF/context/business/current-focus.md`、`AIEF/context/INDEX.md` 和 `AIEF/openspec/README.md` 已把下一道门禁从直接修 distiller 调整为先做 Signal Gate |
+
 ---
 
 ## 3. 关键证据索引
@@ -102,6 +109,7 @@
 - **运行编排规格**：`AIEF/openspec/refinery-runtime-orchestration.md`
 - **正常化规格**：`AIEF/openspec/session-normalizer.md`
 - **代表性资产萃取器规格**：`AIEF/openspec/representative-asset-distillers.md`
+- **Signal Gate 规格**：`AIEF/openspec/signal-gate.md`
 - **MCP 边界 spec（仅设计）**：`AIEF/openspec/mcp-exposure-layer.md`
 
 ### 执行记录
@@ -131,10 +139,10 @@
 
 > 以下顺序基于 §0 当前门禁结论。**MCP / FTS5 / 增量冶炼在产品质量稳定前不启动。**
 
-1. **[P0] 重写 5 类代表性资产 distiller 的定义与门禁 (#57)**
-   - 输入：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
-   - 目标：修正 `follow-up-work-item`、`idea-seed`、`skill-candidate` 的 No-Go 边界；收紧 `practice-pitfall` 与 `decision-rationale`
-   - 产物：更新后的 prompt、schema、post-filter、golden examples 与反例集
+1. **[P0] 实现 Signal Gate 设计入口 (#57)**
+   - 输入：`AIEF/openspec/signal-gate.md` 与 `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
+   - 目标：在 `NormalizedSession` 和 typed distillers 之间补全全局 `Signal` 分级、review、consumption 记录和插件路由契约
+   - 产物：Signal contract、classifier schema、AssetStore signal 节点、`loam signal` 最小 CLI、插件 `consumes_signals`
 2. **[P1] 增加跨资产通用过滤层**
    - 过滤 assistant process log、done-state、action-shell、old-roadmap、duplicate-topic、wrong-type
    - 明确 `follow-up-work-item` 必须是未完成、有对象、有验收标准的用户后续行动

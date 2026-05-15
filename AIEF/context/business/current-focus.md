@@ -27,6 +27,7 @@ Key facts:
 Authoritative ledger:
 
 - `docs/project-ledger.md`
+- `AIEF/openspec/signal-gate.md`
 - `AIEF/openspec/representative-asset-distillers.md`
 - `AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`
 - `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`
@@ -53,8 +54,8 @@ Can this loop work reliably across real local sessions from multiple AI tools?
 
 ## 当前活跃议题 | Current Active Threads
 
-- `#57` — Cross-Asset Dogfooding：当前主线；Batch 1 已证明 5 类代表性资产可从真实会话产出 pending 资产，但人工评分未达可用线，下一步是按失败类型修正 distiller 定义、prompt、schema 与过滤层。
-- `#57` — Cross-Asset Dogfooding: current mainline; Batch 1 proved that five representative asset types can produce pending assets from real sessions, but manual review did not meet the usability bar. Next step: repair distiller definitions, prompts, schemas, and filters based on failure types.
+- `#57` — Cross-Asset Dogfooding：当前主线；Batch 1 已证明 5 类代表性资产可从真实会话产出 pending 资产，但人工评分未达可用线，下一步是按 `Signal Gate` 规格补全全局信号分级层，再修正 distiller 定义、prompt、schema 与过滤层。
+- `#57` — Cross-Asset Dogfooding: current mainline; Batch 1 proved that five representative asset types can produce pending assets from real sessions, but manual review did not meet the usability bar. Next step: implement the global `Signal Gate` layer before repairing distiller definitions, prompts, schemas, and filters.
 - `#11` — config precedence：下一阶段候选，应先定义 explicit config、env、discovered values、defaults 的优先级。
 - `#11` — config precedence: next candidate; define precedence among explicit config, env, discovered values, and defaults.
 - `#9` — local session provider discovery：与“从本机所有 AI 工具抓会话”愿景强相关，应在 #11 边界清晰后推进。
@@ -100,8 +101,8 @@ Reason: the current gap is cross-asset validation and asset lifecycle closure, n
 
 - `idea-seed`、`practice-pitfall`、`decision-rationale`、`follow-up-work-item`、`skill-candidate` 等代表性资产线已经能在真实样本上产出 pending 资产；但本轮人工评分显示当前质量不达标，不能进入资产池。
 - `idea-seed`, `practice-pitfall`, `decision-rationale`, `follow-up-work-item`, and `skill-candidate` can now produce pending assets on real samples; however, this manual review shows that current quality is below the bar and should not enter the asset pool.
-- 下一轮是否能通过通用过滤层去掉 assistant process log、done-state、action-shell、old-roadmap、duplicate-topic、wrong-type？
-- Can the next iteration use a common filter layer to remove assistant process logs, done-state items, action shells, old roadmap residue, duplicate topics, and wrong-type assets?
+- 下一轮是否能通过 Signal Gate 与通用过滤层去掉 assistant process log、done-state、action-shell、old-roadmap、duplicate-topic、wrong-type？
+- Can the next iteration use Signal Gate plus a common filter layer to remove assistant process logs, done-state items, action shells, old roadmap residue, duplicate topics, and wrong-type assets?
 - 重写后的代表性资产 distiller 是否能在 5-10 条真实样本中达到每类 `>=3` 比例至少 50%？
 - Can the revised representative asset distillers reach at least 50% `>=3` items per type on 5-10 real samples?
 - 每类资产是否都有 evidence backlinks、review 状态、本地输出和失败类型记录？
