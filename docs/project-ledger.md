@@ -7,7 +7,7 @@
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
 | **代码编译** | ✅ 通过 | 2026-05-15 `pnpm run build` 全绿，包含 Signal Gate rerun CLI 与 post-capture auto job |
-| **测试** | ✅ 250 pass / 0 fail | 2026-05-15 复跑 `pnpm run test` 全绿；新增 Signal Gate rerun CLI、single-artifact signal job、daemon post-capture job 回归测试 |
+| **测试** | ✅ 通过 | 2026-05-17 复跑 `pnpm run test` 全绿，253 pass / 0 fail；代表性资产 focused tests：21 pass / 0 fail |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
 | **下一道门禁** | Distiller Repair + Re-review | Signal Gate 入口已补齐；不再扩大样本，下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、duplicate-topic / old-roadmap 过滤层，并小批量复评 |
@@ -23,12 +23,12 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 最新 AI completion gate：`AIEF/reports/static-scan/2026-05-15T07-11-23Z`：typescript / biome / pnpm-audit exit 0，blocking 0；Top N 为历史低危 lint，均在 `topN.results.md` 标记 deferred
+- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-17T12-29-02Z`：typescript / biome / pnpm-audit exit 0，blocking 0；Top N 为历史低危 lint，均在 `topN.results.md` 标记 deferred
 
 ### 0.1 已知缺陷 / 修复状态
 
 - ✅ `packages/distill/src/shard.test.ts > reduceResults`：3 条失败用例已修复（去重 by message_id / 去重 by similar title / drops single-shard low confidence），并补充中文标题去重覆盖。2026-05-13 `pnpm run test`：220 pass / 0 fail。
-- `tasks/2026-05-03-issue-draft-v2/progress.md` 与代码不同步：commit `542109f` 已实现 parts data / multi-output / target_repo，但 progress.md 仍写 "Step 1 待开始"。
+- ✅ `tasks/2026-05-03-issue-draft-v2/progress.md` 与代码不同步：2026-05-17 已同步为完成态；commit `542109f` 已实现 parts data / multi-output / target_repo。
 
 ### 0.3 代表性资产 distiller 实现状态（2026-05-13）
 
@@ -76,7 +76,7 @@
 | :--- | :--- | :--- |
 | `tasks/2026-05-01-pipeline-integration` | ✅ 全部完成 (12 phase) | `progress.md`, 160 tests pass |
 | `tasks/2026-05-02-shard-map-reduce` | ✅ 全部完成 (Steps 1-6 + code review) | `progress.md`, 185 tests pass, commits `dc50db3 / 9a51ea7 / 1112410 / 7d025b1` |
-| `tasks/2026-05-03-issue-draft-v2` | ⚠️ progress.md 不同步 | commit `542109f` 已实现；progress.md 待同步 |
+| `tasks/2026-05-03-issue-draft-v2` | ✅ 已完成并同步 | commit `542109f` 已实现 parts data / multi-output / target_repo；`progress.md` 已于 2026-05-17 对齐 |
 | 2026-05-11 bug fix batch | ✅ 全部完成 | 见 §2.y |
 
 ### 2.y 2026-05-11 门禁日修复批次
@@ -111,7 +111,7 @@
 
 | 事项 | 状态 | 描述 |
 | :--- | :--- | :--- |
-| Common post-filter v0.1 | ✅ 已落成 | `@loamlog/distiller-representative-assets` 已新增共享 `shouldKeepRepresentativeAsset` post-filter，在 5 类代表性资产共用入口统一过滤 assistant process log evidence、动作壳标题、follow-up 缺少验收标准、done-state / old-roadmap idea、decision 非明确决策、普通 API key 错误经验、one-off command / bug fix / CI skill-candidate |
+| Common post-filter v0.2 | ✅ 已落成 | `@loamlog/distiller-representative-assets` 共享 `shouldKeepRepresentativeAsset` post-filter 已覆盖 assistant process log evidence、动作壳标题、follow-up 缺少验收标准、done-state / old-roadmap idea、decision 非明确决策、普通 API key 错误经验、one-off command / bug fix / CI skill-candidate，并新增低价值重复主题过滤：API key 排障不进 idea，Loamlog 内部 dogfooding / provider bug / CI 构建动作不升为 skill-candidate |
 
 ---
 
@@ -158,8 +158,8 @@
    - 已完成：Signal contract、默认 review status、`validateSignal`、代表性资产插件 `consumes_signals`、AssetStore signal 节点、`loam signal list/show/review/rerun` 最小人工审阅与重跑入口、classifier schema/prompt/normalize helper、DAG 内 signal-based distiller routing、capture 后自动 Signal Gate job
    - 剩余产物：当前 dogfooding 主线可进入 P1 duplicate-topic / old-roadmap / prompt-schema repair 与小批量复评
 2. **[P1] 增加跨资产通用过滤层**
-   - 已完成 v0.1：过滤 assistant process log、done-state、action-shell、old-roadmap、部分 wrong-type；`follow-up-work-item` 已要求验收标准；`skill-candidate` 已拒绝普通命令、bug fix、CI 等一次性任务
-   - 剩余：duplicate-topic 跨类型去重、更细的 old-roadmap 判定、基于真实样本的 distiller prompt/schema repair
+   - 已完成 v0.2：过滤 assistant process log、done-state、action-shell、old-roadmap、部分 wrong-type；`follow-up-work-item` 已要求验收标准；`skill-candidate` 已拒绝普通命令、bug fix、CI 等一次性任务；API key 排障、内部 dogfooding / provider bug / CI 构建动作等低价值重复主题已增加确定性过滤
+   - 剩余：跨候选的 duplicate-topic 合并、更细的 old-roadmap 判定、基于真实样本的 distiller prompt/schema repair
 3. **[P2] 小批量复评而非扩大样本**
    - 用 5-10 条真实 session rerun，目标是每类资产 `>=3` 比例至少 50%
    - 仅当复评达标后，再讨论多 provider 样本、复用池、页面或 MCP 暴露
