@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
 import type { DistillResult } from "@loamlog/core";
-import { createGitHubSink, type GitHubSinkConfig } from "./index.js";
+import { createGitHubSink } from "./index.js";
 
 function makeResult(overrides: Partial<DistillResult> = {}): DistillResult {
   return {
@@ -24,7 +24,8 @@ function makeResult(overrides: Partial<DistillResult> = {}): DistillResult {
       },
     ],
     render: {
-      markdown: "## Add MFA support\n\nThe auth module needs MFA support.\n\n### Evidence\n- `ses_001` / `msg-1`",
+      markdown:
+        "## Add MFA support\n\nThe auth module needs MFA support.\n\n### Evidence\n- `ses_001` / `msg-1`",
     },
     ...overrides,
   };

@@ -6,8 +6,8 @@ import {
   DEFAULT_RULE_CONFIG,
   loadRuleConfigFromFile,
   parseRuleConfig,
-  RuleConfig,
 } from "./index.js";
+import type { RuleConfig } from "./index.js";
 
 const DEFAULT_RULE_PATH = new URL("./default.rules.yaml", import.meta.url);
 
@@ -20,7 +20,13 @@ describe("rule engine", () => {
       id: "candidate-1",
       title: "Refactor auth gateway",
       signal_type: "architecture_gap",
-      metrics: { frequency: 4, impact: 0.8, urgency: 0.72, confidence: 0.74, effort: 0.3 },
+      metrics: {
+        frequency: 4,
+        impact: 0.8,
+        urgency: 0.72,
+        confidence: 0.74,
+        effort: 0.3,
+      },
       flags: { affects_core_pipeline: true },
       attributes: { title_duplicates_in_session: 1 },
     });
@@ -37,7 +43,9 @@ describe("rule engine", () => {
   });
 
   it("drops low confidence candidates and records reason", async () => {
-    const engine = createRuleEngine(await loadRuleConfigFromFile(DEFAULT_RULE_PATH));
+    const engine = createRuleEngine(
+      await loadRuleConfigFromFile(DEFAULT_RULE_PATH),
+    );
     const decision = engine.evaluate({
       id: "candidate-2",
       signal_type: "bug",
@@ -47,7 +55,9 @@ describe("rule engine", () => {
 
     assert.equal(decision.filtered, true);
     assert.equal(decision.allowExecution, false);
-    assert.ok(decision.filterReasons.some((reason) => reason.includes("confidence")));
+    assert.ok(
+      decision.filterReasons.some((reason) => reason.includes("confidence")),
+    );
   });
 
   it("supports hot reload of rules without code changes", () => {
@@ -64,8 +74,11 @@ describe("rule engine", () => {
     assert.equal(before.filtered, false);
 
     const updated = JSON.parse(JSON.stringify(DEFAULT_RULE_CONFIG));
-    updated.rules = updated.rules.map((rule: typeof DEFAULT_RULE_CONFIG.rules[number]) =>
-      rule.id === "ignore_low_confidence" ? { ...rule, when: { confidence_lt: 0.6 } } : rule,
+    updated.rules = updated.rules.map(
+      (rule: (typeof DEFAULT_RULE_CONFIG.rules)[number]) =>
+        rule.id === "ignore_low_confidence"
+          ? { ...rule, when: { confidence_lt: 0.6 } }
+          : rule,
     );
 
     engine.reload(updated);
@@ -145,6 +158,8 @@ describe("rule engine", () => {
   });
 
   it("rejects invalid rule definitions early", () => {
-    assert.throws(() => parseRuleConfig(`rules:\n  - id: bad\n    type: banana\n`, "yaml"));
+    assert.throws(() =>
+      parseRuleConfig(`rules:\n  - id: bad\n    type: banana\n`, "yaml"),
+    );
   });
 });

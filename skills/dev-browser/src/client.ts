@@ -1,4 +1,9 @@
-import { chromium, type Browser, type Page, type ElementHandle } from "playwright";
+import {
+  chromium,
+  type Browser,
+  type Page,
+  type ElementHandle,
+} from "playwright";
 import type {
   GetPageRequest,
   GetPageResponse,
@@ -61,7 +66,7 @@ interface PendingRequest {
  */
 export async function waitForPageLoad(
   page: Page,
-  options: WaitForPageLoadOptions = {}
+  options: WaitForPageLoadOptions = {},
 ): Promise<WaitForPageLoadResult> {
   const {
     timeout = 10000,
@@ -87,7 +92,8 @@ export async function waitForPageLoad(
       const documentReady = lastState.documentReadyState === "complete";
 
       // Check if network is idle (no pending critical requests)
-      const networkIdle = !waitForNetworkIdle || lastState.pendingRequests.length === 0;
+      const networkIdle =
+        !waitForNetworkIdle || lastState.pendingRequests.length === 0;
 
       if (documentReady && networkIdle) {
         return {
@@ -122,15 +128,29 @@ export async function waitForPageLoad(
 async function getPageLoadState(page: Page): Promise<PageLoadState> {
   const result = await page.evaluate(() => {
     // Access browser globals via globalThis for TypeScript compatibility
-    /* eslint-disable @typescript-eslint/no-explicit-any */
-    const g = globalThis as { document?: any; performance?: any };
-    /* eslint-enable @typescript-eslint/no-explicit-any */
-    const perf = g.performance!;
-    const doc = g.document!;
+    type BrowserResourceEntry = {
+      name: string;
+      responseEnd: number;
+      startTime: number;
+      initiatorType?: string;
+    };
+    const g = globalThis as typeof globalThis & {
+      document: { readyState: string };
+      performance: {
+        now(): number;
+        getEntriesByType(type: "resource"): BrowserResourceEntry[];
+      };
+    };
+    const perf = g.performance;
+    const doc = g.document;
 
     const now = perf.now();
     const resources = perf.getEntriesByType("resource");
-    const pending: Array<{ url: string; loadingDurationMs: number; resourceType: string }> = [];
+    const pending: Array<{
+      url: string;
+      loadingDurationMs: number;
+      resourceType: string;
+    }> = [];
 
     // Common ad/tracking domains and patterns to filter out
     const adPatterns = [
@@ -183,7 +203,8 @@ async function getPageLoadState(page: Page): Promise<PageLoadState> {
         const resourceType = entry.initiatorType || "unknown";
 
         // Filter out non-critical resources loading > 3 seconds
-        if (nonCriticalTypes.includes(resourceType) && loadingDuration > 3000) continue;
+        if (nonCriticalTypes.includes(resourceType) && loadingDuration > 3000)
+          continue;
 
         // Filter out image URLs even if type is unknown
         const isImageUrl = /\.(jpg|jpeg|png|gif|webp|svg|ico)(\?|$)/i.test(url);
@@ -237,21 +258,26 @@ export interface DevBrowserClient {
    * Get an element handle by its ref from the last getAISnapshot call.
    * Refs persist across Playwright connections.
    */
-  selectSnapshotRef: (name: string, ref: string) => Promise<ElementHandle | null>;
+  selectSnapshotRef: (
+    name: string,
+    ref: string,
+  ) => Promise<ElementHandle | null>;
   /**
    * Get server information including mode and extension connection status.
    */
   getServerInfo: () => Promise<ServerInfo>;
 }
 
-export async function connect(serverUrl = "http://localhost:9222"): Promise<DevBrowserClient> {
+export async function connect(
+  serverUrl = "http://localhost:9222",
+): Promise<DevBrowserClient> {
   let browser: Browser | null = null;
   let wsEndpoint: string | null = null;
   let connectingPromise: Promise<Browser> | null = null;
 
   async function ensureConnected(): Promise<Browser> {
     // Return existing connection if still active
-    if (browser && browser.isConnected()) {
+    if (browser?.isConnected()) {
       return browser;
     }
 
@@ -283,10 +309,15 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
   }
 
   // Find page by CDP targetId - more reliable than JS globals
-  async function findPageByTargetId(b: Browser, targetId: string): Promise<Page | null> {
+  async function findPageByTargetId(
+    b: Browser,
+    targetId: string,
+  ): Promise<Page | null> {
     for (const context of b.contexts()) {
       for (const page of context.pages()) {
-        let cdpSession: Awaited<ReturnType<typeof context.newCDPSession>> | undefined;
+        let cdpSession:
+          | Awaited<ReturnType<typeof context.newCDPSession>>
+          | undefined;
         try {
           cdpSession = await context.newCDPSession(page);
           const { targetInfo } = await cdpSession.send("Target.getTargetInfo");
@@ -296,7 +327,10 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
         } catch (err) {
           // Only ignore "target closed" errors, log unexpected ones
           const msg = err instanceof Error ? err.message : String(err);
-          if (!msg.includes("Target closed") && !msg.includes("Session closed")) {
+          if (
+            !msg.includes("Target closed") &&
+            !msg.includes("Session closed")
+          ) {
             console.warn(`Unexpected error checking page target: ${msg}`);
           }
         } finally {
@@ -319,7 +353,10 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
     const res = await fetch(`${serverUrl}/pages`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, viewport: options?.viewport } satisfies GetPageRequest),
+      body: JSON.stringify({
+        name,
+        viewport: options?.viewport,
+      } satisfies GetPageRequest),
     });
 
     if (!res.ok) {
@@ -347,7 +384,8 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
       }
 
       if (allPages.length === 1) {
-        return allPages[0]!;
+        const [page] = allPages;
+        if (page) return page;
       }
 
       // Multiple pages - try to match by URL if available
@@ -384,9 +422,12 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
     },
 
     async close(name: string): Promise<void> {
-      const res = await fetch(`${serverUrl}/pages/${encodeURIComponent(name)}`, {
-        method: "DELETE",
-      });
+      const res = await fetch(
+        `${serverUrl}/pages/${encodeURIComponent(name)}`,
+        {
+          method: "DELETE",
+        },
+      );
 
       if (!res.ok) {
         throw new Error(`Failed to close page: ${await res.text()}`);
@@ -410,8 +451,9 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
       const snapshot = await page.evaluate((script: string) => {
         // Inject script if not already present
         // Note: page.evaluate runs in browser context where window exists
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = globalThis as any;
+        const w = globalThis as typeof globalThis & {
+          __devBrowser_getAISnapshot?: () => string;
+        };
         if (!w.__devBrowser_getAISnapshot) {
           // biome-ignore lint/security/noGlobalEval: browser automation intentionally injects the bundled snapshot script.
           eval(script);
@@ -422,15 +464,19 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
       return snapshot;
     },
 
-    async selectSnapshotRef(name: string, ref: string): Promise<ElementHandle | null> {
+    async selectSnapshotRef(
+      name: string,
+      ref: string,
+    ): Promise<ElementHandle | null> {
       // Get the page
       const page = await getPage(name);
 
       // Find the element using the stored refs
       const elementHandle = await page.evaluateHandle((refId: string) => {
         // Note: page.evaluateHandle runs in browser context where globalThis is the window
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const w = globalThis as any;
+        const w = globalThis as typeof globalThis & {
+          __devBrowserRefs?: Record<string, unknown>;
+        };
         const refs = w.__devBrowserRefs;
         if (!refs) {
           throw new Error("No snapshot refs found. Call getAISnapshot first.");
@@ -438,7 +484,7 @@ export async function connect(serverUrl = "http://localhost:9222"): Promise<DevB
         const element = refs[refId];
         if (!element) {
           throw new Error(
-            `Ref "${refId}" not found. Available refs: ${Object.keys(refs).join(", ")}`
+            `Ref "${refId}" not found. Available refs: ${Object.keys(refs).join(", ")}`,
           );
         }
         return element;

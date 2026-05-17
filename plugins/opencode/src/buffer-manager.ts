@@ -1,6 +1,14 @@
-import { mkdir, readdir, readFile, unlink, writeFile, stat, rename } from "fs/promises";
-import { join } from "path";
-import { homedir } from "os";
+import {
+  mkdir,
+  readdir,
+  readFile,
+  unlink,
+  writeFile,
+  stat,
+  rename,
+} from "node:fs/promises";
+import { join } from "node:path";
+import { homedir } from "node:os";
 import type { CaptureRequest } from "@loamlog/core";
 
 const MAX_BUFFER_FILES = 50;
@@ -35,7 +43,9 @@ export class BufferManager {
     }
   }
 
-  async flush(sendFn: (payload: CaptureRequest) => Promise<void>): Promise<void> {
+  async flush(
+    sendFn: (payload: CaptureRequest) => Promise<void>,
+  ): Promise<void> {
     if (this.isFlushing) return;
     this.isFlushing = true;
 
@@ -60,7 +70,7 @@ export class BufferManager {
             await unlink(filePath).catch(() => {});
           } else {
             this.logger?.(`flush interrupted at ${file.name}: ${err}`);
-            break; 
+            break;
           }
         }
       }
@@ -74,19 +84,20 @@ export class BufferManager {
     }
   }
 
-
   private async listSorted() {
     try {
       const entries = await readdir(this.dir, { withFileTypes: true });
-      const files = entries.filter((e) => e.isFile() && e.name.endsWith(".json"));
+      const files = entries.filter(
+        (e) => e.isFile() && e.name.endsWith(".json"),
+      );
       const stats = await Promise.all(
         files.map(async (f) => ({
           name: f.name,
           mtime: (await stat(join(this.dir, f.name))).mtimeMs,
-        }))
+        })),
       );
       return stats.sort((a, b) => a.mtime - b.mtime);
-    } catch (err) {
+    } catch {
       return [];
     }
   }

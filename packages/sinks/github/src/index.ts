@@ -87,7 +87,9 @@ function buildIssueBody(result: DistillResult): string {
   ];
 
   for (const evidence of result.evidence) {
-    lines.push(`- Session \`${evidence.session_id}\` / Message \`${evidence.message_id}\``);
+    lines.push(
+      `- Session \`${evidence.session_id}\` / Message \`${evidence.message_id}\``,
+    );
     lines.push(`  > ${evidence.excerpt.slice(0, 200)}`);
     lines.push(`  ${evidence.trace_command}`);
   }
@@ -114,21 +116,30 @@ export function createGitHubSink(config: GitHubSinkConfig = {}): SinkPlugin {
       config: Record<string, unknown>;
     }): Promise<DeliveryReport> {
       // Merge construction-time config with delivery-time config (delivery wins)
-      const merged: GitHubSinkConfig = { ...config, ...(input.config as GitHubSinkConfig) };
+      const merged: GitHubSinkConfig = {
+        ...config,
+        ...(input.config as GitHubSinkConfig),
+      };
       const repoRaw = merged.repo ?? "";
-      let token = merged.token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
+      let token =
+        merged.token ?? process.env.GITHUB_TOKEN ?? process.env.GH_TOKEN;
       const labels = merged.labels ?? [];
       const dryRun = merged.dryRun ?? false;
 
-      if (!repoRaw || !repoRaw.includes("/")) {
-        throw new Error("sink-github requires config.repo in owner/repo format");
+      if (!repoRaw.includes("/")) {
+        throw new Error(
+          "sink-github requires config.repo in owner/repo format",
+        );
       }
 
       // Resolve token from gh CLI if not provided
       if (!token) {
         try {
           const { execSync } = await import("node:child_process");
-          token = execSync("gh auth token", { encoding: "utf8", timeout: 5000 }).trim();
+          token = execSync("gh auth token", {
+            encoding: "utf8",
+            timeout: 5000,
+          }).trim();
         } catch {
           throw new Error(
             "sink-github requires a token. Set GITHUB_TOKEN env var, config.token, or authenticate with `gh auth login`.",
@@ -160,7 +171,9 @@ export function createGitHubSink(config: GitHubSinkConfig = {}): SinkPlugin {
         const body = buildIssueBody(result);
 
         if (dryRun) {
-          console.log(`[sink-github:dry-run] Would create issue: "${result.title}"`);
+          console.log(
+            `[sink-github:dry-run] Would create issue: "${result.title}"`,
+          );
           console.log(`  repo: ${repoRaw}`);
           console.log(`  labels: ${labels.join(", ") || "(none)"}`);
           console.log(`  body: ${body.slice(0, 200)}...`);
@@ -174,7 +187,9 @@ export function createGitHubSink(config: GitHubSinkConfig = {}): SinkPlugin {
             body,
             labels: [...labels, ...result.tags],
           });
-          console.log(`[sink-github] Created issue #${issue.number}: ${issue.url}`);
+          console.log(
+            `[sink-github] Created issue #${issue.number}: ${issue.url}`,
+          );
           delivered += 1;
         } catch (error) {
           errors.push({
