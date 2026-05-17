@@ -1,6 +1,6 @@
-import { readFile, readdir, stat } from "node:fs/promises";
-import path from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
+import path from "node:path";
 import type {
   PulledSessionPayload,
   SessionArtifactPart,
@@ -10,7 +10,11 @@ import type {
 } from "@loamlog/core";
 
 type ReadTextFile = (filePath: string) => Promise<string>;
-type ReadDir = (dirPath: string) => Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>>;
+type ReadDir = (
+  dirPath: string,
+) => Promise<
+  Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>
+>;
 type StatFile = (filePath: string) => Promise<{ mtimeMs: number }>;
 
 interface CodexJsonLine {
@@ -62,7 +66,9 @@ function defaultReadTextFile(filePath: string): Promise<string> {
   return readFile(filePath, "utf8");
 }
 
-async function defaultReadDir(dirPath: string): Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>> {
+async function defaultReadDir(
+  dirPath: string,
+): Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>> {
   return readdir(dirPath, { withFileTypes: true });
 }
 
@@ -85,7 +91,7 @@ function parseJsonLines(text: string): CodexJsonLine[] {
       parsed = JSON.parse(trimmed) as unknown;
     } catch {
       const isLastLine = index === lines.length - 1;
-      const looksIncomplete = !/[\]\}]$/.test(trimmed);
+      const looksIncomplete = !/[\]}]$/.test(trimmed);
       if (isLastLine && looksIncomplete) {
         continue;
       }
@@ -100,7 +106,9 @@ function parseJsonLines(text: string): CodexJsonLine[] {
   return rows;
 }
 
-function extractTextFromContent(content: CodexContentItem[] | string | undefined): string {
+function extractTextFromContent(
+  content: CodexContentItem[] | string | undefined,
+): string {
   if (!content) {
     return "";
   }
@@ -116,7 +124,10 @@ function extractTextFromContent(content: CodexContentItem[] | string | undefined
 
   return content
     .flatMap((c) =>
-      (c.type === "input_text" || c.type === "output_text") && typeof c.text === "string" ? [c.text] : [],
+      (c.type === "input_text" || c.type === "output_text") &&
+      typeof c.text === "string"
+        ? [c.text]
+        : [],
     )
     .join("\n");
 }
@@ -140,21 +151,31 @@ function buildPulledPayload(
     if (row.type === "session_meta" && payload) {
       sessionId = typeof payload.id === "string" ? payload.id : undefined;
       cwd = cwd ?? (typeof payload.cwd === "string" ? payload.cwd : undefined);
-      model = model ?? (typeof payload.model_provider === "string" ? payload.model_provider : undefined);
+      model =
+        model ??
+        (typeof payload.model_provider === "string"
+          ? payload.model_provider
+          : undefined);
       continue;
     }
 
     // turn_context: extract cwd and model
     if (row.type === "turn_context" && payload) {
       cwd = cwd ?? (typeof payload.cwd === "string" ? payload.cwd : undefined);
-      model = model ?? (typeof payload.model === "string" ? payload.model : undefined);
+      model =
+        model ??
+        (typeof payload.model === "string" ? payload.model : undefined);
       continue;
     }
 
     // response_item
     if (row.type === "response_item" && payload) {
-      const itemType = typeof payload.type === "string" ? payload.type : undefined;
-      const timestamp = typeof row.timestamp === "string" ? row.timestamp : new Date(fileMtimeMs).toISOString();
+      const itemType =
+        typeof payload.type === "string" ? payload.type : undefined;
+      const timestamp =
+        typeof row.timestamp === "string"
+          ? row.timestamp
+          : new Date(fileMtimeMs).toISOString();
 
       if (itemType === "message") {
         const msgPayload = payload as CodexMessagePayload;
@@ -232,7 +253,8 @@ function buildPulledPayload(
 
         const call: SessionToolCall = {
           id: callId,
-          message_id: messages[messages.length - 1]?.id ?? `codex-msg-${messages.length}`,
+          message_id:
+            messages[messages.length - 1]?.id ?? `codex-msg-${messages.length}`,
           name: callName,
           input: args,
         };
@@ -264,7 +286,6 @@ function buildPulledPayload(
             }
           }
         }
-        continue;
       }
     }
   }
@@ -272,7 +293,9 @@ function buildPulledPayload(
   const repoName = cwd ? path.basename(cwd) : undefined;
   const finalSessionId = sessionId ?? path.basename(sessionFilePath, ".jsonl");
   const start = messages[0]?.timestamp ?? new Date(fileMtimeMs).toISOString();
-  const end = messages[messages.length - 1]?.timestamp ?? new Date(fileMtimeMs).toISOString();
+  const end =
+    messages[messages.length - 1]?.timestamp ??
+    new Date(fileMtimeMs).toISOString();
 
   return {
     session: {
@@ -303,7 +326,10 @@ export async function pullCodexSessionFromFilePath(
 ): Promise<PulledSessionPayload> {
   const readTextFile = options.readTextFile ?? defaultReadTextFile;
   const statFile = options.statFile ?? defaultStatFile;
-  const [text, stats] = await Promise.all([readTextFile(sessionFilePath), statFile(sessionFilePath)]);
+  const [text, stats] = await Promise.all([
+    readTextFile(sessionFilePath),
+    statFile(sessionFilePath),
+  ]);
   const rows = parseJsonLines(text);
   return buildPulledPayload(rows, sessionFilePath, stats.mtimeMs);
 }
@@ -326,8 +352,15 @@ export function createCodexSessionProvider(
   return {
     id: "codex",
     async pullSession(sessionId: string): Promise<PulledSessionPayload> {
-      const sessionFilePath = await findSessionFile(sessionId, sessionsDir, readDirImpl);
-      return pullCodexSessionFromFilePath(sessionFilePath, { readTextFile, statFile });
+      const sessionFilePath = await findSessionFile(
+        sessionId,
+        sessionsDir,
+        readDirImpl,
+      );
+      return pullCodexSessionFromFilePath(sessionFilePath, {
+        readTextFile,
+        statFile,
+      });
     },
   };
 }
@@ -339,7 +372,11 @@ async function findSessionFile(
 ): Promise<string> {
   // sessionsDir = ~/.codex/sessions
   // Files are at sessionsDir/YYYY/MM/DD/rollout-*.jsonl
-  let yearEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+  let yearEntries: Array<{
+    name: string;
+    isDirectory(): boolean;
+    isFile(): boolean;
+  }>;
   try {
     yearEntries = await readDirImpl(sessionsDir);
   } catch {
@@ -352,7 +389,11 @@ async function findSessionFile(
     }
 
     const monthDir = path.join(sessionsDir, yearEntry.name);
-    let monthEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+    let monthEntries: Array<{
+      name: string;
+      isDirectory(): boolean;
+      isFile(): boolean;
+    }>;
     try {
       monthEntries = await readDirImpl(monthDir);
     } catch {
@@ -365,7 +406,11 @@ async function findSessionFile(
       }
 
       const dayDir = path.join(monthDir, monthEntry.name);
-      let dayEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+      let dayEntries: Array<{
+        name: string;
+        isDirectory(): boolean;
+        isFile(): boolean;
+      }>;
       try {
         dayEntries = await readDirImpl(dayDir);
       } catch {
@@ -374,7 +419,11 @@ async function findSessionFile(
 
       for (const dayEntry of dayEntries) {
         // Check files directly under day directory (newer Codex format)
-        if (dayEntry.isFile() && dayEntry.name.startsWith("rollout-") && dayEntry.name.endsWith(".jsonl")) {
+        if (
+          dayEntry.isFile() &&
+          dayEntry.name.startsWith("rollout-") &&
+          dayEntry.name.endsWith(".jsonl")
+        ) {
           if (dayEntry.name.includes(sessionId)) {
             return path.join(dayDir, dayEntry.name);
           }
@@ -386,7 +435,11 @@ async function findSessionFile(
         }
 
         const filesDir = path.join(dayDir, dayEntry.name);
-        let fileEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+        let fileEntries: Array<{
+          name: string;
+          isDirectory(): boolean;
+          isFile(): boolean;
+        }>;
         try {
           fileEntries = await readDirImpl(filesDir);
         } catch {
@@ -394,7 +447,11 @@ async function findSessionFile(
         }
 
         for (const fileEntry of fileEntries) {
-          if (!fileEntry.isFile() || !fileEntry.name.startsWith("rollout-") || !fileEntry.name.endsWith(".jsonl")) {
+          if (
+            !fileEntry.isFile() ||
+            !fileEntry.name.startsWith("rollout-") ||
+            !fileEntry.name.endsWith(".jsonl")
+          ) {
             continue;
           }
 
@@ -409,10 +466,17 @@ async function findSessionFile(
   throw new Error(`Codex session file not found for ${sessionId}`);
 }
 
-async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Promise<string[]> {
+async function listSessionFiles(
+  sessionsDir: string,
+  readDirImpl: ReadDir,
+): Promise<string[]> {
   const files: string[] = [];
 
-  let yearEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+  let yearEntries: Array<{
+    name: string;
+    isDirectory(): boolean;
+    isFile(): boolean;
+  }>;
   try {
     yearEntries = await readDirImpl(sessionsDir);
   } catch {
@@ -425,7 +489,11 @@ async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Prom
     }
 
     const monthDir = path.join(sessionsDir, yearEntry.name);
-    let monthEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+    let monthEntries: Array<{
+      name: string;
+      isDirectory(): boolean;
+      isFile(): boolean;
+    }>;
     try {
       monthEntries = await readDirImpl(monthDir);
     } catch {
@@ -438,7 +506,11 @@ async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Prom
       }
 
       const dayDir = path.join(monthDir, monthEntry.name);
-      let dayEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+      let dayEntries: Array<{
+        name: string;
+        isDirectory(): boolean;
+        isFile(): boolean;
+      }>;
       try {
         dayEntries = await readDirImpl(dayDir);
       } catch {
@@ -447,7 +519,11 @@ async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Prom
 
       for (const dayEntry of dayEntries) {
         // Handle files directly under day directory (newer Codex format)
-        if (dayEntry.isFile() && dayEntry.name.startsWith("rollout-") && dayEntry.name.endsWith(".jsonl")) {
+        if (
+          dayEntry.isFile() &&
+          dayEntry.name.startsWith("rollout-") &&
+          dayEntry.name.endsWith(".jsonl")
+        ) {
           files.push(path.join(dayDir, dayEntry.name));
           continue;
         }
@@ -457,7 +533,11 @@ async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Prom
         }
 
         const filesDir = path.join(dayDir, dayEntry.name);
-        let fileEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+        let fileEntries: Array<{
+          name: string;
+          isDirectory(): boolean;
+          isFile(): boolean;
+        }>;
         try {
           fileEntries = await readDirImpl(filesDir);
         } catch {
@@ -465,7 +545,11 @@ async function listSessionFiles(sessionsDir: string, readDirImpl: ReadDir): Prom
         }
 
         for (const fileEntry of fileEntries) {
-          if (fileEntry.isFile() && fileEntry.name.startsWith("rollout-") && fileEntry.name.endsWith(".jsonl")) {
+          if (
+            fileEntry.isFile() &&
+            fileEntry.name.startsWith("rollout-") &&
+            fileEntry.name.endsWith(".jsonl")
+          ) {
             files.push(path.join(filesDir, fileEntry.name));
           }
         }
@@ -496,7 +580,11 @@ export interface StartCodexWatcherOptions {
   pollIntervalMs?: number;
   retryDelayMs?: number;
   logger?: (message: string) => void;
-  onReady(event: { sessionId: string; filePath: string; trigger: string }): void | Promise<void>;
+  onReady(event: {
+    sessionId: string;
+    filePath: string;
+    trigger: string;
+  }): void | Promise<void>;
   readDir?: ReadDir;
   statFile?: StatFile;
 }
@@ -505,10 +593,14 @@ export interface CodexWatcher {
   close(): void;
 }
 
-export function startCodexWatcher(options: StartCodexWatcherOptions): CodexWatcher {
+export function startCodexWatcher(
+  options: StartCodexWatcherOptions,
+): CodexWatcher {
   const sessionsDir = options.sessionsDir ?? defaultSessionsDir();
   const logger = options.logger ?? (() => undefined);
-  const idleMs = clampIdleMs(options.idleMs ?? Number(process.env.LOAM_CODEX_IDLE_MS));
+  const idleMs = clampIdleMs(
+    options.idleMs ?? Number(process.env.LOAM_CODEX_IDLE_MS),
+  );
   const pollIntervalMs = clampPollIntervalMs(options.pollIntervalMs);
   const retryDelayMs = clampPollIntervalMs(options.retryDelayMs ?? 2_000);
   const readDirImpl = options.readDir ?? defaultReadDir;
@@ -518,7 +610,11 @@ export function startCodexWatcher(options: StartCodexWatcherOptions): CodexWatch
   let stopped = false;
   let scanning = false;
 
-  const scheduleReady = (sessionId: string, filePath: string, delayMs = idleMs) => {
+  const scheduleReady = (
+    sessionId: string,
+    filePath: string,
+    delayMs = idleMs,
+  ) => {
     const key = filePath;
     const existing = timers.get(key);
     if (existing) {
@@ -527,9 +623,13 @@ export function startCodexWatcher(options: StartCodexWatcherOptions): CodexWatch
 
     const timer = setTimeout(() => {
       timers.delete(key);
-      void Promise.resolve(options.onReady({ sessionId, filePath, trigger: "session.idle" })).catch((error: unknown) => {
+      void Promise.resolve(
+        options.onReady({ sessionId, filePath, trigger: "session.idle" }),
+      ).catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        logger(`[loam codex] watcher callback failed session_id=${sessionId} error=${message}`);
+        logger(
+          `[loam codex] watcher callback failed session_id=${sessionId} error=${message}`,
+        );
         if (!stopped) {
           scheduleReady(sessionId, filePath, retryDelayMs);
         }

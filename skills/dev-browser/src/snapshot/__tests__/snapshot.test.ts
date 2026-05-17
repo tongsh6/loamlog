@@ -1,11 +1,25 @@
-import { chromium } from "playwright";
 import type { Browser, BrowserContext, Page } from "playwright";
-import { beforeAll, afterAll, beforeEach, afterEach, describe, test, expect } from "vitest";
-import { getSnapshotScript, clearSnapshotScriptCache } from "../browser-script";
+import { chromium } from "playwright";
+import {
+  afterAll,
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  test,
+} from "vitest";
+import { clearSnapshotScriptCache, getSnapshotScript } from "../browser-script";
 
 let browser: Browser;
 let context: BrowserContext;
 let page: Page;
+
+type SnapshotTestWindow = typeof globalThis & {
+  __devBrowserRefs?: Record<string, unknown>;
+  __devBrowser_getAISnapshot?: () => string;
+  __devBrowser_selectSnapshotRef?: (ref: string) => Element;
+};
 
 beforeAll(async () => {
   browser = await chromium.launch();
@@ -32,9 +46,7 @@ async function setContent(html: string): Promise<void> {
 async function getSnapshot(): Promise<string> {
   const script = getSnapshotScript();
   return await page.evaluate((s: string) => {
-    const w = globalThis as typeof globalThis & {
-      __devBrowser_getAISnapshot?: () => string;
-    };
+    const w = globalThis as SnapshotTestWindow;
     if (!w.__devBrowser_getAISnapshot) {
       // biome-ignore lint/security/noGlobalEval: browser test intentionally injects the bundled snapshot script.
       eval(s);
@@ -45,9 +57,11 @@ async function getSnapshot(): Promise<string> {
 
 async function selectRef(ref: string): Promise<unknown> {
   return await page.evaluate((refId: string) => {
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const w = globalThis as any;
-    const element = w.__devBrowser_selectSnapshotRef(refId);
+    const w = globalThis as SnapshotTestWindow;
+    const element = w.__devBrowser_selectSnapshotRef?.(refId);
+    if (!element) {
+      throw new Error(`Snapshot ref not found: ${refId}`);
+    }
     return {
       tagName: element.tagName,
       textContent: element.textContent?.trim(),
@@ -103,9 +117,11 @@ describe("ARIA Snapshot", () => {
 
     // Check that refs are stored
     const hasRefs = await page.evaluate(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const w = globalThis as any;
-      return typeof w.__devBrowserRefs === "object" && Object.keys(w.__devBrowserRefs).length > 0;
+      const w = globalThis as SnapshotTestWindow;
+      return (
+        typeof w.__devBrowserRefs === "object" &&
+        Object.keys(w.__devBrowserRefs).length > 0
+      );
     });
 
     expect(hasRefs).toBe(true);
@@ -125,11 +141,14 @@ describe("ARIA Snapshot", () => {
     // Extract a ref from the snapshot
     const refMatch = snapshot.match(/\[ref=(e\d+)\]/);
     expect(refMatch).toBeTruthy();
-    expect(refMatch![1]).toBeDefined();
-    const ref = refMatch![1] as string;
+    const ref = refMatch?.[1];
+    expect(ref).toBeDefined();
 
     // Select the element by ref
-    const result = (await selectRef(ref)) as { tagName: string; textContent: string };
+    const result = (await selectRef(ref as string)) as {
+      tagName: string;
+      textContent: string;
+    };
     expect(result.tagName).toBe("BUTTON");
     expect(result.textContent).toBe("My Button");
   });

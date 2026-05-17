@@ -1,4 +1,8 @@
-import type { SessionArtifact, NormalizedSession, NormalizedMessage } from "@loamlog/core";
+import type {
+  NormalizedMessage,
+  NormalizedSession,
+  SessionArtifact,
+} from "@loamlog/core";
 
 export interface NormalizeOptions {
   /** Maximum summary length for tool outputs. Defaults to 300. */
@@ -11,7 +15,10 @@ export interface NormalizeOptions {
  * Physical transformation workshop: transforms RAW SessionArtifact into NORMALIZED NormalizedSession.
  * Performs noise reduction by compressing tool outputs and isolating AI reasoning.
  */
-export function normalizeSession(artifact: SessionArtifact, options: NormalizeOptions = {}): NormalizedSession {
+export function normalizeSession(
+  artifact: SessionArtifact,
+  options: NormalizeOptions = {},
+): NormalizedSession {
   const maxToolSummaryChars = options.maxToolSummaryChars ?? 300;
   const maxReasoningChars = options.maxReasoningChars ?? 500;
 
@@ -43,7 +50,10 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
           toolCalls++;
           const output = part.output ?? "";
           const error = part.error ?? "";
-          rawChars += (part.input ? JSON.stringify(part.input).length : 0) + output.length + error.length;
+          rawChars +=
+            (part.input ? JSON.stringify(part.input).length : 0) +
+            output.length +
+            error.length;
 
           let summary = "";
           // L1-L2 Tiered Crushing:
@@ -62,7 +72,7 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
           tools.push({
             name: part.name,
             summary,
-            source_index: { raw_size: output.length + error.length }
+            source_index: { raw_size: output.length + error.length },
           });
           break;
         }
@@ -73,7 +83,10 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
     const reasoning = reasoningParts.join("\n").trim();
     const slicedReasoning = truncate(reasoning, maxReasoningChars);
 
-    normalizedChars += text.length + slicedReasoning.length + tools.reduce((acc, t) => acc + t.summary.length, 0);
+    normalizedChars +=
+      text.length +
+      slicedReasoning.length +
+      tools.reduce((acc, t) => acc + t.summary.length, 0);
 
     return {
       id: msg.id,
@@ -81,7 +94,7 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
       timestamp: msg.timestamp,
       text,
       reasoning: slicedReasoning || undefined,
-      tools: tools.length > 0 ? tools : undefined
+      tools: tools.length > 0 ? tools : undefined,
     };
   });
 
@@ -89,7 +102,8 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
   const entities = new Set<string>();
   // Refined regex: strictly match standard file paths with common extensions,
   // preventing greedy matching that causes ReDoS.
-  const pathRegex = /(?:^|\s)([\w\-\.\/]+\.(?:ts|js|py|go|rs|md|json|tsx|jsx|html|css))(?:\s|$)/g;
+  const pathRegex =
+    /(?:^|\s)([\w\-./]+\.(?:ts|js|py|go|rs|md|json|tsx|jsx|html|css))(?:\s|$)/g;
 
   for (const m of messages) {
     // Reset index for global regex
@@ -107,22 +121,26 @@ export function normalizeSession(artifact: SessionArtifact, options: NormalizeOp
     header: {
       session_id: artifact.meta.session_id,
       repo_path: artifact.context.worktree,
-      vcs_context: artifact.context.branch && artifact.context.commit ? {
-        branch: artifact.context.branch,
-        commit_sha: artifact.context.commit
-      } : undefined,
+      vcs_context:
+        artifact.context.branch && artifact.context.commit
+          ? {
+              branch: artifact.context.branch,
+              commit_sha: artifact.context.commit,
+            }
+          : undefined,
       provider: artifact.meta.provider,
       captured_at: artifact.meta.captured_at,
       topic_fingerprint: fingerprint || undefined,
-      session_continuity: artifact.messages.length > 50 ? "continuation" : "new"
+      session_continuity:
+        artifact.messages.length > 50 ? "continuation" : "new",
     },
     messages,
     stats: {
       total_messages: messages.length,
       tool_calls: toolCalls,
       raw_chars: rawChars,
-      normalized_chars: normalizedChars
-    }
+      normalized_chars: normalizedChars,
+    },
   };
 }
 

@@ -1,5 +1,9 @@
-import { appendFileSync } from "fs";
-import type { PulledSessionPayload, SessionArtifactPart, CaptureRequest } from "@loamlog/core";
+import { appendFileSync } from "node:fs";
+import type {
+  CaptureRequest,
+  PulledSessionPayload,
+  SessionArtifactPart,
+} from "@loamlog/core";
 import { BufferManager } from "./buffer-manager.js";
 
 // ---------------------------------------------------------------------------
@@ -29,7 +33,9 @@ interface ToolState {
 
 interface OpenCodeClient {
   session: {
-    get(opts: { path: { id: string } }): Promise<{ data?: Record<string, unknown> }>;
+    get(opts: {
+      path: { id: string };
+    }): Promise<{ data?: Record<string, unknown> }>;
     messages(opts: { path: { id: string } }): Promise<{ data?: SessionRow[] }>;
   };
   path: {
@@ -98,7 +104,9 @@ function toIsoTime(value: unknown, fallback: string): string {
   return new Date(value as number).toISOString();
 }
 
-function extractTextContent(parts: MessagePart[] | undefined): string | undefined {
+function extractTextContent(
+  parts: MessagePart[] | undefined,
+): string | undefined {
   const texts: string[] = [];
   for (const part of parts ?? []) {
     if ((part.type === "text" || part.type === "reasoning") && "text" in part) {
@@ -109,17 +117,21 @@ function extractTextContent(parts: MessagePart[] | undefined): string | undefine
 }
 
 function mapPart(part: MessagePart): SessionArtifactPart | undefined {
-  if (part.type === "text" && "text" in part) return { type: "text", text: part.text };
-  if (part.type === "reasoning" && "text" in part) return { type: "reasoning", text: part.text };
+  if (part.type === "text" && "text" in part)
+    return { type: "text", text: part.text };
+  if (part.type === "reasoning" && "text" in part)
+    return { type: "reasoning", text: part.text };
   if (part.type === "file") {
     return {
       type: "file",
-      mime: typeof part.mime === "string" ? part.mime : "application/octet-stream",
+      mime:
+        typeof part.mime === "string" ? part.mime : "application/octet-stream",
       filename: typeof part.filename === "string" ? part.filename : undefined,
     };
   }
   if (part.type === "tool") {
-    const state = part.state && typeof part.state === "object" ? part.state : undefined;
+    const state =
+      part.state && typeof part.state === "object" ? part.state : undefined;
     return {
       type: "tool",
       name: typeof part.tool === "string" ? part.tool : "unknown",
@@ -131,10 +143,15 @@ function mapPart(part: MessagePart): SessionArtifactPart | undefined {
   return undefined;
 }
 
-function mapMessages(rows: SessionRow[], now: string): PulledSessionPayload["messages"] {
+function mapMessages(
+  rows: SessionRow[],
+  now: string,
+): PulledSessionPayload["messages"] {
   return rows.map((row) => {
     const info = row.info ?? row;
-    const parts = (row.parts ?? []).map(mapPart).filter((p): p is NonNullable<typeof p> => p != null);
+    const parts = (row.parts ?? [])
+      .map(mapPart)
+      .filter((p): p is NonNullable<typeof p> => p != null);
     return {
       id: info.id ?? "",
       role: (info.role ?? "unknown") as "user" | "assistant",
@@ -145,15 +162,21 @@ function mapMessages(rows: SessionRow[], now: string): PulledSessionPayload["mes
   });
 }
 
-function mapToolCalls(rows: SessionRow[]): NonNullable<PulledSessionPayload["tools"]> {
+function mapToolCalls(
+  rows: SessionRow[],
+): NonNullable<PulledSessionPayload["tools"]> {
   const calls: NonNullable<PulledSessionPayload["tools"]> = [];
   for (const row of rows) {
     for (const part of row.parts ?? []) {
       if (part.type !== "tool") continue;
-      const state = part.state && typeof part.state === "object" ? part.state : undefined;
+      const state =
+        part.state && typeof part.state === "object" ? part.state : undefined;
       const info = row.info ?? row;
       calls.push({
-        id: typeof part.callID === "string" ? part.callID : `${info.id ?? "unknown"}-tool`,
+        id:
+          typeof part.callID === "string"
+            ? part.callID
+            : `${info.id ?? "unknown"}-tool`,
         message_id: info.id ?? "",
         name: typeof part.tool === "string" ? part.tool : "unknown",
         input: state?.input ?? {},
@@ -180,7 +203,9 @@ export const LoamlogPlugin = async ({ client }: { client: OpenCodeClient }) => {
 
   return {
     event: async ({ event }: { event: OpenCodeEvent }): Promise<void> => {
-      debugLog(`event received: ${event.type} sessionID=${event.properties?.sessionID ?? "n/a"}`);
+      debugLog(
+        `event received: ${event.type} sessionID=${event.properties?.sessionID ?? "n/a"}`,
+      );
       if (event.type !== "session.idle") return;
 
       const sessionId = event.properties?.sessionID;
@@ -192,24 +217,30 @@ export const LoamlogPlugin = async ({ client }: { client: OpenCodeClient }) => {
       try {
         const now = new Date().toISOString();
 
-        const [sessionRes, messagesRes, pathRes, vcsRes] = await Promise.allSettled([
-          client.session.get({ path: { id: sessionId } }),
-          client.session.messages({ path: { id: sessionId } }),
-          client.path.get(),
-          client.vcs.get(),
-        ]);
+        const [sessionRes, messagesRes, pathRes, vcsRes] =
+          await Promise.allSettled([
+            client.session.get({ path: { id: sessionId } }),
+            client.session.messages({ path: { id: sessionId } }),
+            client.path.get(),
+            client.vcs.get(),
+          ]);
 
         debugLog(
           `sessionRes=${sessionRes.status} messagesRes=${messagesRes.status} ` +
             `pathRes=${pathRes.status} vcsRes=${vcsRes.status}`,
         );
-        if (messagesRes.status === "rejected") debugLog(`messagesRes error: ${messagesRes.reason}`);
-        if (sessionRes.status === "rejected") debugLog(`sessionRes error: ${sessionRes.reason}`);
+        if (messagesRes.status === "rejected")
+          debugLog(`messagesRes error: ${messagesRes.reason}`);
+        if (sessionRes.status === "rejected")
+          debugLog(`sessionRes error: ${sessionRes.reason}`);
 
         const sessionData =
-          sessionRes.status === "fulfilled" ? (sessionRes.value.data ?? {}) : {};
+          sessionRes.status === "fulfilled"
+            ? (sessionRes.value.data ?? {})
+            : {};
         const messagesRaw =
-          messagesRes.status === "fulfilled" && Array.isArray(messagesRes.value.data)
+          messagesRes.status === "fulfilled" &&
+          Array.isArray(messagesRes.value.data)
             ? messagesRes.value.data
             : [];
         const pathData =
@@ -227,12 +258,25 @@ export const LoamlogPlugin = async ({ client }: { client: OpenCodeClient }) => {
           context: {
             cwd: pathData.directory,
             worktree: pathData.worktree,
-            repo: inferRepoName((sessionData["directory"] as string | undefined) ?? pathData.directory),
+            repo: inferRepoName(
+              (sessionData.directory as string | undefined) ??
+                pathData.directory,
+            ),
             branch: vcsData.branch,
           },
           time_range: {
-            start: toIsoTime(sessionData["time"] != null && typeof sessionData["time"] === "object" ? (sessionData["time"] as { created?: number }).created : undefined, messages[0]?.timestamp ?? now),
-            end: toIsoTime(sessionData["time"] != null && typeof sessionData["time"] === "object" ? (sessionData["time"] as { updated?: number }).updated : undefined, messages[messages.length - 1]?.timestamp ?? now),
+            start: toIsoTime(
+              sessionData.time != null && typeof sessionData.time === "object"
+                ? (sessionData.time as { created?: number }).created
+                : undefined,
+              messages[0]?.timestamp ?? now,
+            ),
+            end: toIsoTime(
+              sessionData.time != null && typeof sessionData.time === "object"
+                ? (sessionData.time as { updated?: number }).updated
+                : undefined,
+              messages[messages.length - 1]?.timestamp ?? now,
+            ),
           },
         };
 

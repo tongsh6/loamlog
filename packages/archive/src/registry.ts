@@ -1,6 +1,10 @@
 import { readdir, readFile } from "node:fs/promises";
 import path from "node:path";
-import type { GlobalEvidenceRegistry, EvidenceSpan, SessionSnapshot } from "@loamlog/core";
+import type {
+  EvidenceSpan,
+  GlobalEvidenceRegistry,
+  SessionSnapshot,
+} from "@loamlog/core";
 
 /**
  * Robust temporal evidence registry.
@@ -21,16 +25,16 @@ export class TemporalEvidenceRegistry implements GlobalEvidenceRegistry {
 
     // 1. Locate relevant session directories
     const providers = await readdir(this.dumpDir, { withFileTypes: true });
-    
+
     for (const provider of providers) {
       if (!provider.isDirectory() || provider.name.startsWith(".")) continue;
-      
+
       const providerPath = path.join(this.dumpDir, provider.name);
       const snapshots = await readdir(providerPath);
 
       for (const snapshotFile of snapshots) {
         if (!snapshotFile.endsWith(".json")) continue;
-        
+
         try {
           const fullPath = path.join(providerPath, snapshotFile);
           const content = await readFile(fullPath, "utf8");
@@ -43,15 +47,15 @@ export class TemporalEvidenceRegistry implements GlobalEvidenceRegistry {
             // 3. Entity & Keyword Weaving
             for (const msg of snapshot.messages) {
               const text = msg.content ?? "";
-              const matches = [...query.entities, ...query.keywords].some(k => 
-                text.toLowerCase().includes(k.toLowerCase())
+              const matches = [...query.entities, ...query.keywords].some((k) =>
+                text.toLowerCase().includes(k.toLowerCase()),
               );
 
               if (matches) {
                 evidence.push({
                   session_id: snapshot.meta.session_id,
                   message_id: msg.id,
-                  excerpt: text.slice(0, 500)
+                  excerpt: text.slice(0, 500),
                 });
               }
             }
@@ -60,15 +64,15 @@ export class TemporalEvidenceRegistry implements GlobalEvidenceRegistry {
             if (snapshot.tools) {
               for (const tool of snapshot.tools) {
                 const output = tool.output ?? "";
-                const matches = [...query.entities, ...query.keywords].some(k => 
-                  output.toLowerCase().includes(k.toLowerCase())
+                const matches = [...query.entities, ...query.keywords].some(
+                  (k) => output.toLowerCase().includes(k.toLowerCase()),
                 );
-                
+
                 if (matches) {
                   evidence.push({
                     session_id: snapshot.meta.session_id,
                     message_id: tool.message_id,
-                    excerpt: `[tool:${tool.name}] ${output.slice(0, 500)}`
+                    excerpt: `[tool:${tool.name}] ${output.slice(0, 500)}`,
                   });
                 }
               }
@@ -76,7 +80,6 @@ export class TemporalEvidenceRegistry implements GlobalEvidenceRegistry {
           }
         } catch {
           // Skip corrupted or unreadable snapshots
-          continue;
         }
       }
     }

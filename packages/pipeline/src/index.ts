@@ -1,4 +1,9 @@
-import type { ExecutionContext, RetryOptions, withTimeout as WithTimeoutFn, withRetry as WithRetryFn } from "@loamlog/core";
+import type {
+  ExecutionContext,
+  RetryOptions,
+  withRetry as WithRetryFn,
+  withTimeout as WithTimeoutFn,
+} from "@loamlog/core";
 
 export interface PipelineNode<I = unknown, O = unknown> {
   id: string;
@@ -95,7 +100,9 @@ function topologicalLevels(def: DAGDefinition): RunnableLevel[][] {
   // Check for cycles
   for (const [_, degree] of inDegree) {
     if (degree > 0) {
-      const stuck = [...inDegree.entries()].filter(([, d]) => d > 0).map(([id]) => id);
+      const stuck = [...inDegree.entries()]
+        .filter(([, d]) => d > 0)
+        .map(([id]) => id);
       throw new Error(`DAG contains a cycle involving: ${stuck.join(", ")}`);
     }
   }
@@ -221,7 +228,8 @@ export async function executeDAG(
           options.onNodeComplete?.(item.node.id, report);
         } catch (error) {
           failedNodes.add(item.node.id);
-          const message = error instanceof Error ? error.message : String(error);
+          const message =
+            error instanceof Error ? error.message : String(error);
           const report: NodeReport = {
             nodeId: item.node.id,
             status: "failed",
@@ -238,9 +246,7 @@ export async function executeDAG(
       if (running.length >= concurrency) {
         await Promise.race(running);
         running.splice(
-          running.findIndex((p) =>
-            p.then(() => false).catch(() => true),
-          ),
+          running.findIndex((p) => p.then(() => false).catch(() => true)),
           1,
         );
       }
@@ -263,8 +269,10 @@ export async function executeDAG(
 
 function summarizeValue(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
-  if (typeof value === "string") return value.length > 80 ? value.slice(0, 77) + "..." : value;
+  if (typeof value === "string")
+    return value.length > 80 ? `${value.slice(0, 77)}...` : value;
   if (Array.isArray(value)) return `Array(${value.length})`;
-  if (typeof value === "object") return `Object(${Object.keys(value as object).length} keys)`;
+  if (typeof value === "object")
+    return `Object(${Object.keys(value as object).length} keys)`;
   return String(value);
 }

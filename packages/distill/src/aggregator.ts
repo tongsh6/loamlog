@@ -1,35 +1,103 @@
 import { createHash } from "node:crypto";
 import type {
-  VerifiedAsset,
-  RefinedAsset,
-  AggregatorPlugin,
   AggregatorContext,
-  EvidenceSpan
+  AggregatorPlugin,
+  EvidenceSpan,
+  RefinedAsset,
+  VerifiedAsset,
 } from "@loamlog/core";
 
 /** Words too generic to anchor a topic group. */
 const TOPIC_STOPWORDS = new Set([
   // articles / prepositions / common conjunctions
-  "a", "an", "the", "and", "or", "of", "to", "in", "on", "for", "with",
-  "is", "are", "be", "by", "as", "at", "from", "into", "via", "use",
-  "using", "do", "does", "that", "this", "it", "its",
+  "a",
+  "an",
+  "the",
+  "and",
+  "or",
+  "of",
+  "to",
+  "in",
+  "on",
+  "for",
+  "with",
+  "is",
+  "are",
+  "be",
+  "by",
+  "as",
+  "at",
+  "from",
+  "into",
+  "via",
+  "use",
+  "using",
+  "do",
+  "does",
+  "that",
+  "this",
+  "it",
+  "its",
   // generic action verbs
-  "add", "ensure", "enforce", "implement", "configure", "verify", "make",
-  "run", "runs", "running", "build", "builds", "built",
-  "create", "creates", "support", "supports", "fix", "fixes", "set", "sets",
-  "require", "requires", "prevent", "catch", "check", "checks",
+  "add",
+  "ensure",
+  "enforce",
+  "implement",
+  "configure",
+  "verify",
+  "make",
+  "run",
+  "runs",
+  "running",
+  "build",
+  "builds",
+  "built",
+  "create",
+  "creates",
+  "support",
+  "supports",
+  "fix",
+  "fixes",
+  "set",
+  "sets",
+  "require",
+  "requires",
+  "prevent",
+  "catch",
+  "check",
+  "checks",
   // generic engineering nouns that don't anchor a topic
-  "code", "step", "command", "commands", "script", "scripts", "rule", "rules",
-  "gate", "gates", "before", "after", "missing", "ci", "cd",
-  "workflow", "development", "validation", "integration", "pipeline",
-  "succeeds", "merging", "pre", "commit",
+  "code",
+  "step",
+  "command",
+  "commands",
+  "script",
+  "scripts",
+  "rule",
+  "rules",
+  "gate",
+  "gates",
+  "before",
+  "after",
+  "missing",
+  "ci",
+  "cd",
+  "workflow",
+  "development",
+  "validation",
+  "integration",
+  "pipeline",
+  "succeeds",
+  "merging",
+  "pre",
+  "commit",
 ]);
 
 function normalizeTopicTokens(text: string): Set<string> {
   return new Set(
     text
       .toLowerCase()
-      .replace(/[`*_~()\[\]{}<>|]/g, " ")
+      .replace(/[`*_~()[\]{}<>|]/g, " ")
       .replace(/[^a-z0-9一-鿿]+/g, " ")
       .split(/\s+/)
       .filter((t) => t.length >= 3 && !TOPIC_STOPWORDS.has(t)),
@@ -68,7 +136,10 @@ export class TopicAggregator implements AggregatorPlugin {
   /** Jaccard threshold (after stopword filtering) for two groups to merge. */
   static readonly TOPIC_THRESHOLD = 0.25;
 
-  async refine(assets: VerifiedAsset[], ctx: AggregatorContext): Promise<RefinedAsset[]> {
+  async refine(
+    assets: VerifiedAsset[],
+    ctx: AggregatorContext,
+  ): Promise<RefinedAsset[]> {
     const { repo_path } = ctx;
     const identityMap = new Map<string, VerifiedAsset[]>();
 
@@ -97,7 +168,9 @@ export class TopicAggregator implements AggregatorPlugin {
     };
     for (let i = 0; i < groupArr.length; i++) {
       for (let j = i + 1; j < groupArr.length; j++) {
-        if (sameTopic(tokenSets[i], tokenSets[j], TopicAggregator.TOPIC_THRESHOLD)) {
+        if (
+          sameTopic(tokenSets[i], tokenSets[j], TopicAggregator.TOPIC_THRESHOLD)
+        ) {
           parent[find(j)] = find(i);
         }
       }
@@ -144,7 +217,7 @@ export class TopicAggregator implements AggregatorPlugin {
         identity_hash: hash,
         contributing_sessions: [a.evidence[0]?.session_id ?? "unknown"],
         is_merged: false,
-        version: 1
+        version: 1,
       };
     }
 
@@ -170,14 +243,19 @@ export class TopicAggregator implements AggregatorPlugin {
     // Multi-source confidence bonus (+0.1 per additional session, cap 1.0)
     const baseConfidence = primary.confidence;
     const bonus = (sessions.size - 1) * 0.1;
-    const finalConfidence = Math.min(1.0, Math.round((baseConfidence + bonus) * 10) / 10);
+    const finalConfidence = Math.min(
+      1.0,
+      Math.round((baseConfidence + bonus) * 10) / 10,
+    );
 
     // Verification status inheritance (Verified > Unverified)
-    const isVerified = group.some(a => a.verification.status === "verified");
+    const isVerified = group.some((a) => a.verification.status === "verified");
 
     // Versioning: in a stateless batch run, we start at 1 or use existing version if available in payload
     const maxVersion = Math.max(
-      ...group.map((a) => ("version" in a && typeof a.version === "number" ? a.version : 1)),
+      ...group.map((a) =>
+        "version" in a && typeof a.version === "number" ? a.version : 1,
+      ),
     );
 
     return {
@@ -187,12 +265,14 @@ export class TopicAggregator implements AggregatorPlugin {
       verification: {
         ...primary.verification,
         status: isVerified ? "verified" : primary.verification.status,
-        mining_score: Math.max(...group.map(a => a.verification.mining_score))
+        mining_score: Math.max(
+          ...group.map((a) => a.verification.mining_score),
+        ),
       },
       identity_hash: hash,
       contributing_sessions: Array.from(sessions),
       is_merged: true,
-      version: group.length > 1 ? maxVersion : maxVersion
+      version: group.length > 1 ? maxVersion : maxVersion,
     };
   }
 }

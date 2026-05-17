@@ -1,6 +1,6 @@
-import { readFile, readdir, stat } from "node:fs/promises";
-import path from "node:path";
+import { readdir, readFile, stat } from "node:fs/promises";
 import { homedir } from "node:os";
+import path from "node:path";
 import type {
   PulledSessionPayload,
   SessionArtifactPart,
@@ -10,7 +10,11 @@ import type {
 } from "@loamlog/core";
 
 type ReadTextFile = (filePath: string) => Promise<string>;
-type ReadDir = (dirPath: string) => Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>>;
+type ReadDir = (
+  dirPath: string,
+) => Promise<
+  Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>
+>;
 type StatFile = (filePath: string) => Promise<{ mtimeMs: number }>;
 
 interface ClaudeTranscriptRow {
@@ -93,7 +97,11 @@ export interface StartClaudeCodeWatcherOptions {
   pollIntervalMs?: number;
   retryDelayMs?: number;
   logger?: (message: string) => void;
-  onReady(event: { sessionId: string; filePath: string; trigger: string }): void | Promise<void>;
+  onReady(event: {
+    sessionId: string;
+    filePath: string;
+    trigger: string;
+  }): void | Promise<void>;
   readDir?: ReadDir;
   statFile?: StatFile;
 }
@@ -110,7 +118,9 @@ function defaultReadTextFile(filePath: string): Promise<string> {
   return readFile(filePath, "utf8");
 }
 
-async function defaultReadDir(dirPath: string): Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>> {
+async function defaultReadDir(
+  dirPath: string,
+): Promise<Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>> {
   return readdir(dirPath, { withFileTypes: true });
 }
 
@@ -132,7 +142,10 @@ function inferRepoName(cwd: string | undefined): string | undefined {
   return basename || undefined;
 }
 
-function ensureIsoTimestamp(value: string | undefined, fallbackMs: number): string {
+function ensureIsoTimestamp(
+  value: string | undefined,
+  fallbackMs: number,
+): string {
   if (!value) {
     return new Date(fallbackMs).toISOString();
   }
@@ -150,7 +163,10 @@ function normalizeContentItems(value: unknown): ClaudeContentItem[] {
     return [];
   }
 
-  return value.filter((item): item is ClaudeContentItem => isRecord(item) && typeof item.type === "string") as ClaudeContentItem[];
+  return value.filter(
+    (item): item is ClaudeContentItem =>
+      isRecord(item) && typeof item.type === "string",
+  ) as ClaudeContentItem[];
 }
 
 function stringifyUnknown(value: unknown): string {
@@ -202,7 +218,7 @@ function parseJsonLines(text: string): ClaudeTranscriptRow[] {
       parsed = JSON.parse(trimmed) as unknown;
     } catch (error) {
       const isLastLine = index === lines.length - 1;
-      const looksIncomplete = !/[\]\}]$/.test(trimmed);
+      const looksIncomplete = !/[\]}]$/.test(trimmed);
       if (isLastLine && looksIncomplete) {
         continue;
       }
@@ -232,19 +248,27 @@ async function findSessionFile(
 
     const candidate = path.join(projectsDir, entry.name, `${sessionId}.jsonl`);
     try {
-      const nestedEntries = await readDirImpl(path.join(projectsDir, entry.name));
-      if (nestedEntries.some((nested) => nested.isFile() && nested.name === `${sessionId}.jsonl`)) {
+      const nestedEntries = await readDirImpl(
+        path.join(projectsDir, entry.name),
+      );
+      if (
+        nestedEntries.some(
+          (nested) => nested.isFile() && nested.name === `${sessionId}.jsonl`,
+        )
+      ) {
         return candidate;
       }
-    } catch {
-      continue;
-    }
+    } catch {}
   }
 
   throw new Error(`Claude Code session file not found for ${sessionId}`);
 }
 
-function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string, fileMtimeMs: number): PulledSessionPayload {
+function buildPulledPayload(
+  rows: ClaudeTranscriptRow[],
+  sessionFilePath: string,
+  fileMtimeMs: number,
+): PulledSessionPayload {
   const messages: SessionMessage[] = [];
   const tools: SessionToolCall[] = [];
   const pendingTools = new Map<string, PendingToolBinding>();
@@ -254,25 +278,32 @@ function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string
 
   for (const row of rows) {
     cwd ??= row.cwd;
-    branch ??= row.gitBranch && row.gitBranch !== "HEAD" ? row.gitBranch : undefined;
+    branch ??=
+      row.gitBranch && row.gitBranch !== "HEAD" ? row.gitBranch : undefined;
     resolvedSessionId ??= row.sessionId;
 
     const timestamp = ensureIsoTimestamp(row.timestamp, fileMtimeMs);
-    const messageId = row.uuid ?? `${resolvedSessionId ?? "claude"}-${messages.length + 1}`;
+    const messageId =
+      row.uuid ?? `${resolvedSessionId ?? "claude"}-${messages.length + 1}`;
 
     if (row.type === "assistant") {
       const parts: SessionArtifactPart[] = [];
       const textChunks: string[] = [];
 
       for (const item of normalizeContentItems(row.message?.content)) {
-        if (item.type === "text" && typeof item.text === "string" && item.text.trim().length > 0) {
+        if (
+          item.type === "text" &&
+          typeof item.text === "string" &&
+          item.text.trim().length > 0
+        ) {
           textChunks.push(item.text);
           parts.push({ type: "text", text: item.text });
           continue;
         }
 
         if (item.type === "thinking") {
-          const reasoning = typeof item.thinking === "string" ? item.thinking : item.text;
+          const reasoning =
+            typeof item.thinking === "string" ? item.thinking : item.text;
           if (reasoning && reasoning.trim().length > 0) {
             parts.push({ type: "reasoning", text: reasoning });
           }
@@ -329,7 +360,11 @@ function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string
       let sawToolResult = false;
 
       for (const item of items) {
-        if (item.type === "text" && typeof item.text === "string" && item.text.trim().length > 0) {
+        if (
+          item.type === "text" &&
+          typeof item.text === "string" &&
+          item.text.trim().length > 0
+        ) {
           textChunks.push(item.text);
           continue;
         }
@@ -345,7 +380,9 @@ function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string
         const stderr = row.toolUseResult?.stderr ?? "";
         const output = contentOutput.trim().length > 0 ? contentOutput : stdout;
         const errorText = stderr.trim().length > 0 ? stderr : output;
-        const error = item.is_error ? errorText || "tool result error" : undefined;
+        const error = item.is_error
+          ? errorText || "tool result error"
+          : undefined;
 
         if (binding) {
           if (error) {
@@ -395,7 +432,10 @@ function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string
       }
 
       const progressOutput = row.data?.fullOutput ?? row.data?.output;
-      if (typeof progressOutput === "string" && progressOutput.trim().length > 0) {
+      if (
+        typeof progressOutput === "string" &&
+        progressOutput.trim().length > 0
+      ) {
         binding.call.output = progressOutput;
         binding.part.output = progressOutput;
       }
@@ -404,7 +444,10 @@ function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string
 
     if (row.type === "system") {
       const contentValue = row.message?.content;
-      const content = typeof contentValue === "string" ? contentValue : stringifyUnknown(contentValue);
+      const content =
+        typeof contentValue === "string"
+          ? contentValue
+          : stringifyUnknown(contentValue);
       if (content.trim().length > 0) {
         messages.push({
           id: messageId,
@@ -419,7 +462,9 @@ function buildPulledPayload(rows: ClaudeTranscriptRow[], sessionFilePath: string
   const fallbackSessionId = path.basename(sessionFilePath, ".jsonl");
   const finalSessionId = resolvedSessionId ?? fallbackSessionId;
   const start = messages[0]?.timestamp ?? new Date(fileMtimeMs).toISOString();
-  const end = messages[messages.length - 1]?.timestamp ?? new Date(fileMtimeMs).toISOString();
+  const end =
+    messages[messages.length - 1]?.timestamp ??
+    new Date(fileMtimeMs).toISOString();
 
   return {
     session: {
@@ -449,7 +494,10 @@ export async function pullClaudeCodeSessionFromFilePath(
 ): Promise<PulledSessionPayload> {
   const readTextFile = options.readTextFile ?? defaultReadTextFile;
   const statFile = options.statFile ?? defaultStatFile;
-  const [text, stats] = await Promise.all([readTextFile(sessionFilePath), statFile(sessionFilePath)]);
+  const [text, stats] = await Promise.all([
+    readTextFile(sessionFilePath),
+    statFile(sessionFilePath),
+  ]);
   const rows = parseJsonLines(text);
   return buildPulledPayload(rows, sessionFilePath, stats.mtimeMs);
 }
@@ -465,13 +513,23 @@ export function createClaudeCodeSessionProvider(
   return {
     id: "claude-code",
     async pullSession(sessionId: string): Promise<PulledSessionPayload> {
-      const sessionFilePath = await findSessionFile(sessionId, projectsDir, readDirImpl);
-      return pullClaudeCodeSessionFromFilePath(sessionFilePath, { readTextFile, statFile });
+      const sessionFilePath = await findSessionFile(
+        sessionId,
+        projectsDir,
+        readDirImpl,
+      );
+      return pullClaudeCodeSessionFromFilePath(sessionFilePath, {
+        readTextFile,
+        statFile,
+      });
     },
   };
 }
 
-async function listSessionFiles(projectsDir: string, readDirImpl: ReadDir): Promise<string[]> {
+async function listSessionFiles(
+  projectsDir: string,
+  readDirImpl: ReadDir,
+): Promise<string[]> {
   const files: string[] = [];
   const projectEntries = await readDirImpl(projectsDir);
 
@@ -481,7 +539,11 @@ async function listSessionFiles(projectsDir: string, readDirImpl: ReadDir): Prom
     }
 
     const projectPath = path.join(projectsDir, projectEntry.name);
-    let nestedEntries: Array<{ name: string; isDirectory(): boolean; isFile(): boolean }>;
+    let nestedEntries: Array<{
+      name: string;
+      isDirectory(): boolean;
+      isFile(): boolean;
+    }>;
     try {
       nestedEntries = await readDirImpl(projectPath);
     } catch {
@@ -514,10 +576,14 @@ function clampPollIntervalMs(value: number | undefined): number {
   return Math.max(100, Math.floor(value));
 }
 
-export function startClaudeCodeWatcher(options: StartClaudeCodeWatcherOptions): ClaudeCodeWatcher {
+export function startClaudeCodeWatcher(
+  options: StartClaudeCodeWatcherOptions,
+): ClaudeCodeWatcher {
   const projectsDir = options.projectsDir ?? defaultProjectsDir();
   const logger = options.logger ?? (() => undefined);
-  const idleMs = clampIdleMs(options.idleMs ?? Number(process.env.LOAM_CLAUDE_IDLE_MS));
+  const idleMs = clampIdleMs(
+    options.idleMs ?? Number(process.env.LOAM_CLAUDE_IDLE_MS),
+  );
   const pollIntervalMs = clampPollIntervalMs(options.pollIntervalMs);
   const retryDelayMs = clampPollIntervalMs(options.retryDelayMs ?? 2_000);
   const readDirImpl = options.readDir ?? defaultReadDir;
@@ -527,7 +593,11 @@ export function startClaudeCodeWatcher(options: StartClaudeCodeWatcherOptions): 
   let stopped = false;
   let scanning = false;
 
-  const scheduleReady = (sessionId: string, filePath: string, delayMs = idleMs) => {
+  const scheduleReady = (
+    sessionId: string,
+    filePath: string,
+    delayMs = idleMs,
+  ) => {
     const key = filePath;
     const existing = timers.get(key);
     if (existing) {
@@ -536,9 +606,13 @@ export function startClaudeCodeWatcher(options: StartClaudeCodeWatcherOptions): 
 
     const timer = setTimeout(() => {
       timers.delete(key);
-      void Promise.resolve(options.onReady({ sessionId, filePath, trigger: "session.idle" })).catch((error: unknown) => {
+      void Promise.resolve(
+        options.onReady({ sessionId, filePath, trigger: "session.idle" }),
+      ).catch((error: unknown) => {
         const message = error instanceof Error ? error.message : String(error);
-        logger(`[loam claude-code] watcher callback failed session_id=${sessionId} error=${message}`);
+        logger(
+          `[loam claude-code] watcher callback failed session_id=${sessionId} error=${message}`,
+        );
         if (!stopped) {
           scheduleReady(sessionId, filePath, retryDelayMs);
         }

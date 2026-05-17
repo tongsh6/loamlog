@@ -1,7 +1,7 @@
 import type { Dirent } from "node:fs";
 import { readdir, readFile, stat } from "node:fs/promises";
 import path from "node:path";
-import { readArchiveIndex, type ArchiveIndexEntry } from "@loamlog/archive";
+import { type ArchiveIndexEntry, readArchiveIndex } from "@loamlog/archive";
 import { renderCardMarkdown } from "./show.js";
 
 type OutputFormat = "table" | "json" | "md";
@@ -259,9 +259,7 @@ async function countSessionFiles(dumpDir: string): Promise<number> {
       count += sessionEntries.filter(
         (e) => e.isFile() && e.name.endsWith(".json"),
       ).length;
-    } catch {
-      continue;
-    }
+    } catch {}
   }
   return count;
 }
@@ -326,9 +324,7 @@ async function readJournalStats(
         if (parsed.status === "produced") stats.produced += 1;
         else if (parsed.status === "error") stats.error += 1;
         else stats.no_signal += 1;
-      } catch {
-        continue;
-      }
+      } catch {}
     }
   }
 
@@ -441,7 +437,12 @@ export async function listScanReports(
   opts: ListOptions,
   scanBaseDir?: string,
 ): Promise<ScanReportSummary[]> {
-  const scanDir = path.join(scanBaseDir ?? process.cwd(), "AIEF", "reports", "static-scan");
+  const scanDir = path.join(
+    scanBaseDir ?? process.cwd(),
+    "AIEF",
+    "reports",
+    "static-scan",
+  );
   let entries: Dirent[];
   try {
     entries = await readdir(scanDir, { withFileTypes: true });
@@ -485,15 +486,22 @@ export async function listScanReports(
     try {
       const normPath = path.join(scanDir, runId, "scan.normalized.json");
       const normText = await readFile(normPath, "utf8");
-      const norm = JSON.parse(normText) as { findings?: Array<{ rankScore?: number; severity?: string; category?: string; inChangedFile?: boolean }> };
+      const norm = JSON.parse(normText) as {
+        findings?: Array<{
+          rankScore?: number;
+          severity?: string;
+          category?: string;
+          inChangedFile?: boolean;
+        }>;
+      };
       if (Array.isArray(norm.findings)) {
         findingsCount = norm.findings.length;
         blockingCount = norm.findings.filter(
           (f) =>
             f.severity === "critical" ||
             f.severity === "high" ||
-            (f.category === "secret" || f.category === "security") &&
-            f.inChangedFile,
+            ((f.category === "secret" || f.category === "security") &&
+              f.inChangedFile),
         ).length;
       }
     } catch {
@@ -549,7 +557,9 @@ export async function runListCommand(args: string[]): Promise<void> {
   let format: OutputFormat;
   if (formatRaw) {
     if (formatRaw !== "table" && formatRaw !== "json" && formatRaw !== "md") {
-      console.error(`Error: invalid --format value: ${formatRaw} (allowed: table, json, md)`);
+      console.error(
+        `Error: invalid --format value: ${formatRaw} (allowed: table, json, md)`,
+      );
       process.exitCode = 1;
       return;
     }
@@ -587,7 +597,14 @@ export async function runListCommand(args: string[]): Promise<void> {
       return;
     }
 
-    const headers = ["Run ID", "Profile", "Findings", "Blocking", "Branch", "Dirty"];
+    const headers = [
+      "Run ID",
+      "Profile",
+      "Findings",
+      "Blocking",
+      "Branch",
+      "Dirty",
+    ];
     const rows = reports.map((r) => [
       r.runId.slice(0, 22),
       r.profile,
@@ -637,7 +654,9 @@ export async function runListCommand(args: string[]): Promise<void> {
     }
 
     if (format === "md") {
-      console.log(`# Loam distill — ${results.length} ${pending ? "pending" : "all"} results\n`);
+      console.log(
+        `# Loam distill — ${results.length} ${pending ? "pending" : "all"} results\n`,
+      );
       console.log(
         `> Processed ${journal.total} sessions · produced ${journal.produced} · no-signal ${journal.no_signal} · errors ${journal.error}\n`,
       );
@@ -661,23 +680,29 @@ export async function runListCommand(args: string[]): Promise<void> {
 
     // Show processing journal stats first
     if (journal.total > 0) {
-      const pct = (n: number) => journal.total > 0 ? `${((n / journal.total) * 100).toFixed(0)}%` : "0%";
+      const pct = (n: number) =>
+        journal.total > 0 ? `${((n / journal.total) * 100).toFixed(0)}%` : "0%";
       console.log(`Processed: ${journal.total} sessions`);
-      console.log(`  ✓ ${journal.produced} with results (${pct(journal.produced)})`);
-      console.log(`  ○ ${journal.no_signal} no signal   (${pct(journal.no_signal)})`);
+      console.log(
+        `  ✓ ${journal.produced} with results (${pct(journal.produced)})`,
+      );
+      console.log(
+        `  ○ ${journal.no_signal} no signal   (${pct(journal.no_signal)})`,
+      );
       if (journal.error > 0) {
-        console.log(`  ✗ ${journal.error} errors       (${pct(journal.error)})`);
+        console.log(
+          `  ✗ ${journal.error} errors       (${pct(journal.error)})`,
+        );
       }
       console.log("");
     }
 
     if (results.length === 0) {
-      const hint = journal.total === 0
-        ? `\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`
-        : "";
-      console.log(
-        `No distill results yet${repo ? ` in ${repo}` : ""}.${hint}`,
-      );
+      const hint =
+        journal.total === 0
+          ? `\n  Run: loam distill --distiller @loamlog/distiller-issue-draft --llm <provider/model>`
+          : "";
+      console.log(`No distill results yet${repo ? ` in ${repo}` : ""}.${hint}`);
       return;
     }
 
@@ -685,7 +710,7 @@ export async function runListCommand(args: string[]): Promise<void> {
     const rows = results.map((r) => [
       r.id,
       r.type,
-      r.title.length > 50 ? r.title.slice(0, 47) + "..." : r.title,
+      r.title.length > 50 ? `${r.title.slice(0, 47)}...` : r.title,
       r.confidence.toFixed(2),
     ]);
 

@@ -1,17 +1,22 @@
+import { mkdirSync } from "node:fs";
+import type { Socket } from "node:net";
+import { join } from "node:path";
 import express, { type Express, type Request, type Response } from "express";
-import { chromium, type BrowserContext, type Page } from "playwright";
-import { mkdirSync } from "fs";
-import { join } from "path";
-import type { Socket } from "net";
+import { type BrowserContext, chromium, type Page } from "playwright";
 import type {
-  ServeOptions,
   GetPageRequest,
   GetPageResponse,
   ListPagesResponse,
+  ServeOptions,
   ServerInfoResponse,
 } from "./types";
 
-export type { ServeOptions, GetPageResponse, ListPagesResponse, ServerInfoResponse };
+export type {
+  GetPageResponse,
+  ListPagesResponse,
+  ServeOptions,
+  ServerInfoResponse,
+};
 
 export interface DevBrowserServer {
   wsEndpoint: string;
@@ -23,7 +28,7 @@ export interface DevBrowserServer {
 async function fetchWithRetry(
   url: string,
   maxRetries = 5,
-  delayMs = 500
+  delayMs = 500,
 ): Promise<globalThis.Response> {
   let lastError: Error | null = null;
   for (let i = 0; i < maxRetries; i++) {
@@ -42,16 +47,22 @@ async function fetchWithRetry(
 }
 
 // Helper to add timeout to promises
-function withTimeout<T>(promise: Promise<T>, ms: number, message: string): Promise<T> {
+function withTimeout<T>(
+  promise: Promise<T>,
+  ms: number,
+  message: string,
+): Promise<T> {
   return Promise.race([
     promise,
     new Promise<never>((_, reject) =>
-      setTimeout(() => reject(new Error(`Timeout: ${message}`)), ms)
+      setTimeout(() => reject(new Error(`Timeout: ${message}`)), ms),
     ),
   ]);
 }
 
-export async function serve(options: ServeOptions = {}): Promise<DevBrowserServer> {
+export async function serve(
+  options: ServeOptions = {},
+): Promise<DevBrowserServer> {
   const port = options.port ?? 9222;
   const headless = options.headless ?? false;
   const cdpPort = options.cdpPort ?? 9223;
@@ -80,15 +91,22 @@ export async function serve(options: ServeOptions = {}): Promise<DevBrowserServe
   console.log("Launching browser with persistent context...");
 
   // Launch persistent context - this persists cookies, localStorage, cache, etc.
-  const context: BrowserContext = await chromium.launchPersistentContext(userDataDir, {
-    headless,
-    args: [`--remote-debugging-port=${cdpPort}`],
-  });
+  const context: BrowserContext = await chromium.launchPersistentContext(
+    userDataDir,
+    {
+      headless,
+      args: [`--remote-debugging-port=${cdpPort}`],
+    },
+  );
   console.log("Browser launched with persistent profile...");
 
   // Get the CDP WebSocket endpoint from Chrome's JSON API (with retry for slow startup)
-  const cdpResponse = await fetchWithRetry(`http://127.0.0.1:${cdpPort}/json/version`);
-  const cdpInfo = (await cdpResponse.json()) as { webSocketDebuggerUrl: string };
+  const cdpResponse = await fetchWithRetry(
+    `http://127.0.0.1:${cdpPort}/json/version`,
+  );
+  const cdpInfo = (await cdpResponse.json()) as {
+    webSocketDebuggerUrl: string;
+  };
   const wsEndpoint = cdpInfo.webSocketDebuggerUrl;
   console.log(`CDP WebSocket endpoint: ${wsEndpoint}`);
 
@@ -154,7 +172,11 @@ export async function serve(options: ServeOptions = {}): Promise<DevBrowserServe
     let entry = registry.get(name);
     if (!entry) {
       // Create new page in the persistent context (with timeout to prevent hangs)
-      const page = await withTimeout(context.newPage(), 30000, "Page creation timed out after 30s");
+      const page = await withTimeout(
+        context.newPage(),
+        30000,
+        "Page creation timed out after 30s",
+      );
 
       // Apply viewport if provided
       if (viewport) {
@@ -171,24 +193,31 @@ export async function serve(options: ServeOptions = {}): Promise<DevBrowserServe
       });
     }
 
-    const response: GetPageResponse = { wsEndpoint, name, targetId: entry.targetId };
+    const response: GetPageResponse = {
+      wsEndpoint,
+      name,
+      targetId: entry.targetId,
+    };
     res.json(response);
   });
 
   // DELETE /pages/:name - close a page
-  app.delete("/pages/:name", async (req: Request<{ name: string }>, res: Response) => {
-    const name = decodeURIComponent(req.params.name);
-    const entry = registry.get(name);
+  app.delete(
+    "/pages/:name",
+    async (req: Request<{ name: string }>, res: Response) => {
+      const name = decodeURIComponent(req.params.name);
+      const entry = registry.get(name);
 
-    if (entry) {
-      await entry.page.close();
-      registry.delete(name);
-      res.json({ success: true });
-      return;
-    }
+      if (entry) {
+        await entry.page.close();
+        registry.delete(name);
+        res.json({ success: true });
+        return;
+      }
 
-    res.status(404).json({ error: "page not found" });
-  });
+      res.status(404).json({ error: "page not found" });
+    },
+  );
 
   // Start the server
   const server = app.listen(port, () => {

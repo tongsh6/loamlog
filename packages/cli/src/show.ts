@@ -56,9 +56,22 @@ async function listDistillRepos(dumpDir: string): Promise<string[]> {
 async function findCardByPrefix(
   dumpDir: string,
   idPrefix: string,
-): Promise<{ record: DistillResultRecord; filePath: string; repo: string; status: string } | undefined> {
+): Promise<
+  | {
+      record: DistillResultRecord;
+      filePath: string;
+      repo: string;
+      status: string;
+    }
+  | undefined
+> {
   const repos = await listDistillRepos(dumpDir);
-  const matches: Array<{ record: DistillResultRecord; filePath: string; repo: string; status: string }> = [];
+  const matches: Array<{
+    record: DistillResultRecord;
+    filePath: string;
+    repo: string;
+    status: string;
+  }> = [];
 
   for (const repo of repos) {
     for (const status of SUBDIRS) {
@@ -79,9 +92,7 @@ async function findCardByPrefix(
           if (record.id?.startsWith(idPrefix)) {
             matches.push({ record, filePath, repo, status });
           }
-        } catch {
-          continue;
-        }
+        } catch {}
       }
     }
   }
@@ -106,8 +117,11 @@ export function renderCardMarkdown(
   const summary = record.summary ?? record.payload?.summary ?? "";
   const detail = record.payload?.detail;
   const tags = record.tags?.length ? record.tags.join(", ") : "—";
-  const conf = typeof record.confidence === "number" ? record.confidence.toFixed(2) : "—";
-  const category = record.payload?.category ? ` · category: \`${record.payload.category}\`` : "";
+  const conf =
+    typeof record.confidence === "number" ? record.confidence.toFixed(2) : "—";
+  const category = record.payload?.category
+    ? ` · category: \`${record.payload.category}\``
+    : "";
   const ver = record.verification;
 
   lines.push(`# ${title}`);
@@ -115,11 +129,16 @@ export function renderCardMarkdown(
   lines.push(
     `- **id**: \`${record.id}\` · **status**: ${meta.status} · **repo**: ${meta.repo}`,
   );
-  lines.push(`- **type**: ${record.type ?? "?"} · **confidence**: ${conf}${category}`);
+  lines.push(
+    `- **type**: ${record.type ?? "?"} · **confidence**: ${conf}${category}`,
+  );
   lines.push(`- **distiller**: \`${record.distiller_id ?? "?"}\``);
   if (ver) {
-    const score = typeof ver.mining_score === "number" ? ver.mining_score.toFixed(2) : "?";
-    lines.push(`- **verification**: \`${ver.status ?? "?"}\` (mining_score: ${score})${ver.reason ? ` — ${ver.reason}` : ""}`);
+    const score =
+      typeof ver.mining_score === "number" ? ver.mining_score.toFixed(2) : "?";
+    lines.push(
+      `- **verification**: \`${ver.status ?? "?"}\` (mining_score: ${score})${ver.reason ? ` — ${ver.reason}` : ""}`,
+    );
   }
   lines.push(`- **tags**: ${tags}`);
   lines.push("");
@@ -153,7 +172,9 @@ export function renderCardMarkdown(
       lines.push("");
       const excerpt = (e.excerpt ?? "").replace(/\r?\n/g, " ").trim();
       if (excerpt) {
-        lines.push(`> ${excerpt.length > 600 ? `${excerpt.slice(0, 600)}…` : excerpt}`);
+        lines.push(
+          `> ${excerpt.length > 600 ? `${excerpt.slice(0, 600)}…` : excerpt}`,
+        );
         lines.push("");
       }
     }
@@ -178,7 +199,9 @@ function getArg(args: string[], name: string): string | undefined {
 
 export async function runShowCommand(args: string[]): Promise<void> {
   // Positional id-prefix is the first non-flag arg
-  const idPrefix = args.find((a) => !a.startsWith("--") && a !== getArg(args, "--dump-dir"));
+  const idPrefix = args.find(
+    (a) => !a.startsWith("--") && a !== getArg(args, "--dump-dir"),
+  );
   if (!idPrefix) {
     console.error("Usage: loam show <id-prefix> [--dump-dir <path>] [--json]");
     process.exitCode = 1;
@@ -187,7 +210,9 @@ export async function runShowCommand(args: string[]): Promise<void> {
 
   const dumpDir = getArg(args, "--dump-dir") ?? process.env.LOAM_DUMP_DIR;
   if (!dumpDir) {
-    console.error("Error: LOAM_DUMP_DIR is not configured. Set env or pass --dump-dir");
+    console.error(
+      "Error: LOAM_DUMP_DIR is not configured. Set env or pass --dump-dir",
+    );
     process.exitCode = 1;
     return;
   }
@@ -199,7 +224,9 @@ export async function runShowCommand(args: string[]): Promise<void> {
   try {
     match = await findCardByPrefix(opts.dumpDir, opts.idPrefix);
   } catch (error) {
-    console.error(`Error: ${error instanceof Error ? error.message : String(error)}`);
+    console.error(
+      `Error: ${error instanceof Error ? error.message : String(error)}`,
+    );
     process.exitCode = 1;
     return;
   }

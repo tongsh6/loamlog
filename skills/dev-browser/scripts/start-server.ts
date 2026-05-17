@@ -1,8 +1,8 @@
+import { execSync } from "node:child_process";
+import { existsSync, mkdirSync, readdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { serve } from "@/index.js";
-import { execSync } from "child_process";
-import { mkdirSync, existsSync, readdirSync } from "fs";
-import { join, dirname } from "path";
-import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const tmpDir = join(__dirname, "..", "tmp");
@@ -54,7 +54,9 @@ function isChromiumInstalled(): boolean {
 
 try {
   if (!isChromiumInstalled()) {
-    console.log("Playwright Chromium not found. Installing (this may take a minute)...");
+    console.log(
+      "Playwright Chromium not found. Installing (this may take a minute)...",
+    );
 
     const pm = findPackageManager();
     if (!pm) {
@@ -91,7 +93,9 @@ try {
 try {
   const pid = execSync("lsof -ti:9223", { encoding: "utf-8" }).trim();
   if (pid) {
-    console.log(`Cleaning up stale Chrome process on CDP port 9223 (PID: ${pid})`);
+    console.log(
+      `Cleaning up stale Chrome process on CDP port 9223 (PID: ${pid})`,
+    );
     execSync(`kill -9 ${pid}`);
   }
 } catch {

@@ -6,9 +6,9 @@
  * forwards CDP commands/events between them.
  */
 
-import { Hono } from "hono";
 import { serve } from "@hono/node-server";
 import { createNodeWebSocket } from "@hono/node-ws";
+import { Hono } from "hono";
 import type { WSContext } from "hono/ws";
 
 // ============================================================================
@@ -44,17 +44,6 @@ interface PlaywrightClient {
   id: string;
   ws: WSContext;
   knownTargets: Set<string>; // targetIds this client has received attachedToTarget for
-}
-
-// Message types for extension communication
-interface ExtensionCommandMessage {
-  id: number;
-  method: "forwardCDPCommand";
-  params: {
-    method: string;
-    params?: Record<string, unknown>;
-    sessionId?: string;
-  };
 }
 
 interface ExtensionResponseMessage {
@@ -102,7 +91,9 @@ interface CDPEvent {
 // Relay Server Implementation
 // ============================================================================
 
-export async function serveRelay(options: RelayOptions = {}): Promise<RelayServer> {
+export async function serveRelay(
+  options: RelayOptions = {},
+): Promise<RelayServer> {
   const port = options.port ?? 9222;
   const host = options.host ?? "127.0.0.1";
 
@@ -130,7 +121,10 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
     console.log("[relay]", ...args);
   }
 
-  function sendToPlaywright(message: CDPResponse | CDPEvent, clientId?: string) {
+  function sendToPlaywright(
+    message: CDPResponse | CDPEvent,
+    clientId?: string,
+  ) {
     const messageStr = JSON.stringify(message);
 
     if (clientId) {
@@ -153,7 +147,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
   function sendAttachedToTarget(
     target: ConnectedTarget,
     clientId?: string,
-    waitingForDebugger = false
+    waitingForDebugger = false,
   ) {
     const event: CDPEvent = {
       method: "Target.attachedToTarget",
@@ -202,7 +196,9 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
     return new Promise((resolve, reject) => {
       const timeoutId = setTimeout(() => {
         extensionPendingRequests.delete(id);
-        reject(new Error(`Extension request timeout after ${timeout}ms: ${method}`));
+        reject(
+          new Error(`Extension request timeout after ${timeout}ms: ${method}`),
+        );
       }, timeout);
 
       extensionPendingRequests.set(id, {
@@ -388,7 +384,10 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
     try {
       const result = (await sendToExtension({
         method: "forwardCDPCommand",
-        params: { method: "Target.createTarget", params: { url: "about:blank" } },
+        params: {
+          method: "Target.createTarget",
+          params: { url: "about:blank" },
+        },
       })) as { targetId: string };
 
       // Wait for Target.attachedToTarget event to register the new target
@@ -437,7 +436,8 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
     "/cdp/:clientId?",
     upgradeWebSocket((c) => {
       const clientId =
-        c.req.param("clientId") || `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
+        c.req.param("clientId") ||
+        `client-${Date.now()}-${Math.random().toString(36).slice(2)}`;
 
       return {
         onOpen(_event, ws) {
@@ -447,7 +447,11 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
             return;
           }
 
-          playwrightClients.set(clientId, { id: clientId, ws, knownTargets: new Set() });
+          playwrightClients.set(clientId, {
+            id: clientId,
+            ws,
+            knownTargets: new Set(),
+          });
           log(`Playwright client connected: ${clientId}`);
         },
 
@@ -469,7 +473,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
                 sessionId,
                 error: { message: "Extension not connected" },
               },
-              clientId
+              clientId,
             );
             return;
           }
@@ -498,7 +502,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
                       targetInfo: { ...target.targetInfo, attached: true },
                     },
                   },
-                  clientId
+                  clientId,
                 );
               }
             }
@@ -510,7 +514,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
             ) {
               const targetId = params?.targetId as string;
               const target = Array.from(connectedTargets.values()).find(
-                (t) => t.targetId === targetId
+                (t) => t.targetId === targetId,
               );
               if (target) {
                 sendAttachedToTarget(target, clientId);
@@ -526,7 +530,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
                 sessionId,
                 error: { message: (e as Error).message },
               },
-              clientId
+              clientId,
             );
           }
         },
@@ -540,7 +544,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
           log(`Playwright WebSocket error [${clientId}]:`, event);
         },
       };
-    })
+    }),
   );
 
   // ============================================================================
@@ -590,7 +594,9 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
             extensionPendingRequests.delete(message.id);
 
             if ((message as ExtensionResponseMessage).error) {
-              pending.reject(new Error((message as ExtensionResponseMessage).error));
+              pending.reject(
+                new Error((message as ExtensionResponseMessage).error),
+              );
             } else {
               pending.resolve((message as ExtensionResponseMessage).result);
             }
@@ -623,7 +629,9 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
               };
               connectedTargets.set(targetParams.sessionId, target);
 
-              log(`Target attached: ${targetParams.targetInfo.url} (${targetParams.sessionId})`);
+              log(
+                `Target attached: ${targetParams.targetInfo.url} (${targetParams.sessionId})`,
+              );
 
               // Use deduplication helper - only sends to clients that don't know about this target
               sendAttachedToTarget(target);
@@ -697,7 +705,7 @@ export async function serveRelay(options: RelayOptions = {}): Promise<RelayServe
           log("Extension WebSocket error:", event);
         },
       };
-    })
+    }),
   );
 
   // ============================================================================

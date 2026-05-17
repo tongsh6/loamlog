@@ -1,0 +1,86 @@
+{
+  "runId": "2026-05-17T14-22-28Z",
+  "startedAt": "2026-05-17T14:22:28.350Z",
+  "completedAt": "2026-05-17T14:22:42.557Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "3b9832e",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "IEF/context/business/current-focus.md",
+      "ocs/project-ledger.md",
+      "ackages/archive/src/index.ts",
+      "ackages/archive/src/registry.ts",
+      "ackages/cli/src/distill.ts",
+      "ackages/cli/src/list.ts",
+      "ackages/cli/src/show.ts",
+      "ackages/distill/src/aggregator.ts",
+      "ackages/distill/src/normalizer.ts",
+      "ackages/distill/src/verifier/git-gap.ts",
+      "ackages/distillers/pitfall-card/src/index.test.ts",
+      "ackages/distillers/pitfall-card/src/index.ts",
+      "ackages/distillers/prd-draft/src/index.test.ts",
+      "ackages/distillers/prd-draft/src/index.ts",
+      "ackages/distillers/representative-assets/src/base.ts",
+      "ackages/distillers/representative-assets/src/shared.test.ts",
+      "ackages/distillers/representative-assets/src/shared.ts",
+      "ackages/evaluation-harness/src/metrics.ts",
+      "ackages/pipeline/src/index.ts",
+      "ackages/providers/claude-code/src/index.ts",
+      "ackages/providers/codex/src/index.test.ts",
+      "ackages/providers/codex/src/index.ts",
+      "lugins/opencode/src/buffer-manager.test.ts",
+      "lugins/opencode/src/index.ts",
+      "kills/dev-browser/scripts/start-server.ts",
+      "kills/dev-browser/src/index.ts",
+      "kills/dev-browser/src/relay.ts",
+      "kills/dev-browser/src/snapshot/__tests__/snapshot.test.ts",
+      "kills/dev-browser/src/snapshot/browser-script.ts",
+      "AIEF/reports/static-scan/2026-05-17T13-51-34Z/",
+      "AIEF/reports/static-scan/2026-05-17T13-52-14Z/",
+      "AIEF/reports/static-scan/2026-05-17T13-53-49Z/",
+      "AIEF/reports/static-scan/2026-05-17T14-05-53Z/",
+      "AIEF/reports/static-scan/2026-05-17T14-06-29Z/",
+      "AIEF/reports/static-scan/2026-05-17T14-15-48Z/",
+      "AIEF/reports/static-scan/2026-05-17T14-18-22Z/",
+      "AIEF/reports/static-scan/2026-05-17T14-20-31Z/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

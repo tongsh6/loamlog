@@ -30,14 +30,20 @@ function safeDivide(numerator: number, denominator: number): number {
 
 type RankedItem = { key?: string; label?: string; confidence?: number };
 
-function computeTopKHit(primaryKey: string, predictions: RankedItem[] | undefined, k: number): number {
+function computeTopKHit(
+  primaryKey: string,
+  predictions: RankedItem[] | undefined,
+  k: number,
+): number {
   if (!primaryKey || !predictions?.length) {
     return 0;
   }
-  const sorted = [...predictions].sort((a, b) => (b.confidence ?? 0) - (a.confidence ?? 0));
+  const sorted = [...predictions].sort(
+    (a, b) => (b.confidence ?? 0) - (a.confidence ?? 0),
+  );
   const keys = sorted.map((item) => normalizeKey(item.key ?? item.label));
   const normalized = normalizeKey(primaryKey);
-  const rank = keys.findIndex((key) => key === normalized);
+  const rank = keys.indexOf(normalized);
   return rank >= 0 && rank < k ? 1 : 0;
 }
 
@@ -45,8 +51,12 @@ export function evaluateSignalMetrics(
   expected: SampleExpected,
   prediction?: SignalPrediction[],
 ): SignalMetrics {
-  const expectedKeys = new Set(expected.signals.map((signal) => normalizeKey(signal.key)));
-  const predictedKeys = new Set((prediction ?? []).map((signal) => normalizeKey(signal.key)));
+  const expectedKeys = new Set(
+    expected.signals.map((signal) => normalizeKey(signal.key)),
+  );
+  const predictedKeys = new Set(
+    (prediction ?? []).map((signal) => normalizeKey(signal.key)),
+  );
 
   let truePositive = 0;
   for (const key of predictedKeys) {
@@ -74,7 +84,8 @@ export function evaluateIssueMetrics(
 ): IssueDraftMetrics {
   const expectedIssue = expected.issue;
   const predictedShouldIssue = prediction?.shouldIssue ?? false;
-  const shouldIssueAccuracy = expectedIssue.shouldIssue === predictedShouldIssue ? 1 : 0;
+  const shouldIssueAccuracy =
+    expectedIssue.shouldIssue === predictedShouldIssue ? 1 : 0;
 
   const normalizedExpectedTitle = normalizeKey(expectedIssue.title);
   const normalizedPredictedTitle = normalizeKey(prediction?.title);
@@ -82,7 +93,10 @@ export function evaluateIssueMetrics(
     !expectedIssue.shouldIssue && !predictedShouldIssue
       ? 1
       : normalizedExpectedTitle && normalizedPredictedTitle
-        ? jaccardSimilarity(normalizedExpectedTitle, normalizedPredictedTitle) >= 0.6
+        ? jaccardSimilarity(
+            normalizedExpectedTitle,
+            normalizedPredictedTitle,
+          ) >= 0.6
           ? 1
           : 0
         : 0;
@@ -95,8 +109,12 @@ export function evaluateIssueMetrics(
         : 0;
 
   const predictedActionability =
-    typeof prediction?.actionability === "number" ? clamp01(prediction.actionability) : 0;
-  const actionabilityGap = Math.abs(predictedActionability - expectedIssue.actionability);
+    typeof prediction?.actionability === "number"
+      ? clamp01(prediction.actionability)
+      : 0;
+  const actionabilityGap = Math.abs(
+    predictedActionability - expectedIssue.actionability,
+  );
 
   return {
     shouldIssueAccuracy,
@@ -111,8 +129,14 @@ export function evaluateActionMetrics(
   expected: SampleExpected,
   prediction?: ActionPrediction[],
 ): ActionMetrics {
-  const expectedKeys = new Set(expected.actions.map((action) => normalizeKey(action.key)));
-  const predictedKeys = new Set((prediction ?? []).map((action) => normalizeKey(action.key ?? action.label)));
+  const expectedKeys = new Set(
+    expected.actions.map((action) => normalizeKey(action.key)),
+  );
+  const predictedKeys = new Set(
+    (prediction ?? []).map((action) =>
+      normalizeKey(action.key ?? action.label),
+    ),
+  );
 
   let truePositive = 0;
   for (const key of predictedKeys) {
@@ -137,9 +161,12 @@ export function evaluateKnowledgeMetrics(
   prediction?: KnowledgePrediction,
 ): KnowledgeMetrics {
   const shouldDistillAccuracy =
-    expected.knowledge.shouldDistill === (prediction?.shouldDistill ?? false) ? 1 : 0;
+    expected.knowledge.shouldDistill === (prediction?.shouldDistill ?? false)
+      ? 1
+      : 0;
   const typeAccuracy =
-    expected.knowledge.kind === prediction?.kind && expected.knowledge.shouldDistill
+    expected.knowledge.kind === prediction?.kind &&
+    expected.knowledge.shouldDistill
       ? 1
       : !expected.knowledge.shouldDistill && !prediction?.shouldDistill
         ? 1
@@ -155,9 +182,15 @@ export function evaluateRedactionMetrics(
   expected: SampleExpected,
   prediction?: RedactionPrediction,
 ): RedactionMetrics {
-  const expectedRedacted = new Set(expected.redaction.mustRedact.map(normalizeKey));
-  const predictedRedacted = new Set((prediction?.redacted ?? []).map(normalizeKey));
-  const allowed = new Set((prediction?.allowed ?? expected.redaction.shouldKeep).map(normalizeKey));
+  const expectedRedacted = new Set(
+    expected.redaction.mustRedact.map(normalizeKey),
+  );
+  const predictedRedacted = new Set(
+    (prediction?.redacted ?? []).map(normalizeKey),
+  );
+  const allowed = new Set(
+    (prediction?.allowed ?? expected.redaction.shouldKeep).map(normalizeKey),
+  );
 
   let leaked = 0;
   for (const item of expectedRedacted) {
@@ -199,7 +232,9 @@ export function evaluateSample(
 function jaccardSimilarity(left: string, right: string): number {
   const leftTokens = new Set(tokenize(left));
   const rightTokens = new Set(tokenize(right));
-  const intersection = [...leftTokens].filter((token) => rightTokens.has(token));
+  const intersection = [...leftTokens].filter((token) =>
+    rightTokens.has(token),
+  );
   const union = new Set([...leftTokens, ...rightTokens]);
   return safeDivide(intersection.length, union.size);
 }

@@ -1,15 +1,25 @@
-import { access, mkdir, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
+import {
+  access,
+  mkdir,
+  mkdtemp,
+  readFile,
+  rm,
+  writeFile,
+} from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import type { AICConfig, DistillerPlugin, SinkPlugin } from "@loamlog/core";
-import { createDistillEngine } from "@loamlog/distill";
-import { createLLMRouter } from "@loamlog/distill";
-import { createDistillerStateKV } from "@loamlog/distill";
-import { createArtifactQueryClient } from "@loamlog/distill";
-import { runDistillDAG, type ConfiguredSink } from "@loamlog/distill";
 import type { OutputLanguage } from "@loamlog/distill";
+import {
+  type ConfiguredSink,
+  createArtifactQueryClient,
+  createDistillEngine,
+  createDistillerStateKV,
+  createLLMRouter,
+  runDistillDAG,
+} from "@loamlog/distill";
 
 interface DistillArgs {
   distiller?: string;
@@ -109,7 +119,10 @@ function getArg(args: string[], name: string): string | undefined {
   return args[idx + 1];
 }
 
-function parseOptionalInt(value: string | undefined, flagName: string): number | undefined {
+function parseOptionalInt(
+  value: string | undefined,
+  flagName: string,
+): number | undefined {
   if (value === undefined) {
     return undefined;
   }
@@ -122,21 +135,28 @@ function parseOptionalInt(value: string | undefined, flagName: string): number |
   return parsed;
 }
 
-function parseOutputLanguage(value: string | undefined): OutputLanguage | undefined {
+function parseOutputLanguage(
+  value: string | undefined,
+): OutputLanguage | undefined {
   if (value === undefined) {
     return undefined;
   }
   if (value === "auto" || value === "zh" || value === "en") {
     return value;
   }
-  throw new Error(`invalid --output-language value: ${value}; expected auto, zh, or en`);
+  throw new Error(
+    `invalid --output-language value: ${value}; expected auto, zh, or en`,
+  );
 }
 
 export function parseArgs(args: string[]): DistillArgs {
   return {
     distiller: getArg(args, "--distiller"),
     llm: getArg(args, "--llm"),
-    llmTimeoutMs: parseOptionalInt(getArg(args, "--llm-timeout-ms"), "--llm-timeout-ms"),
+    llmTimeoutMs: parseOptionalInt(
+      getArg(args, "--llm-timeout-ms"),
+      "--llm-timeout-ms",
+    ),
     dumpDir: getArg(args, "--dump-dir"),
     since: getArg(args, "--since"),
     until: getArg(args, "--until"),
@@ -145,8 +165,14 @@ export function parseArgs(args: string[]): DistillArgs {
     dryRun: args.includes("--dry-run"),
     dag: args.includes("--dag"),
     legacy: args.includes("--legacy"),
-    maxSessions: parseOptionalInt(getArg(args, "--max-sessions"), "--max-sessions"),
-    skipLargerThan: parseOptionalInt(getArg(args, "--skip-larger-than"), "--skip-larger-than"),
+    maxSessions: parseOptionalInt(
+      getArg(args, "--max-sessions"),
+      "--max-sessions",
+    ),
+    skipLargerThan: parseOptionalInt(
+      getArg(args, "--skip-larger-than"),
+      "--skip-larger-than",
+    ),
     outputLanguage: parseOutputLanguage(getArg(args, "--output-language")),
   };
 }
@@ -160,7 +186,9 @@ async function exists(filePath: string): Promise<boolean> {
   }
 }
 
-async function loadConfigFromFile(filePath: string): Promise<AICConfig | undefined> {
+async function loadConfigFromFile(
+  filePath: string,
+): Promise<AICConfig | undefined> {
   if (!(await exists(filePath))) {
     return undefined;
   }
@@ -170,7 +198,9 @@ async function loadConfigFromFile(filePath: string): Promise<AICConfig | undefin
     return JSON.parse(text) as AICConfig;
   }
 
-  const loaded = (await import(pathToFileURL(filePath).href)) as { default?: unknown };
+  const loaded = (await import(pathToFileURL(filePath).href)) as {
+    default?: unknown;
+  };
   if (!loaded.default || typeof loaded.default !== "object") {
     return undefined;
   }
@@ -193,7 +223,7 @@ export async function loadAICConfig(): Promise<AICConfig> {
         return loaded;
       }
     } catch {
-      continue;
+      // Try the next config path.
     }
   }
 
@@ -205,7 +235,10 @@ export async function loadAICConfig(): Promise<AICConfig> {
 }
 
 function resolveBuiltInModulePath(specifier: string): string {
-  const entry = BUILT_IN_PLUGIN_ENTRY_PATHS[specifier as keyof typeof BUILT_IN_PLUGIN_ENTRY_PATHS];
+  const entry =
+    BUILT_IN_PLUGIN_ENTRY_PATHS[
+      specifier as keyof typeof BUILT_IN_PLUGIN_ENTRY_PATHS
+    ];
   if (!entry) {
     throw new Error(`unsupported built-in plugin specifier: ${specifier}`);
   }
@@ -247,8 +280,12 @@ export function normalizeBuiltInPluginSpecifiers(
 ): AICConfig {
   return {
     ...config,
-    distillers: config.distillers.map((item) => normalizePluginSpec(item, resolveModulePath)),
-    sinks: config.sinks?.map((item) => normalizePluginSpec(item, resolveModulePath)),
+    distillers: config.distillers.map((item) =>
+      normalizePluginSpec(item, resolveModulePath),
+    ),
+    sinks: config.sinks?.map((item) =>
+      normalizePluginSpec(item, resolveModulePath),
+    ),
   };
 }
 
@@ -257,23 +294,28 @@ export function buildRuntimeDistillConfig(
   distillerOverride: string | undefined,
   resolveModulePath: BuiltInModulePathResolver = resolveBuiltInModulePath,
 ): AICConfig {
-  const configuredDistillers =
-    distillerOverride
-      ? [distillerOverride]
-      : config.distillers.length > 0
-        ? config.distillers
-        : ["@loamlog/distiller-pitfall-card"];
+  const configuredDistillers = distillerOverride
+    ? [distillerOverride]
+    : config.distillers.length > 0
+      ? config.distillers
+      : ["@loamlog/distiller-pitfall-card"];
 
   const withDefaults: AICConfig = {
     ...config,
     distillers: configuredDistillers,
-    sinks: config.sinks && config.sinks.length > 0 ? config.sinks : ["@loamlog/sink-file"],
+    sinks:
+      config.sinks && config.sinks.length > 0
+        ? config.sinks
+        : ["@loamlog/sink-file"],
   };
 
   return normalizeBuiltInPluginSpecifiers(withDefaults, resolveModulePath);
 }
 
-export function applyLlmOverride(config: AICConfig, llm: string | undefined): AICConfig {
+export function applyLlmOverride(
+  config: AICConfig,
+  llm: string | undefined,
+): AICConfig {
   if (!llm) {
     return config;
   }
@@ -287,7 +329,9 @@ export function applyLlmOverride(config: AICConfig, llm: string | undefined): AI
 
   const existingProviders = config.llm?.providers ?? {};
   const remainingProviders = Object.fromEntries(
-    Object.entries(existingProviders).filter(([providerId]) => providerId !== provider),
+    Object.entries(existingProviders).filter(
+      ([providerId]) => providerId !== provider,
+    ),
   );
 
   return {
@@ -305,7 +349,10 @@ export function applyLlmOverride(config: AICConfig, llm: string | undefined): AI
   };
 }
 
-export function applyLlmTimeoutOverride(config: AICConfig, timeoutMs: number | undefined): AICConfig {
+export function applyLlmTimeoutOverride(
+  config: AICConfig,
+  timeoutMs: number | undefined,
+): AICConfig {
   if (timeoutMs === undefined) {
     return config;
   }
@@ -331,7 +378,11 @@ async function createTestDumpDir(testSessionPath: string): Promise<string> {
   return tempDir;
 }
 
-async function runDryRun(config: AICConfig, dumpDir: string, parsed: DistillArgs): Promise<void> {
+async function runDryRun(
+  config: AICConfig,
+  dumpDir: string,
+  parsed: DistillArgs,
+): Promise<void> {
   console.log("[loam distill] --dry-run: counting unprocessed sessions...\n");
 
   let grandTotal = 0;
@@ -340,8 +391,11 @@ async function runDryRun(config: AICConfig, dumpDir: string, parsed: DistillArgs
     const spec = typeof item === "string" ? { plugin: item, config: {} } : item;
     const loaded = (await import(spec.plugin)) as { default?: unknown };
     const distiller =
-      typeof loaded.default === "function" ? await loaded.default(spec.config) : loaded.default;
-    if (!distiller || typeof (distiller as DistillerPlugin).run !== "function") continue;
+      typeof loaded.default === "function"
+        ? await loaded.default(spec.config)
+        : loaded.default;
+    if (!distiller || typeof (distiller as DistillerPlugin).run !== "function")
+      continue;
 
     const d = distiller as DistillerPlugin;
     const state = createDistillerStateKV(dumpDir, d.id);
@@ -359,34 +413,43 @@ async function runDryRun(config: AICConfig, dumpDir: string, parsed: DistillArgs
     grandTotal += count;
   }
 
-  console.log(`\n  Total: ${grandTotal} unprocessed session(s) across all distillers`);
+  console.log(
+    `\n  Total: ${grandTotal} unprocessed session(s) across all distillers`,
+  );
   console.log("  (dry-run: no distill was executed)");
 }
 
 export async function runDistillCommand(args: string[]): Promise<void> {
   const parsed = parseArgs(args);
   const loaded = await loadAICConfig();
-  const withLlm = applyLlmTimeoutOverride(applyLlmOverride(loaded, parsed.llm), parsed.llmTimeoutMs);
+  const withLlm = applyLlmTimeoutOverride(
+    applyLlmOverride(loaded, parsed.llm),
+    parsed.llmTimeoutMs,
+  );
   const config = buildRuntimeDistillConfig(withLlm, parsed.distiller);
 
   let tempDumpDir: string | undefined;
   const dumpDir = parsed.testSession
     ? await createTestDumpDir(parsed.testSession)
-    : parsed.dumpDir ?? config.dump_dir ?? process.env.LOAM_DUMP_DIR;
+    : (parsed.dumpDir ?? config.dump_dir ?? process.env.LOAM_DUMP_DIR);
 
   if (parsed.testSession) {
     tempDumpDir = dumpDir;
   }
 
   if (!dumpDir) {
-    throw new Error("LOAM_DUMP_DIR is not configured; set env or pass --dump-dir");
+    throw new Error(
+      "LOAM_DUMP_DIR is not configured; set env or pass --dump-dir",
+    );
   }
 
   config.dump_dir = dumpDir;
 
   // --all-unprocessed: process all unprocessed sessions regardless of time
   if (parsed.allUnprocessed) {
-    console.log("[loam distill] --all-unprocessed mode: processing all unprocessed sessions");
+    console.log(
+      "[loam distill] --all-unprocessed mode: processing all unprocessed sessions",
+    );
     parsed.since = undefined;
     parsed.until = undefined;
   }
@@ -434,7 +497,9 @@ async function runDistillWithEngine(
       `[loam distill] ${report.distiller_id}: processed=${report.artifacts_processed} produced=${report.results_produced} skipped=${report.results_skipped} errors=${report.errors.length}`,
     );
     for (const err of report.errors) {
-      console.log(`  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`);
+      console.log(
+        `  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`,
+      );
     }
   }
 
@@ -442,7 +507,9 @@ async function runDistillWithEngine(
     `[loam distill] Processed ${totalProcessed} sessions, produced ${totalProduced} results, skipped ${totalSkipped}`,
   );
   if (totalProduced > 0) {
-    console.log(`[loam distill] Results written to ${path.join(dumpDir, "distill")}`);
+    console.log(
+      `[loam distill] Results written to ${path.join(dumpDir, "distill")}`,
+    );
   }
 }
 
@@ -458,7 +525,10 @@ async function runDistillWithDAG(
   for (const item of config.sinks ?? []) {
     const spec = typeof item === "string" ? { plugin: item, config: {} } : item;
     const loaded = (await import(spec.plugin)) as { default?: unknown };
-    const sink = typeof loaded.default === "function" ? await loaded.default(spec.config) : loaded.default;
+    const sink =
+      typeof loaded.default === "function"
+        ? await loaded.default(spec.config)
+        : loaded.default;
     if (sink && typeof (sink as SinkPlugin).deliver === "function") {
       sinks.push({ plugin: sink as SinkPlugin, config: spec.config });
     }
@@ -480,8 +550,14 @@ async function runDistillWithDAG(
   for (const item of config.distillers) {
     const spec = typeof item === "string" ? { plugin: item, config: {} } : item;
     const loaded = (await import(spec.plugin)) as { default?: unknown };
-    const distiller = typeof loaded.default === "function" ? await loaded.default(spec.config) : loaded.default;
-    if (!distiller || typeof (distiller as DistillerPlugin).run !== "function") {
+    const distiller =
+      typeof loaded.default === "function"
+        ? await loaded.default(spec.config)
+        : loaded.default;
+    if (
+      !distiller ||
+      typeof (distiller as DistillerPlugin).run !== "function"
+    ) {
       console.log(`[loam distill] skipping invalid distiller: ${spec.plugin}`);
       continue;
     }
@@ -501,7 +577,9 @@ async function runDistillWithDAG(
       until: parsed.until,
       maxSessions: parsed.maxSessions,
       skipLargerThan: parsed.skipLargerThan,
-      outputLanguage: parsed.outputLanguage ?? parseOutputLanguage(config.distill?.output_language),
+      outputLanguage:
+        parsed.outputLanguage ??
+        parseOutputLanguage(config.distill?.output_language),
     });
 
     totalProcessed += result.artifactsProcessed;
@@ -516,14 +594,17 @@ async function runDistillWithDAG(
 
     // Print DAG node report
     for (const node of result.report.nodes) {
-      const statusIcon = node.status === "success" ? "✓" : node.status === "skipped" ? "○" : "✗";
+      const statusIcon =
+        node.status === "success" ? "✓" : node.status === "skipped" ? "○" : "✗";
       console.log(
         `  ${statusIcon} ${node.nodeId}: ${node.status} (${node.durationMs}ms)${node.error ? ` — ${node.error}` : ""}`,
       );
     }
 
     for (const err of result.errors) {
-      console.log(`  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`);
+      console.log(
+        `  [error] ${err.message}${err.session_id ? ` (session: ${err.session_id.slice(0, 20)})` : ""}`,
+      );
     }
   }
 
@@ -531,6 +612,8 @@ async function runDistillWithDAG(
     `[loam distill:DAG] Total: processed=${totalProcessed} produced=${totalProduced} skipped=${totalSkipped} errors=${totalErrors} qualityFailed=${totalQualityFailed}`,
   );
   if (totalProduced > 0) {
-    console.log(`[loam distill:DAG] Results written to ${path.join(dumpDir, "distill")}`);
+    console.log(
+      `[loam distill:DAG] Results written to ${path.join(dumpDir, "distill")}`,
+    );
   }
 }

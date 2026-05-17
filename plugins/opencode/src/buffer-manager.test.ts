@@ -1,12 +1,15 @@
 import assert from "node:assert/strict";
-import { describe, test, after, before } from "node:test";
+import { mkdir, readdir, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
+import { after, before, describe, test } from "node:test";
 import { BufferManager } from "./buffer-manager.js";
-import { mkdir, rm, readdir } from "fs/promises";
-import { join } from "path";
-import { tmpdir } from "os";
 
 describe("BufferManager", () => {
-  const testDir = join(tmpdir(), `loamlog-test-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`);
+  const testDir = join(
+    tmpdir(),
+    `loamlog-test-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+  );
 
   before(async () => {
     await mkdir(testDir, { recursive: true });
@@ -27,7 +30,7 @@ describe("BufferManager", () => {
 
     await manager.save(payload);
 
-    const files = (await readdir(testDir)).filter(f => f.endsWith(".json"));
+    const files = (await readdir(testDir)).filter((f) => f.endsWith(".json"));
     assert.equal(files.length, 1);
     assert.ok(files[0].startsWith("capture-"));
   });
@@ -47,10 +50,10 @@ describe("BufferManager", () => {
         provider: "test",
       });
       // Delay to ensure mtime differences
-      await new Promise(r => setTimeout(r, 10));
+      await new Promise((r) => setTimeout(r, 10));
     }
 
-    const files = (await readdir(testDir)).filter(f => f.endsWith(".json"));
+    const files = (await readdir(testDir)).filter((f) => f.endsWith(".json"));
     assert.equal(files.length, 50);
   });
 
@@ -75,7 +78,7 @@ describe("BufferManager", () => {
     });
 
     assert.ok(called);
-    const files = (await readdir(testDir)).filter(f => f.endsWith(".json"));
+    const files = (await readdir(testDir)).filter((f) => f.endsWith(".json"));
     assert.equal(files.length, 0);
   });
 });

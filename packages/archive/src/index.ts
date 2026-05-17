@@ -279,7 +279,8 @@ export async function* readSessionSnapshots(
         for (const entry of indexEntries) {
           // Filter by repo (match against both raw and sanitized name)
           if (sanitizedRepo && rawRepo) {
-            if (entry.repo !== sanitizedRepo && entry.repo !== rawRepo) continue;
+            if (entry.repo !== sanitizedRepo && entry.repo !== rawRepo)
+              continue;
           }
 
           // Filter by session_ids
@@ -298,7 +299,6 @@ export async function* readSessionSnapshots(
             }
           } catch {
             // Skip unavailable snapshots — index may reference deleted files
-            continue;
           }
         }
         return;

@@ -7,7 +7,7 @@
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
 | **代码编译** | ✅ 通过 | 2026-05-15 `pnpm run build` 全绿，包含 Signal Gate rerun CLI 与 post-capture auto job |
-| **测试** | ✅ 通过 | 2026-05-17 复跑 `pnpm run test` 全绿，253 pass / 0 fail；代表性资产 focused tests：21 pass / 0 fail |
+| **测试** | ✅ 通过 | 2026-05-17 复跑 `pnpm run test` 全绿，271 pass / 0 fail；代表性资产 focused tests：37 pass / 0 fail |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
 | **下一道门禁** | Distiller Repair + Re-review | Signal Gate 入口已补齐；不再扩大样本，下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、duplicate-topic / old-roadmap 过滤层，并小批量复评 |
@@ -23,7 +23,7 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-17T12-29-02Z`：typescript / biome / pnpm-audit exit 0，blocking 0；Top N 为历史低危 lint，均在 `topN.results.md` 标记 deferred
+- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-17T14-22-28Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -43,7 +43,7 @@
 
 ### 0.2 Review 新发现（2026-05-13）
 
-- ⚠️ **跨资产 evidence fallback 不一致**：`knowledge-card` 已改为无有效 `evidence_refs` 则拒绝；但 `prd-draft` / `pitfall-card` 仍会在 evidence refs 无效时回退到首条 message。影响：Cross-Asset Dogfooding 中可能出现“证据不支撑但仍产出”的资产。处理：不纳入本次 knowledge-card 小修；#57 执行前应统一 distiller evidence 策略并补测试。
+- ✅ **跨资产 evidence fallback 不一致已修复**：2026-05-17 已将 `prd-draft` / `pitfall-card` 对齐到 `knowledge-card`、`issue-draft` 和代表性资产策略：无有效 `evidence_refs`、引用不存在 message、或 malformed refs 时直接丢弃候选，不 fallback 到首条 message；新增 focused regression tests。
 - ⚠️ **DAG 聚合后 result / candidate / quality 对齐风险**：`process_results` 会把 `acc.results` 替换为 refined assets，`deliver_to_sinks` 再用 id 或 index 回找 candidate/quality。聚合合并或改 ID 后可能造成 audit / quality 与输出资产错配。影响：多资产 review / sink 审计可信度。处理：不在本次小修中重构 DAG；应在 #57 或单独 task 中设计稳定的 refined asset lineage 映射。
 
 ---
@@ -114,6 +114,9 @@
 | Common post-filter v0.2 | ✅ 已落成 | `@loamlog/distiller-representative-assets` 共享 `shouldKeepRepresentativeAsset` post-filter 已覆盖 assistant process log evidence、动作壳标题、follow-up 缺少验收标准、done-state / old-roadmap idea、decision 非明确决策、普通 API key 错误经验、one-off command / bug fix / CI skill-candidate，并新增低价值重复主题过滤：API key 排障不进 idea，Loamlog 内部 dogfooding / provider bug / CI 构建动作不升为 skill-candidate |
 | Common post-filter v0.3 | ✅ 已落成 | 2026-05-17 继续收紧代表性资产低价值重复主题：routine repo implementation（CI / GitHub Actions / typecheck / build coverage）和 dogfooding execution 不再进入 `idea-seed`；API key / provider fallback 排障不再进入 `decision-rationale`；补充 focused regression tests |
 | Prompt/schema repair v0.4 | ✅ 已落成 | 2026-05-17 为 5 类代表性资产 distiller 增加共享 prompt guardrails 与类型专属负例：evidence-first、不得无证据扩写 owner / due / tradeoff / value、拒绝 assistant process log / completed work / action-shell / old-roadmap / transient fallback；新增 prompt guardrails focused tests |
+| Candidate duplicate-topic merge v0.5 | ✅ 已落成 | 2026-05-17 在代表性资产共享基类中增加单 artifact 内候选去重：同类型候选按精确 evidence excerpt 或标题 topic 相似度合并，保留最高置信候选并合并 evidence / tags；覆盖英文、中文与同长消息多主题误杀 regression tests；跨类型 / 跨 session 聚合仍交给后续复评与现有 aggregator 观察 |
+| Old-roadmap repair v0.6 | ✅ 已落成 | 2026-05-17 收紧旧路线图残留过滤：`issue-candidate / prd-draft`、MCP API gateway、golden user testing、工具专属 AI 规则文件 Phase 4 等历史方向不再进入 `idea-seed` / `follow-up-work-item`；`decision-rationale` 仅在缺少明确 decision / deferral 语言时拒绝旧路线图题材，保留“明确暂缓 MCP”等有效决策；补充正负 focused regression tests |
+| Evidence-first alignment v0.7 | ✅ 已落成 | 2026-05-17 统一内置文档类 distiller 的 evidence 策略：`prd-draft` / `pitfall-card` 不再在 invalid / missing `evidence_refs` 时 fallback 到首条 message，避免无证据资产进入 Cross-Asset Dogfooding；focused tests 覆盖 invalid refs 与 omitted refs |
 
 ---
 
@@ -161,7 +164,9 @@
    - 剩余产物：当前 dogfooding 主线可进入 P1 duplicate-topic / old-roadmap / prompt-schema repair 与小批量复评
 2. **[P1] 增加跨资产通用过滤层**
    - 已完成 v0.2：过滤 assistant process log、done-state、action-shell、old-roadmap、部分 wrong-type；`follow-up-work-item` 已要求验收标准；`skill-candidate` 已拒绝普通命令、bug fix、CI 等一次性任务；API key 排障、内部 dogfooding / provider bug / CI 构建动作等低价值重复主题已增加确定性过滤
-   - 剩余：跨候选的 duplicate-topic 合并、更细的 old-roadmap 判定、基于真实样本的 distiller prompt/schema repair
+   - 已完成 v0.5：单 artifact 内同类型候选 duplicate-topic 合并，避免 LLM 单次返回重复包装同一主题
+   - 已完成 v0.6：更细的 old-roadmap 判定，覆盖旧资产路线、MCP API gateway、golden user testing、Phase 4 工具规则文件，同时保留明确暂缓类 decision
+   - 剩余：跨类型重复主题观察、基于真实样本的小批量复评
 3. **[P2] 小批量复评而非扩大样本**
    - 用 5-10 条真实 session rerun，目标是每类资产 `>=3` 比例至少 50%
    - 仅当复评达标后，再讨论多 provider 样本、复用池、页面或 MCP 暴露
