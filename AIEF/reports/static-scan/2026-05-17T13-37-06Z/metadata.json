@@ -1,0 +1,58 @@
+{
+  "runId": "2026-05-17T13-37-06Z",
+  "startedAt": "2026-05-17T13:37:06.347Z",
+  "completedAt": "2026-05-17T13:37:35.284Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "b853ea7",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "IEF/context/business/current-focus.md",
+      "ocs/project-ledger.md",
+      "ackages/distillers/representative-assets/src/decision-rationale.ts",
+      "ackages/distillers/representative-assets/src/follow-up-work-item.ts",
+      "ackages/distillers/representative-assets/src/idea-seed.ts",
+      "ackages/distillers/representative-assets/src/practice-pitfall.ts",
+      "ackages/distillers/representative-assets/src/shared.ts",
+      "ackages/distillers/representative-assets/src/skill-candidate.ts",
+      "packages/distillers/representative-assets/src/prompt-guardrails.test.ts"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}
