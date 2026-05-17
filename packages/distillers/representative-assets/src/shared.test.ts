@@ -115,6 +115,97 @@ describe("representative asset shared helpers", () => {
 			false,
 		);
 	});
+
+	test("shared post-filter rejects api-key troubleshooting as idea seeds", () => {
+		assert.equal(
+			shouldKeepRepresentativeAsset({
+				type: "idea-seed",
+				title: "DeepSeek provider environment variable",
+				summary: "DeepSeek API key is empty, so use this as a future idea.",
+				payload: {
+					idea: "DeepSeek provider environment variable",
+					context: "The API key was not set during a distill run.",
+				},
+				evidence: [
+					{
+						session_id: "ses_rep_1",
+						message_id: "msg_1",
+						excerpt: "DeepSeek API key was not set",
+					},
+				],
+				artifact: makeArtifact({
+					messages: [
+						{
+							id: "msg_1",
+							role: "user",
+							timestamp: "2026-05-13T00:00:00.000Z",
+							content: "DeepSeek API key was not set during the distill run.",
+						},
+					],
+				}),
+			}),
+			false,
+		);
+	});
+
+	test("shared post-filter rejects project-internal dogfooding skill candidates", () => {
+		assert.equal(
+			shouldKeepRepresentativeAsset({
+				type: "skill-candidate",
+				title: "loamlog_dogfooding_validation_workflow",
+				summary: "Turn the Loamlog internal dogfooding validation workflow into a skill.",
+				payload: {
+					skill_name: "loamlog_dogfooding_validation_workflow",
+					trigger: "When Loamlog needs internal product validation",
+					capability: "Run the project-internal dogfooding validation flow.",
+					workflow_steps: ["Run representative assets", "Review the pending outputs"],
+				},
+				evidence: [
+					{
+						session_id: "ses_rep_1",
+						message_id: "msg_1",
+						excerpt: "Loamlog internal dogfooding validation workflow",
+					},
+				],
+				artifact: makeArtifact({
+					messages: [
+						{
+							id: "msg_1",
+							role: "user",
+							timestamp: "2026-05-13T00:00:00.000Z",
+							content: "Loamlog internal dogfooding validation workflow is specific to this project.",
+						},
+					],
+				}),
+			}),
+			false,
+		);
+	});
+
+	test("shared post-filter rejects Chinese CI workflow skill candidates", () => {
+		assert.equal(
+			shouldKeepRepresentativeAsset({
+				type: "skill-candidate",
+				title: "CI 工作流集成",
+				summary: "把 GitHub Actions 流水线集成做成 skill。",
+				payload: {
+					skill_name: "CI 工作流集成",
+					trigger: "仓库需要 CI 时",
+					capability: "添加 GitHub Actions 流水线。",
+					workflow_steps: ["创建 workflow 文件", "运行测试"],
+				},
+				evidence: [
+					{
+						session_id: "ses_rep_1",
+						message_id: "msg_1",
+						excerpt: "CI 工作流集成",
+					},
+				],
+				artifact: makeArtifact(),
+			}),
+			false,
+		);
+	});
 });
 
 function makeArtifact(overrides: Partial<SessionArtifact> = {}): SessionArtifact {

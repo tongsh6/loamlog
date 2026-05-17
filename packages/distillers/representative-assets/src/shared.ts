@@ -127,7 +127,11 @@ export function shouldKeepRepresentativeAsset(input: {
 		case "follow-up-work-item":
 			return keepFollowUpWorkItem(input.payload, combinedText);
 		case "idea-seed":
-			return !hasDoneState(combinedText) && !isOldRoadmapResidue(combinedText);
+			return (
+				!hasDoneState(combinedText) &&
+				!isOldRoadmapResidue(combinedText) &&
+				!isTroubleshootingDuplicateTopic(combinedText)
+			);
 		case "decision-rationale":
 			return keepDecisionRationale(input.payload, combinedText);
 		case "practice-pitfall":
@@ -194,7 +198,12 @@ function keepSkillCandidate(
 	if (/\b(ci workflow|github actions|bug fix|provider bug|one-off)\b/.test(combinedText)) {
 		return false;
 	}
-	if (/一次性|单次|普通命令|bug 修复|项目内部/.test(combinedText)) {
+	if (
+		/一次性|单次|普通命令|bug 修复|项目内部|ci 工作流|github actions|流水线/.test(combinedText)
+	) {
+		return false;
+	}
+	if (isProjectInternalWorkflow(combinedText)) {
 		return false;
 	}
 	return true;
@@ -232,6 +241,30 @@ function hasDoneState(text: string): boolean {
 
 function isOldRoadmapResidue(text: string): boolean {
 	return /\b(old roadmap|roadmap residue|legacy roadmap|mcp api gateway|issue-candidate|prd-draft)\b/.test(text) || /旧路线图|历史计划|过时/.test(text);
+}
+
+function isTroubleshootingDuplicateTopic(text: string): boolean {
+	return (
+		/\b(api key|apikey|environment variable|env var|deepseek|openai|anthropic)\b.*\b(missing|empty|not set|unset|fallback)\b/.test(
+			text,
+		) ||
+		/\b(missing|empty|not set|unset|fallback)\b.*\b(api key|apikey|environment variable|env var|deepseek|openai|anthropic)\b/.test(
+			text,
+		) ||
+		/key 为空|未设置.*key|环境变量.*(缺失|为空|未设置)/.test(text)
+	);
+}
+
+function isProjectInternalWorkflow(text: string): boolean {
+	return (
+		/\b(loamlog|project-internal|internal)\b.*\b(dogfooding|validation workflow|ci workflow|github actions|provider bug|redaction config)\b/.test(
+			text,
+		) ||
+		/\b(dogfooding|validation workflow|ci workflow|github actions|provider bug|redaction config)\b.*\b(loamlog|project-internal|internal)\b/.test(
+			text,
+		) ||
+		/项目内部.*(dogfooding|验证|ci|provider bug|redaction)|dogfooding.*项目内部/.test(text)
+	);
 }
 
 function evidenceSourceText(
