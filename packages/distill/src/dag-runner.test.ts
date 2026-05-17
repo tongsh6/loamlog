@@ -3,11 +3,11 @@ import { mkdtemp, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, test } from "node:test";
-import type { SessionSnapshot } from "@loamlog/core";
 import { writeSessionSnapshot } from "@loamlog/archive";
+import type { SessionSnapshot } from "@loamlog/core";
 import { validateDAG } from "@loamlog/pipeline";
-import { createDistillerStateKV } from "./state.js";
 import { createDistillDAG, runDistillDAG } from "./dag-runner.js";
+import { createDistillerStateKV } from "./state.js";
 import { LocalAssetStore } from "./store.js";
 
 let tempDir: string | undefined;
@@ -57,7 +57,16 @@ function buildSnapshot(sessionId: string): SessionSnapshot {
 function makeLLMRouter() {
   return {
     route() {
-      return { provider: { id: "mock", complete: async () => ({ content: "{}", tokens: { input: 0, output: 0 } }) }, model: "mock" };
+      return {
+        provider: {
+          id: "mock",
+          complete: async () => ({
+            content: "{}",
+            tokens: { input: 0, output: 0 },
+          }),
+        },
+        model: "mock",
+      };
     },
   };
 }
@@ -80,7 +89,16 @@ describe("createDistillDAG", () => {
         sinks: [],
         dumpDir: "/tmp",
       },
-      { results: [], skipped: 0, errors: [], artifactsProcessed: 0 },
+      {
+        results: [],
+        candidates: [],
+        qualityReports: [],
+        deliveryItems: [],
+        audit: [],
+        skipped: 0,
+        errors: [],
+        artifactsProcessed: 0,
+      },
     );
 
     const errors = validateDAG(dag);
@@ -153,7 +171,10 @@ describe("runDistillDAG", () => {
 
     const { default: distillerFactory } = await import(distillerPath);
     const { default: sinkFactory } = await import(sinkPath);
-    const d = typeof distillerFactory === "function" ? distillerFactory() : distillerFactory;
+    const d =
+      typeof distillerFactory === "function"
+        ? distillerFactory()
+        : distillerFactory;
     const s = typeof sinkFactory === "function" ? sinkFactory() : sinkFactory;
 
     const state = createDistillerStateKV(tempDir, "@test/dag-distiller");
@@ -192,7 +213,10 @@ describe("runDistillDAG", () => {
     assert.ok(nodeIds.includes("deliver_to_sinks"));
 
     // All nodes should succeed
-    assert.equal(result.report.nodes.every((n) => n.status === "success"), true);
+    assert.equal(
+      result.report.nodes.every((n) => n.status === "success"),
+      true,
+    );
   });
 
   test("runs without artifacts without error", async () => {
@@ -235,7 +259,7 @@ describe("runDistillDAG", () => {
     // Pre-populate fingerprint
     const { createHash } = await import("node:crypto");
     const fp = createHash("sha256")
-      .update("@test/dag-dedup:ses_dag_dedup:{\"raw\":\"TODO: refactor\"}")
+      .update('@test/dag-dedup:ses_dag_dedup:{"raw":"TODO: refactor"}')
       .digest("hex");
     await state.set("fingerprints", { [fp]: true });
 
@@ -246,16 +270,26 @@ describe("runDistillDAG", () => {
         version: "0.1.0",
         supported_types: ["test"],
         async run({ artifactStore }) {
-          for await (const artifact of artifactStore.getUnprocessed("@test/dag-dedup")) {
-            return [{
-              type: "test",
-              title: "Found TODO",
-              summary: "There is a TODO",
-              confidence: 0.9,
-              tags: ["todo"],
-              payload: { raw: "TODO: refactor" },
-              evidence: [{ session_id: artifact.meta.session_id, message_id: artifact.messages[0].id, excerpt: "TODO" }],
-            }];
+          for await (const artifact of artifactStore.getUnprocessed(
+            "@test/dag-dedup",
+          )) {
+            return [
+              {
+                type: "test",
+                title: "Found TODO",
+                summary: "There is a TODO",
+                confidence: 0.9,
+                tags: ["todo"],
+                payload: { raw: "TODO: refactor" },
+                evidence: [
+                  {
+                    session_id: artifact.meta.session_id,
+                    message_id: artifact.messages[0].id,
+                    excerpt: "TODO",
+                  },
+                ],
+              },
+            ];
           }
           return [];
         },
@@ -339,7 +373,9 @@ describe("runDistillDAG", () => {
         ],
         async run({ artifactStore, signals }) {
           distillerSawSignals = signals?.length ?? 0;
-          for await (const artifact of artifactStore.getUnprocessed("@test/signal-routed")) {
+          for await (const artifact of artifactStore.getUnprocessed(
+            "@test/signal-routed",
+          )) {
             distillerSawMessages = artifact.messages.length;
             return [
               {
@@ -397,7 +433,10 @@ describe("approval gate + external sink integration", () => {
       name: `External ${id}`,
       version: "0.1.0",
       supports: () => true,
-      deliver: async (input: { results: Array<{ id: string; title: string }>; config: Record<string, unknown> }) => {
+      deliver: async (input: {
+        results: Array<{ id: string; title: string }>;
+        config: Record<string, unknown>;
+      }) => {
         return { delivered: input.results.length, failed: 0 };
       },
     };
@@ -421,13 +460,36 @@ describe("approval gate + external sink integration", () => {
         name: "Ext Allow",
         version: "0.1.0",
         supported_types: ["issue-draft"],
-        async run({ artifactStore }: { artifactStore: { getUnprocessed: (id: string) => AsyncIterable<{ meta: { session_id: string }; messages: Array<{ id: string }> }> } }) {
-          for await (const a of artifactStore.getUnprocessed("@test/ext-allow")) {
-            return [{
-              type: "issue-draft", title: "Allowed", summary: "Should work",
-              confidence: 0.9, tags: ["test"], payload: {},
-              evidence: [{ session_id: a.meta.session_id, message_id: a.messages[0].id, excerpt: "x" }],
-            }];
+        async run({
+          artifactStore,
+        }: {
+          artifactStore: {
+            getUnprocessed: (id: string) => AsyncIterable<{
+              meta: { session_id: string };
+              messages: Array<{ id: string }>;
+            }>;
+          };
+        }) {
+          for await (const a of artifactStore.getUnprocessed(
+            "@test/ext-allow",
+          )) {
+            return [
+              {
+                type: "issue-draft",
+                title: "Allowed",
+                summary: "Should work",
+                confidence: 0.9,
+                tags: ["test"],
+                payload: {},
+                evidence: [
+                  {
+                    session_id: a.meta.session_id,
+                    message_id: a.messages[0].id,
+                    excerpt: "x",
+                  },
+                ],
+              },
+            ];
           }
           return [];
         },
@@ -462,13 +524,36 @@ describe("approval gate + external sink integration", () => {
         name: "Ext Audit",
         version: "0.1.0",
         supported_types: ["issue-draft"],
-        async run({ artifactStore }: { artifactStore: { getUnprocessed: (id: string) => AsyncIterable<{ meta: { session_id: string }; messages: Array<{ id: string }> }> } }) {
-          for await (const a of artifactStore.getUnprocessed("@test/ext-audit")) {
-            return [{
-              type: "issue-draft", title: "Audit Test", summary: "Test",
-              confidence: 0.95, tags: ["test"], payload: {},
-              evidence: [{ session_id: a.meta.session_id, message_id: a.messages[0].id, excerpt: "test" }],
-            }];
+        async run({
+          artifactStore,
+        }: {
+          artifactStore: {
+            getUnprocessed: (id: string) => AsyncIterable<{
+              meta: { session_id: string };
+              messages: Array<{ id: string }>;
+            }>;
+          };
+        }) {
+          for await (const a of artifactStore.getUnprocessed(
+            "@test/ext-audit",
+          )) {
+            return [
+              {
+                type: "issue-draft",
+                title: "Audit Test",
+                summary: "Test",
+                confidence: 0.95,
+                tags: ["test"],
+                payload: {},
+                evidence: [
+                  {
+                    session_id: a.meta.session_id,
+                    message_id: a.messages[0].id,
+                    excerpt: "test",
+                  },
+                ],
+              },
+            ];
           }
           return [];
         },
@@ -486,5 +571,100 @@ describe("approval gate + external sink integration", () => {
     assert.equal(audit.delivery_status, "delivered");
     assert.ok(audit.id.startsWith("audit-"));
     assert.ok(audit.session_id);
+  });
+
+  test("aligns refined delivery quality with the refined candidate", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-dag-refined-lineage-"));
+    process.env.OPENAI_API_KEY = "test-key";
+
+    await writeSessionSnapshot({
+      dumpDir: tempDir,
+      snapshot: buildSnapshot("ses_refined_lineage"),
+    });
+
+    const deliveredTitles: string[] = [];
+    const extSink = {
+      id: "@test/refined-sink",
+      name: "Refined Sink",
+      version: "0.1.0",
+      supports: () => true,
+      async deliver(input: { results: Array<{ title: string }> }) {
+        deliveredTitles.push(...input.results.map((result) => result.title));
+        return { delivered: input.results.length, failed: 0 };
+      },
+    };
+
+    const result = await runDistillDAG({
+      distiller: {
+        id: "@test/refined-lineage",
+        name: "Refined Lineage",
+        version: "0.1.0",
+        supported_types: ["issue-draft"],
+        async run({
+          artifactStore,
+        }: {
+          artifactStore: {
+            getUnprocessed: (id: string) => AsyncIterable<{
+              meta: { session_id: string };
+              messages: Array<{ id: string }>;
+            }>;
+          };
+        }) {
+          for await (const artifact of artifactStore.getUnprocessed(
+            "@test/refined-lineage",
+          )) {
+            return [
+              {
+                type: "issue-draft",
+                title: "Refactor module docs",
+                summary: "Low confidence duplicate topic.",
+                confidence: 0.2,
+                tags: ["test"],
+                payload: { variant: "low" },
+                evidence: [
+                  {
+                    session_id: artifact.meta.session_id,
+                    message_id: artifact.messages[0].id,
+                    excerpt: "TODO",
+                  },
+                ],
+              },
+              {
+                type: "issue-draft",
+                title: "Refactor module documentation",
+                summary: "High confidence refined topic.",
+                confidence: 0.9,
+                tags: ["test"],
+                payload: { variant: "high" },
+                evidence: [
+                  {
+                    session_id: artifact.meta.session_id,
+                    message_id: artifact.messages[0].id,
+                    excerpt: "TODO",
+                  },
+                ],
+              },
+            ];
+          }
+          return [];
+        },
+      },
+      llm: makeLLMRouter(),
+      state: createDistillerStateKV(tempDir, "@test/refined-lineage"),
+      sinks: [{ plugin: extSink, config: {} }],
+      dumpDir: tempDir,
+      allowExternal: true,
+    });
+
+    assert.equal(result.results.length, 1);
+    assert.equal(result.candidates.length, 1);
+    assert.equal(result.qualityReports.length, 1);
+    assert.equal(result.results[0].id, result.candidates[0].id);
+    assert.equal(result.qualityReports[0].passed, true);
+    assert.equal(result.audit.length, 1);
+    assert.equal(result.audit[0].candidate_id, result.results[0].id);
+    assert.equal(result.audit[0].quality_passed, true);
+    assert.equal(result.audit[0].delivery_status, "delivered");
+    assert.deepEqual(deliveredTitles, ["Refactor module documentation"]);
   });
 });
