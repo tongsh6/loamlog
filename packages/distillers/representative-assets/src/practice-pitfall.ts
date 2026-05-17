@@ -1,6 +1,6 @@
 import type { DistillerFactory } from "@loamlog/core";
 import { createRepresentativeDistiller } from "./base.js";
-import { getString } from "./shared.js";
+import { getString, REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS } from "./shared.js";
 
 interface PracticePitfallPayload extends Record<string, unknown> {
   situation: string;
@@ -18,6 +18,10 @@ const SYSTEM_PROMPT = [
   "Each item must include: situation, pitfall_or_practice, fix_or_pattern, reusable_scope, confidence, evidence_refs.",
   "Optional fields: symptom, root_cause, prevention.",
   "Each evidence_refs item must include message_id and excerpt.",
+  ...REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+  "Accept only reusable practices or pitfalls with a clear situation and fix_or_pattern.",
+  "For engineering mechanism claims, require evidence for the symptom, root cause, and fix or prevention.",
+  "Reject raw error messages, missing API key incidents, one-off command failures, and chat summaries that do not teach what to do next time.",
 ].join("\n");
 
 const factory: DistillerFactory = () =>

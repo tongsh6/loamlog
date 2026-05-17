@@ -1,6 +1,11 @@
 import type { DistillerFactory } from "@loamlog/core";
 import { createRepresentativeDistiller } from "./base.js";
-import { getEnumValue, getString, getStringArray } from "./shared.js";
+import {
+  getEnumValue,
+  getString,
+  getStringArray,
+  REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+} from "./shared.js";
 
 const PRIORITY_HINTS = ["p0", "p1", "p2"] as const;
 type PriorityHint = (typeof PRIORITY_HINTS)[number];
@@ -22,6 +27,10 @@ const SYSTEM_PROMPT = [
   "Optional fields: owner_hint, priority_hint, due_context, acceptance, related_assets.",
   "priority_hint must be one of p0, p1, p2 when present.",
   "Each evidence_refs item must include message_id and excerpt.",
+  ...REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+  "Accept only future or still-open work that is actionable and verifiable after the session.",
+  "Each item should include concrete acceptance criteria when the evidence supports them.",
+  "Reject completed work, assistant process steps, action-shell titles, generic placeholders, routine tool commands, and risks or practices that belong in another asset type.",
 ].join("\n");
 
 const factory: DistillerFactory = () =>

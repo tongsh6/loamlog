@@ -113,6 +113,7 @@
 | :--- | :--- | :--- |
 | Common post-filter v0.2 | ✅ 已落成 | `@loamlog/distiller-representative-assets` 共享 `shouldKeepRepresentativeAsset` post-filter 已覆盖 assistant process log evidence、动作壳标题、follow-up 缺少验收标准、done-state / old-roadmap idea、decision 非明确决策、普通 API key 错误经验、one-off command / bug fix / CI skill-candidate，并新增低价值重复主题过滤：API key 排障不进 idea，Loamlog 内部 dogfooding / provider bug / CI 构建动作不升为 skill-candidate |
 | Common post-filter v0.3 | ✅ 已落成 | 2026-05-17 继续收紧代表性资产低价值重复主题：routine repo implementation（CI / GitHub Actions / typecheck / build coverage）和 dogfooding execution 不再进入 `idea-seed`；API key / provider fallback 排障不再进入 `decision-rationale`；补充 focused regression tests |
+| Prompt/schema repair v0.4 | ✅ 已落成 | 2026-05-17 为 5 类代表性资产 distiller 增加共享 prompt guardrails 与类型专属负例：evidence-first、不得无证据扩写 owner / due / tradeoff / value、拒绝 assistant process log / completed work / action-shell / old-roadmap / transient fallback；新增 prompt guardrails focused tests |
 
 ---
 

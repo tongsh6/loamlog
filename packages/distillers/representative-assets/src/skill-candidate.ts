@@ -1,6 +1,11 @@
 import type { DistillerFactory } from "@loamlog/core";
 import { createRepresentativeDistiller } from "./base.js";
-import { getEnumValue, getString, getStringArray } from "./shared.js";
+import {
+  getEnumValue,
+  getString,
+  getStringArray,
+  REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+} from "./shared.js";
 
 const PROMOTION_TARGETS = [
   "codex_skill",
@@ -31,6 +36,11 @@ const SYSTEM_PROMPT = [
   "Optional fields: required_context, inputs, outputs, constraints, negative_cases, promotion_target.",
   "promotion_target must be one of codex_skill, agents_rule, prompt_template, runbook, project_doc when present.",
   "Each evidence_refs item must include message_id and excerpt.",
+  ...REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+  "Accept only cross-project, repeatable, multi-step AI collaboration workflows with a stable trigger and clear boundaries.",
+  "workflow_steps must describe a reusable process, not a single command or one repository implementation task.",
+  "Reject project-internal dogfooding flows, routine CI/build tasks, ordinary git or shell commands, bug fixes, and feature implementation steps.",
+  "Include negative_cases or constraints when evidence supports when the skill should not be used.",
 ].join("\n");
 
 const factory: DistillerFactory = () =>

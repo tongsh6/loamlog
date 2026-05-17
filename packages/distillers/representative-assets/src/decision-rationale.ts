@@ -1,6 +1,10 @@
 import type { DistillerFactory } from "@loamlog/core";
 import { createRepresentativeDistiller } from "./base.js";
-import { getString, getStringArray } from "./shared.js";
+import {
+  getString,
+  getStringArray,
+  REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+} from "./shared.js";
 
 interface DecisionRationalePayload extends Record<string, unknown> {
   decision: string;
@@ -18,6 +22,10 @@ const SYSTEM_PROMPT = [
   "Each item must include: decision, context, rationale, confidence, evidence_refs.",
   "Optional fields: options_considered, tradeoffs, constraints, revisit_trigger.",
   "Each evidence_refs item must include message_id and excerpt.",
+  ...REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+  "Accept only explicit decisions, deferrals, priority choices, or tradeoffs whose rationale is visible in evidence.",
+  "Reject statements that merely say a decision is needed, work is being done, a fallback was used for troubleshooting, or a task was completed.",
+  "Only include options_considered, tradeoffs, constraints, or revisit_trigger when those exact details are evidenced.",
 ].join("\n");
 
 const factory: DistillerFactory = () =>

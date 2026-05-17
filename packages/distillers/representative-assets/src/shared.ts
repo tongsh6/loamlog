@@ -6,6 +6,14 @@ export interface LlmEvidenceRef {
   excerpt: string;
 }
 
+export const REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS = [
+  "Only extract assets directly supported by the cited evidence text.",
+  "Do not infer owners, deadlines, tradeoffs, revisit triggers, audiences, business value, or implementation priority unless the evidence states them.",
+  "Do not extract assistant process logs, tool/action names, sink actions, completed work, routine execution records, old roadmap residue, or generic troubleshooting noise.",
+  "Do not turn a user request, a phase plan, a file-reading step, or a transient fallback into a reusable asset.",
+  "If the evidence is weak, ambiguous, already completed, or only supports a different asset type, return no item for it.",
+] as const;
+
 export function estimateTokens(content: string): number {
   return Math.max(1, Math.ceil(content.length / 4));
 }

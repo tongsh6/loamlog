@@ -1,6 +1,6 @@
 import type { DistillerFactory } from "@loamlog/core";
 import { createRepresentativeDistiller } from "./base.js";
-import { getString } from "./shared.js";
+import { getString, REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS } from "./shared.js";
 
 interface IdeaSeedPayload extends Record<string, unknown> {
   idea: string;
@@ -18,6 +18,9 @@ const SYSTEM_PROMPT = [
   "Each item must include: idea, context, confidence, evidence_refs.",
   "Optional fields: why_now, potential_value, target_audience, uncertainty, next_probe.",
   "Each evidence_refs item must include message_id and excerpt.",
+  ...REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
+  "Accept only new, expandable ideas, opportunities, hypotheses, or content seeds that can go into an idea inbox.",
+  "Reject ordinary summaries, user requests, current tasks, completed records, old roadmap items, implementation chores, and ideas inferred merely from reading a design document.",
 ].join("\n");
 
 const factory: DistillerFactory = () =>
