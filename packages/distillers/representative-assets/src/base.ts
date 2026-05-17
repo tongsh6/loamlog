@@ -8,6 +8,7 @@ import {
   asRecord,
   buildSessionPrompt,
   collectEvidence,
+  dedupeRepresentativeAssetDrafts,
   estimateTokens,
   extractJsonArray,
   getEvidenceRefs,
@@ -45,6 +46,7 @@ export function createRepresentativeDistiller<
 
       for await (const artifact of artifactStore.getUnprocessed(spec.id)) {
         try {
+          const artifactResults: DistillResultDraft<TPayload>[] = [];
           const prompt = buildSessionPrompt(artifact);
           const { provider, model } = llm.route({
             task: "extract",
@@ -86,7 +88,7 @@ export function createRepresentativeDistiller<
               continue;
             }
 
-            results.push({
+            artifactResults.push({
               type: spec.type,
               title,
               summary,
@@ -99,6 +101,8 @@ export function createRepresentativeDistiller<
               },
             });
           }
+
+          results.push(...dedupeRepresentativeAssetDrafts(artifactResults));
         } catch (error) {
           console.error(
             `[${spec.type}] session ${artifact.meta.session_id}: ${

@@ -30,13 +30,15 @@ describe("prd-draft distiller", () => {
                 id: "msg_1",
                 role: "user",
                 timestamp: "2026-05-01T00:00:00.000Z",
-                content: "We need to add dark mode support to the dashboard. Users complain about eye strain.",
+                content:
+                  "We need to add dark mode support to the dashboard. Users complain about eye strain.",
               },
               {
                 id: "msg_2",
                 role: "assistant",
                 timestamp: "2026-05-01T00:00:01.000Z",
-                content: "I'll use CSS custom properties and a theme context. We need to audit all hardcoded colors first.",
+                content:
+                  "I'll use CSS custom properties and a theme context. We need to audit all hardcoded colors first.",
               },
             ],
             redacted: { patterns_applied: [], redacted_count: 0 },
@@ -57,11 +59,18 @@ describe("prd-draft distiller", () => {
                   content: JSON.stringify([
                     {
                       title: "Dark Mode Support",
-                      problem: "Users experience eye strain when using the dashboard at night.",
-                      user_story: "As a night-time user, I want a dark color scheme so that I can use the dashboard comfortably in low-light environments.",
-                      proposed_solution: "Implement a theme system using CSS custom properties. Add a ThemeContext provider and a toggle in the user settings. Audit and replace all hardcoded color values with theme variables.",
-                      technical_notes: "Use prefers-color-scheme media query for auto-detection. Persist preference in localStorage.",
-                      dependencies: ["Audit all hardcoded colors in components", "Design dark color palette"],
+                      problem:
+                        "Users experience eye strain when using the dashboard at night.",
+                      user_story:
+                        "As a night-time user, I want a dark color scheme so that I can use the dashboard comfortably in low-light environments.",
+                      proposed_solution:
+                        "Implement a theme system using CSS custom properties. Add a ThemeContext provider and a toggle in the user settings. Audit and replace all hardcoded color values with theme variables.",
+                      technical_notes:
+                        "Use prefers-color-scheme media query for auto-detection. Persist preference in localStorage.",
+                      dependencies: [
+                        "Audit all hardcoded colors in components",
+                        "Design dark color palette",
+                      ],
                       acceptance_criteria: [
                         "Toggle switches between light and dark themes instantly",
                         "All text remains readable (WCAG AA contrast ratio)",
@@ -71,8 +80,14 @@ describe("prd-draft distiller", () => {
                       effort: "m",
                       confidence: 0.9,
                       evidence_refs: [
-                        { message_id: "msg_1", excerpt: "add dark mode support" },
-                        { message_id: "msg_2", excerpt: "CSS custom properties and a theme context" },
+                        {
+                          message_id: "msg_1",
+                          excerpt: "add dark mode support",
+                        },
+                        {
+                          message_id: "msg_2",
+                          excerpt: "CSS custom properties and a theme context",
+                        },
                       ],
                     },
                   ]),
@@ -84,10 +99,18 @@ describe("prd-draft distiller", () => {
         },
       },
       state: {
-        async get() { return undefined; },
-        async set() { return; },
-        async update() { return; },
-        async markProcessed() { return; },
+        async get() {
+          return undefined;
+        },
+        async set() {
+          return;
+        },
+        async update() {
+          return;
+        },
+        async markProcessed() {
+          return;
+        },
       },
     });
 
@@ -117,7 +140,10 @@ describe("prd-draft distiller", () => {
               provider: "opencode",
             },
             context: { cwd: "/tmp", worktree: "/tmp" },
-            time_range: { start: "2026-05-01T00:00:00.000Z", end: "2026-05-01T00:00:01.000Z" },
+            time_range: {
+              start: "2026-05-01T00:00:00.000Z",
+              end: "2026-05-01T00:00:01.000Z",
+            },
             session: {},
             messages: [
               {
@@ -130,7 +156,9 @@ describe("prd-draft distiller", () => {
             redacted: { patterns_applied: [], redacted_count: 0 },
           };
         },
-        query() { return emptyArtifacts(); },
+        query() {
+          return emptyArtifacts();
+        },
       },
       llm: {
         route() {
@@ -161,10 +189,18 @@ describe("prd-draft distiller", () => {
         },
       },
       state: {
-        async get() { return undefined; },
-        async set() { return; },
-        async update() { return; },
-        async markProcessed() { return; },
+        async get() {
+          return undefined;
+        },
+        async set() {
+          return;
+        },
+        async update() {
+          return;
+        },
+        async markProcessed() {
+          return;
+        },
       },
     });
 
@@ -189,7 +225,10 @@ describe("prd-draft distiller", () => {
               provider: "opencode",
             },
             context: { cwd: "/tmp", worktree: "/tmp" },
-            time_range: { start: "2026-05-01T00:00:00.000Z", end: "2026-05-01T00:00:01.000Z" },
+            time_range: {
+              start: "2026-05-01T00:00:00.000Z",
+              end: "2026-05-01T00:00:01.000Z",
+            },
             session: {},
             messages: [
               {
@@ -202,7 +241,9 @@ describe("prd-draft distiller", () => {
             redacted: { patterns_applied: [], redacted_count: 0 },
           };
         },
-        query() { return emptyArtifacts(); },
+        query() {
+          return emptyArtifacts();
+        },
       },
       llm: {
         route() {
@@ -213,7 +254,12 @@ describe("prd-draft distiller", () => {
               async complete() {
                 return {
                   content: JSON.stringify([
-                    { title: "Incomplete", problem: "", user_story: "", proposed_solution: "" },
+                    {
+                      title: "Incomplete",
+                      problem: "",
+                      user_story: "",
+                      proposed_solution: "",
+                    },
                     {
                       title: "Valid",
                       problem: "Real problem.",
@@ -234,15 +280,122 @@ describe("prd-draft distiller", () => {
         },
       },
       state: {
-        async get() { return undefined; },
-        async set() { return; },
-        async update() { return; },
-        async markProcessed() { return; },
+        async get() {
+          return undefined;
+        },
+        async set() {
+          return;
+        },
+        async update() {
+          return;
+        },
+        async markProcessed() {
+          return;
+        },
       },
     });
 
     assert.equal(outputs.length, 1);
     assert.equal(outputs[0].payload.title, "Valid");
+  });
+
+  test("skips drafts without valid evidence refs", async () => {
+    const plugin = factory();
+
+    const outputs = await plugin.run({
+      artifactStore: {
+        async *getUnprocessed() {
+          yield {
+            schema_version: "1.0",
+            meta: {
+              session_id: "ses_prd_4",
+              captured_at: "2026-05-01T00:00:00.000Z",
+              capture_trigger: "session.idle",
+              loam_version: "0.1.0",
+              provider: "opencode",
+            },
+            context: { cwd: "/tmp", worktree: "/tmp" },
+            time_range: {
+              start: "2026-05-01T00:00:00.000Z",
+              end: "2026-05-01T00:00:01.000Z",
+            },
+            session: {},
+            messages: [
+              {
+                id: "msg_1",
+                role: "user",
+                timestamp: "2026-05-01T00:00:00.000Z",
+                content:
+                  "The first message should not become fallback evidence.",
+              },
+            ],
+            redacted: { patterns_applied: [], redacted_count: 0 },
+          };
+        },
+        query() {
+          return emptyArtifacts();
+        },
+      },
+      llm: {
+        route() {
+          return {
+            model: "fake-model",
+            provider: {
+              id: "mock",
+              async complete() {
+                return {
+                  content: JSON.stringify([
+                    {
+                      title: "Unsupported Feature",
+                      problem: "The model did not cite a valid message.",
+                      user_story:
+                        "As a reviewer, I want unsupported PRDs skipped.",
+                      proposed_solution:
+                        "Require valid evidence_refs before output.",
+                      acceptance_criteria: ["No fallback evidence is used"],
+                      priority: "p2_medium",
+                      effort: "s",
+                      confidence: 0.8,
+                      evidence_refs: [
+                        { message_id: "missing", excerpt: "missing evidence" },
+                      ],
+                    },
+                    {
+                      title: "No Evidence Feature",
+                      problem: "The model omitted evidence refs.",
+                      user_story:
+                        "As a reviewer, I want missing evidence skipped.",
+                      proposed_solution: "Drop candidates without valid refs.",
+                      acceptance_criteria: ["No result is produced"],
+                      priority: "p2_medium",
+                      effort: "s",
+                      confidence: 0.7,
+                    },
+                  ]),
+                  tokens: { input: 10, output: 10 },
+                };
+              },
+            },
+          };
+        },
+      },
+      state: {
+        async get() {
+          return undefined;
+        },
+        async set() {
+          return;
+        },
+        async update() {
+          return;
+        },
+        async markProcessed() {
+          return;
+        },
+      },
+    });
+
+    assert.equal(outputs.length, 0);
   });
 });
 

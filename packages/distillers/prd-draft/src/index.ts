@@ -1,4 +1,10 @@
-import type { DistillResultDraft, DistillerFactory, DistillerRunInput, SessionArtifact } from "@loamlog/core";
+import type {
+  DistillEvidenceDraft,
+  DistillerFactory,
+  DistillerRunInput,
+  DistillResultDraft,
+  SessionArtifact,
+} from "@loamlog/core";
 import { createEvidence, defineDistiller } from "@loamlog/distiller-sdk";
 
 const DISTILLER_ID = "@loamlog/distiller-prd-draft";
@@ -34,16 +40,21 @@ interface PrdDraftPayload {
 }
 
 interface LlmEvidenceRef {
-  message_id: string;
-  excerpt: string;
+  message_id?: unknown;
+  excerpt?: unknown;
 }
 
 interface LlmPrdDraft extends PrdDraftPayload {
   confidence?: number;
-  evidence_refs?: LlmEvidenceRef[];
+  evidence_refs?: unknown;
 }
 
-const VALID_PRIORITIES = new Set(["p0_critical", "p1_high", "p2_medium", "p3_low"]);
+const VALID_PRIORITIES = new Set([
+  "p0_critical",
+  "p1_high",
+  "p2_medium",
+  "p3_low",
+]);
 const VALID_EFFORTS = new Set(["xs", "s", "m", "l", "xl"]);
 
 function estimateTokens(content: string): number {
@@ -51,10 +62,12 @@ function estimateTokens(content: string): number {
 }
 
 function buildPrompt(artifact: SessionArtifact): string {
-  const chunks = artifact.messages.map((message: SessionArtifact["messages"][number]) => {
-    const text = (message.content ?? "").slice(0, 1500);
-    return `[${message.id}] (${message.role}) ${text}`;
-  });
+  const chunks = artifact.messages.map(
+    (message: SessionArtifact["messages"][number]) => {
+      const text = (message.content ?? "").slice(0, 1500);
+      return `[${message.id}] (${message.role}) ${text}`;
+    },
+  );
 
   return [
     `session_id: ${artifact.meta.session_id}`,
@@ -111,16 +124,54 @@ function parsePrdDrafts(content: string): LlmPrdDraft[] {
     if (!item || typeof item !== "object") return false;
     const c = item as Record<string, unknown>;
     return (
-      typeof c.title === "string" && c.title.length > 0 &&
-      typeof c.problem === "string" && c.problem.length > 0 &&
-      typeof c.user_story === "string" && c.user_story.length > 0 &&
-      typeof c.proposed_solution === "string" && c.proposed_solution.length > 0
+      typeof c.title === "string" &&
+      c.title.length > 0 &&
+      typeof c.problem === "string" &&
+      c.problem.length > 0 &&
+      typeof c.user_story === "string" &&
+      c.user_story.length > 0 &&
+      typeof c.proposed_solution === "string" &&
+      c.proposed_solution.length > 0
     );
   });
 }
 
-function findMessage(artifact: SessionArtifact, messageId: string): SessionArtifact["messages"][number] | undefined {
-  return artifact.messages.find((m: SessionArtifact["messages"][number]) => m.id === messageId);
+function findMessage(
+  artifact: SessionArtifact,
+  messageId: string,
+): SessionArtifact["messages"][number] | undefined {
+  return artifact.messages.find(
+    (m: SessionArtifact["messages"][number]) => m.id === messageId,
+  );
+}
+
+function buildEvidence(
+  artifact: SessionArtifact,
+  refs: unknown,
+): DistillEvidenceDraft[] {
+  if (!Array.isArray(refs)) return [];
+  return refs
+    .map((ref) => {
+      if (!ref || typeof ref !== "object") {
+        return undefined;
+      }
+      const candidate = ref as LlmEvidenceRef;
+      if (
+        typeof candidate.message_id !== "string" ||
+        typeof candidate.excerpt !== "string"
+      ) {
+        return undefined;
+      }
+      const messageId = candidate.message_id.trim();
+      const excerpt = candidate.excerpt.trim();
+      if (!messageId || !excerpt) {
+        return undefined;
+      }
+      const message = findMessage(artifact, messageId);
+      if (!message) return undefined;
+      return createEvidence(artifact, message, excerpt);
+    })
+    .filter((item): item is DistillEvidenceDraft => Boolean(item));
 }
 
 const factory: DistillerFactory = () =>
@@ -130,73 +181,72 @@ const factory: DistillerFactory = () =>
     version: "0.1.0",
     supported_types: ["prd-draft"],
 
-    async run({ artifactStore, llm }: DistillerRunInput): Promise<DistillResultDraft<PrdDraftPayload>[]> {
+    async run({
+      artifactStore,
+      llm,
+    }: DistillerRunInput): Promise<DistillResultDraft<PrdDraftPayload>[]> {
       const results: DistillResultDraft<PrdDraftPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
         try {
           const prompt = buildPrompt(artifact);
-        const { provider, model } = llm.route({
-          task: "extract",
-          budget: "cheap",
-          input_tokens: estimateTokens(prompt),
-        });
-
-        const response = await provider.complete({
-          messages: [
-            { role: "system", content: SYSTEM_PROMPT },
-            { role: "user", content: prompt },
-          ],
-          model,
-          temperature: 0.3,
-          response_format: "json",
-        });
-
-        const parsed = parsePrdDrafts(response.content);
-        for (const draft of parsed) {
-          const evidence = (draft.evidence_refs ?? [])
-            .map((ref) => {
-              const message = findMessage(artifact, ref.message_id);
-              if (!message) return undefined;
-              return createEvidence(artifact, message, ref.excerpt);
-            })
-            .filter((item): item is DistillResultDraft["evidence"][number] => Boolean(item));
-
-          if (evidence.length === 0) {
-            const fallback = artifact.messages[0];
-            if (!fallback) continue;
-            evidence.push(createEvidence(artifact, fallback, fallback.content ?? draft.title));
-          }
-
-          const priority = normalizePriority(draft.priority ?? "p2_medium");
-          const effort = normalizeEffort(draft.effort ?? "m");
-
-          const payload: PrdDraftPayload = {
-            title: draft.title.trim(),
-            problem: draft.problem.trim(),
-            user_story: draft.user_story.trim(),
-            proposed_solution: draft.proposed_solution.trim(),
-            technical_notes: draft.technical_notes?.trim(),
-            dependencies: Array.isArray(draft.dependencies)
-              ? draft.dependencies.map((d) => String(d).trim()).filter(Boolean)
-              : undefined,
-            acceptance_criteria: Array.isArray(draft.acceptance_criteria)
-              ? draft.acceptance_criteria.map((a) => String(a).trim()).filter(Boolean)
-              : [],
-            priority,
-            effort,
-          };
-
-          results.push({
-            type: "prd-draft",
-            title: draft.title.trim().slice(0, 100),
-            summary: `[${priority}/${effort}] ${draft.problem.trim().slice(0, 120)}`,
-            confidence: typeof draft.confidence === "number" ? draft.confidence : 0.7,
-            tags: ["prd", priority, effort],
-            payload,
-            evidence,
+          const { provider, model } = llm.route({
+            task: "extract",
+            budget: "cheap",
+            input_tokens: estimateTokens(prompt),
           });
-        }
+
+          const response = await provider.complete({
+            messages: [
+              { role: "system", content: SYSTEM_PROMPT },
+              { role: "user", content: prompt },
+            ],
+            model,
+            temperature: 0.3,
+            response_format: "json",
+          });
+
+          const parsed = parsePrdDrafts(response.content);
+          for (const draft of parsed) {
+            const evidence = buildEvidence(artifact, draft.evidence_refs);
+            if (evidence.length === 0) {
+              continue;
+            }
+
+            const priority = normalizePriority(draft.priority ?? "p2_medium");
+            const effort = normalizeEffort(draft.effort ?? "m");
+
+            const payload: PrdDraftPayload = {
+              title: draft.title.trim(),
+              problem: draft.problem.trim(),
+              user_story: draft.user_story.trim(),
+              proposed_solution: draft.proposed_solution.trim(),
+              technical_notes: draft.technical_notes?.trim(),
+              dependencies: Array.isArray(draft.dependencies)
+                ? draft.dependencies
+                    .map((d) => String(d).trim())
+                    .filter(Boolean)
+                : undefined,
+              acceptance_criteria: Array.isArray(draft.acceptance_criteria)
+                ? draft.acceptance_criteria
+                    .map((a) => String(a).trim())
+                    .filter(Boolean)
+                : [],
+              priority,
+              effort,
+            };
+
+            results.push({
+              type: "prd-draft",
+              title: draft.title.trim().slice(0, 100),
+              summary: `[${priority}/${effort}] ${draft.problem.trim().slice(0, 120)}`,
+              confidence:
+                typeof draft.confidence === "number" ? draft.confidence : 0.7,
+              tags: ["prd", priority, effort],
+              payload,
+              evidence,
+            });
+          }
         } catch (error) {
           console.error(
             `[prd-draft] session ${artifact.meta.session_id}: ${error instanceof Error ? error.message : String(error)}`,

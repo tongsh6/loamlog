@@ -1,9 +1,10 @@
 import assert from "node:assert/strict";
 import { describe, test } from "node:test";
-import type { SessionArtifact } from "@loamlog/core";
+import type { DistillResultDraft, SessionArtifact } from "@loamlog/core";
 import {
   buildSessionPrompt,
   collectEvidence,
+  dedupeRepresentativeAssetDrafts,
   extractJsonArray,
   normalizeConfidence,
   shouldKeepRepresentativeAsset,
@@ -33,6 +34,126 @@ describe("representative asset shared helpers", () => {
     const prompt = buildSessionPrompt(makeArtifact());
     assert.match(prompt, /session_id: ses_rep_1/);
     assert.match(prompt, /\[msg_1\] \(user\)/);
+  });
+
+  test("dedupes same-topic representative asset candidates", () => {
+    const drafts = dedupeRepresentativeAssetDrafts([
+      makeDraft({
+        title: "Route Signal Gate inputs into typed distillers",
+        confidence: 0.72,
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "route signals into representative asset distillers",
+          },
+        ],
+      }),
+      makeDraft({
+        title: "Signal Gate routing for typed distillers",
+        confidence: 0.91,
+        tags: ["idea-seed", "signal-gate"],
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_2",
+            excerpt: "Signal Gate routing",
+          },
+        ],
+      }),
+    ]);
+
+    assert.equal(drafts.length, 1);
+    assert.equal(drafts[0].title, "Signal Gate routing for typed distillers");
+    assert.equal(drafts[0].confidence, 0.91);
+    assert.deepEqual(drafts[0].tags, ["idea-seed", "signal-gate"]);
+    assert.deepEqual(
+      drafts[0].evidence.map((evidence) => evidence.message_id),
+      ["msg_1", "msg_2"],
+    );
+  });
+
+  test("dedupes Chinese candidates with similar titles", () => {
+    const drafts = dedupeRepresentativeAssetDrafts([
+      makeDraft({
+        title: "信号门路由代表性资产",
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "信号门路由代表性资产",
+          },
+        ],
+      }),
+      makeDraft({
+        title: "信号门路由资产候选",
+        confidence: 0.85,
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_2",
+            excerpt: "信号门路由资产候选",
+          },
+        ],
+      }),
+    ]);
+
+    assert.equal(drafts.length, 1);
+    assert.equal(drafts[0].title, "信号门路由资产候选");
+  });
+
+  test("does not merge distinct representative asset topics", () => {
+    const drafts = dedupeRepresentativeAssetDrafts([
+      makeDraft({
+        title: "Signal Gate routing for typed distillers",
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "Signal Gate routing",
+          },
+        ],
+      }),
+      makeDraft({
+        title: "Manual review CLI for accepted signals",
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_2",
+            excerpt: "Manual review CLI",
+          },
+        ],
+      }),
+    ]);
+
+    assert.equal(drafts.length, 2);
+  });
+
+  test("does not merge distinct topics from the same long message", () => {
+    const drafts = dedupeRepresentativeAssetDrafts([
+      makeDraft({
+        title: "Signal Gate routing for typed distillers",
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "Signal Gate routing",
+          },
+        ],
+      }),
+      makeDraft({
+        title: "Manual review CLI for accepted signals",
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "Manual review CLI",
+          },
+        ],
+      }),
+    ]);
+
+    assert.equal(drafts.length, 2);
   });
 
   test("shared post-filter rejects assistant process log evidence", () => {
@@ -216,6 +337,72 @@ describe("representative asset shared helpers", () => {
     );
   });
 
+  test("shared post-filter rejects old roadmap residue as idea seeds", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "idea-seed",
+        title: "issue-candidate / prd-draft distiller",
+        summary: "Revive the old issue-candidate and prd-draft roadmap item.",
+        payload: {
+          idea: "issue-candidate / prd-draft distiller",
+          context: "The session mentioned an old roadmap item.",
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "issue-candidate / prd-draft distiller",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "This is old roadmap residue: issue-candidate / prd-draft distiller.",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
+  test("shared post-filter rejects stale phase roadmap as follow-up work", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "follow-up-work-item",
+        title: "工具专属 AI 规则文件 Phase 4",
+        summary: "Continue a historical Phase 4 plan.",
+        payload: {
+          action: "工具专属 AI 规则文件 Phase 4",
+          reason: "Historical plan signal from the session.",
+          acceptance: ["Phase 4 plan is restarted"],
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "工具专属 AI 规则文件 Phase 4",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content: "工具专属 AI 规则文件 Phase 4 是历史计划信号。",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
   test("shared post-filter rejects troubleshooting fallback as decision rationale", () => {
     assert.equal(
       shouldKeepRepresentativeAsset({
@@ -247,6 +434,76 @@ describe("representative asset shared helpers", () => {
         }),
       }),
       false,
+    );
+  });
+
+  test("shared post-filter rejects old roadmap decision without explicit decision language", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "decision-rationale",
+        title: "MCP API gateway",
+        summary: "The session mentioned MCP API gateway work.",
+        payload: {
+          decision: "MCP API gateway",
+          context: "The session mentioned the old roadmap item.",
+          rationale: "The text only says the item exists.",
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "MCP API gateway",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content: "MCP API gateway is listed in the historical plan.",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
+  test("shared post-filter keeps explicit deferral decisions about old roadmap topics", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "decision-rationale",
+        title: "Defer MCP API gateway implementation",
+        summary:
+          "Decision: defer MCP API gateway because cross-asset quality is the current constraint.",
+        payload: {
+          decision: "Defer MCP API gateway implementation",
+          context: "MCP API gateway was considered against current priorities.",
+          rationale:
+            "Defer because cross-asset quality is the current constraint.",
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt:
+              "Decide to defer MCP API gateway because cross-asset quality is the current constraint.",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "Decide to defer MCP API gateway because cross-asset quality is the current constraint.",
+            },
+          ],
+        }),
+      }),
+      true,
     );
   });
 
@@ -314,6 +571,27 @@ describe("representative asset shared helpers", () => {
     );
   });
 });
+
+function makeDraft(
+  overrides: Partial<DistillResultDraft<Record<string, unknown>>> = {},
+): DistillResultDraft<Record<string, unknown>> {
+  return {
+    type: "idea-seed",
+    title: "Signal Gate routing",
+    summary: "Route classified signals into typed distillers.",
+    confidence: 0.7,
+    tags: ["idea-seed"],
+    payload: { idea: "Signal Gate routing" },
+    evidence: [
+      {
+        session_id: "ses_rep_1",
+        message_id: "msg_1",
+        excerpt: "Signal Gate routing",
+      },
+    ],
+    ...overrides,
+  };
+}
 
 function makeArtifact(
   overrides: Partial<SessionArtifact> = {},

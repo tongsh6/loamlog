@@ -1,4 +1,8 @@
-import type { DistillEvidenceDraft, SessionArtifact } from "@loamlog/core";
+import type {
+  DistillEvidenceDraft,
+  DistillResultDraft,
+  SessionArtifact,
+} from "@loamlog/core";
 import { createEvidence } from "@loamlog/distiller-sdk";
 
 export interface LlmEvidenceRef {
@@ -172,6 +176,157 @@ export function shouldKeepRepresentativeAsset(input: {
   }
 }
 
+const DUPLICATE_TOPIC_THRESHOLD = 0.6;
+
+const TOPIC_STOPWORDS = new Set([
+  "a",
+  "an",
+  "and",
+  "asset",
+  "assets",
+  "candidate",
+  "candidates",
+  "for",
+  "from",
+  "in",
+  "input",
+  "inputs",
+  "into",
+  "item",
+  "items",
+  "of",
+  "on",
+  "output",
+  "outputs",
+  "representative",
+  "the",
+  "to",
+  "with",
+]);
+
+export function dedupeRepresentativeAssetDrafts<T>(
+  drafts: DistillResultDraft<T>[],
+): DistillResultDraft<T>[] {
+  const groups: DistillResultDraft<T>[][] = [];
+
+  for (const draft of drafts) {
+    const existing = groups.find((group) =>
+      sameRepresentativeAssetTopic(group[0], draft),
+    );
+    if (existing) {
+      existing.push(draft);
+      continue;
+    }
+    groups.push([draft]);
+  }
+
+  return groups.map((group) => mergeRepresentativeAssetDrafts(group));
+}
+
+function sameRepresentativeAssetTopic<T>(
+  a: DistillResultDraft<T>,
+  b: DistillResultDraft<T>,
+): boolean {
+  if (a.type !== b.type) return false;
+
+  const aEvidenceKeys = new Set(
+    a.evidence.map(
+      (evidence) =>
+        `${evidence.session_id}:${evidence.message_id}:${normalizeText(evidence.excerpt)}`,
+    ),
+  );
+  if (
+    b.evidence.some((evidence) =>
+      aEvidenceKeys.has(
+        `${evidence.session_id}:${evidence.message_id}:${normalizeText(evidence.excerpt)}`,
+      ),
+    )
+  ) {
+    return true;
+  }
+
+  return (
+    representativeTopicSimilarity(a.title, b.title) >= DUPLICATE_TOPIC_THRESHOLD
+  );
+}
+
+function mergeRepresentativeAssetDrafts<T>(
+  group: DistillResultDraft<T>[],
+): DistillResultDraft<T> {
+  const sorted = [...group].sort((a, b) => b.confidence - a.confidence);
+  const primary = sorted[0];
+  return {
+    ...primary,
+    tags: Array.from(new Set(group.flatMap((draft) => draft.tags))),
+    evidence: mergeDraftEvidence(group),
+  };
+}
+
+function mergeDraftEvidence<T>(
+  group: DistillResultDraft<T>[],
+): DistillEvidenceDraft[] {
+  const seen = new Set<string>();
+  const merged: DistillEvidenceDraft[] = [];
+
+  for (const draft of group) {
+    for (const evidence of draft.evidence) {
+      const key = `${evidence.session_id}:${evidence.message_id}:${evidence.excerpt}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      merged.push(evidence);
+    }
+  }
+
+  return merged;
+}
+
+function representativeTopicSimilarity(a: string, b: string): number {
+  const aTokens = new Set(representativeTopicTokens(a));
+  const bTokens = new Set(representativeTopicTokens(b));
+  if (aTokens.size === 0 || bTokens.size === 0) return 0;
+  let shared = 0;
+  for (const token of aTokens) {
+    if (bTokens.has(token)) shared += 1;
+  }
+  const union = aTokens.size + bTokens.size - shared;
+  const jaccard = union > 0 ? shared / union : 0;
+  if (jaccard >= DUPLICATE_TOPIC_THRESHOLD) return jaccard;
+
+  const aCjk = representativeCjkBigrams(a);
+  const bCjk = representativeCjkBigrams(b);
+  if (aCjk.length === 0 || bCjk.length === 0) return jaccard;
+  const bCjkSet = new Set(bCjk);
+  const sharedCjk = new Set(aCjk.filter((token) => bCjkSet.has(token))).size;
+  const smallerCjkSetSize = Math.min(new Set(aCjk).size, new Set(bCjk).size);
+  if (sharedCjk >= 4 && sharedCjk / smallerCjkSetSize >= 0.55) {
+    return DUPLICATE_TOPIC_THRESHOLD;
+  }
+
+  return jaccard;
+}
+
+function representativeTopicTokens(text: string): string[] {
+  const normalized = text.toLowerCase().trim();
+  const latin = (normalized.match(/[a-z0-9]+/g) ?? [])
+    .map((token) =>
+      token.length > 4 && token.endsWith("s") ? token.slice(0, -1) : token,
+    )
+    .filter((token) => token.length >= 3 && !TOPIC_STOPWORDS.has(token));
+  return [...latin, ...representativeCjkBigrams(normalized)];
+}
+
+function representativeCjkBigrams(text: string): string[] {
+  const cjkChars = Array.from(
+    text.toLowerCase().matchAll(/[\p{Script=Han}]/gu),
+    (match) => match[0],
+  );
+  const bigrams: string[] = [];
+  for (let i = 0; i < cjkChars.length - 1; i++) {
+    bigrams.push(`${cjkChars[i]}${cjkChars[i + 1]}`);
+  }
+  return bigrams;
+}
+
 function keepFollowUpWorkItem(
   payload: Record<string, unknown>,
   combinedText: string,
@@ -197,6 +352,12 @@ function keepDecisionRationale(
   const rationale = normalizeText(String(payload.rationale ?? ""));
   if (!decision || !rationale) return false;
   if (isTroubleshootingDuplicateTopic(combinedText)) {
+    return false;
+  }
+  if (
+    isOldRoadmapResidue(combinedText) &&
+    !hasDecisionSupportLanguage(combinedText)
+  ) {
     return false;
   }
   if (
@@ -308,9 +469,18 @@ function hasDoneState(text: string): boolean {
 
 function isOldRoadmapResidue(text: string): boolean {
   return (
-    /\b(old roadmap|roadmap residue|legacy roadmap|mcp api gateway|issue-candidate|prd-draft)\b/.test(
+    /\b(old roadmap|roadmap residue|legacy roadmap|legacy plan|stale plan|obsolete plan|golden user testing|mcp api gateway|issue[- ]candidate|prd[- ]draft)\b/.test(
       text,
-    ) || /旧路线图|历史计划|过时/.test(text)
+    ) ||
+    /\b(tool[- ]specific ai rules?|ai rules? files?)\b.*\bphase 4\b/.test(
+      text,
+    ) ||
+    /\bphase 4\b.*\b(tool[- ]specific ai rules?|ai rules? files?)\b/.test(
+      text,
+    ) ||
+    /旧路线图|历史计划|过时|过期计划|历史方向|黄金用户测试|工具专属\s*ai\s*规则文件|工具专属.*规则文件.*phase 4|phase 4.*工具专属.*规则文件/i.test(
+      text,
+    )
   );
 }
 

@@ -1,4 +1,10 @@
-import type { DistillResultDraft, DistillerFactory, DistillerRunInput, SessionArtifact } from "@loamlog/core";
+import type {
+  DistillEvidenceDraft,
+  DistillerFactory,
+  DistillerRunInput,
+  DistillResultDraft,
+  SessionArtifact,
+} from "@loamlog/core";
 import { createEvidence, defineDistiller } from "@loamlog/distiller-sdk";
 
 const DISTILLER_ID = "@loamlog/distiller-pitfall-card";
@@ -19,13 +25,13 @@ interface PitfallCardPayload {
 }
 
 interface LlmEvidenceRef {
-  message_id: string;
-  excerpt: string;
+  message_id?: unknown;
+  excerpt?: unknown;
 }
 
 interface LlmPitfall extends PitfallCardPayload {
   confidence?: number;
-  evidence_refs?: LlmEvidenceRef[];
+  evidence_refs?: unknown;
 }
 
 function estimateTokens(content: string): number {
@@ -33,10 +39,12 @@ function estimateTokens(content: string): number {
 }
 
 function buildPrompt(artifact: SessionArtifact): string {
-  const chunks = artifact.messages.map((message: SessionArtifact["messages"][number]) => {
-    const text = (message.content ?? "").slice(0, 1200);
-    return `[${message.id}] (${message.role}) ${text}`;
-  });
+  const chunks = artifact.messages.map(
+    (message: SessionArtifact["messages"][number]) => {
+      const text = (message.content ?? "").slice(0, 1200);
+      return `[${message.id}] (${message.role}) ${text}`;
+    },
+  );
 
   return [
     `session_id: ${artifact.meta.session_id}`,
@@ -44,7 +52,7 @@ function buildPrompt(artifact: SessionArtifact): string {
     ...chunks,
     "",
     "Output format:",
-    "[{\"problem\":\"...\",\"root_cause\":\"...\",\"solution\":\"...\",\"prevention\":\"...\",\"category\":\"...\",\"confidence\":0.0,\"evidence_refs\":[{\"message_id\":\"...\",\"excerpt\":\"...\"}]}]",
+    '[{"problem":"...","root_cause":"...","solution":"...","prevention":"...","category":"...","confidence":0.0,"evidence_refs":[{"message_id":"...","excerpt":"..."}]}]',
   ].join("\n");
 }
 
@@ -85,8 +93,44 @@ function parsePitfalls(content: string): LlmPitfall[] {
   });
 }
 
-function findMessage(artifact: SessionArtifact, messageId: string): SessionArtifact["messages"][number] | undefined {
-  return artifact.messages.find((message: SessionArtifact["messages"][number]) => message.id === messageId);
+function findMessage(
+  artifact: SessionArtifact,
+  messageId: string,
+): SessionArtifact["messages"][number] | undefined {
+  return artifact.messages.find(
+    (message: SessionArtifact["messages"][number]) => message.id === messageId,
+  );
+}
+
+function buildEvidence(
+  artifact: SessionArtifact,
+  refs: unknown,
+): DistillEvidenceDraft[] {
+  if (!Array.isArray(refs)) return [];
+  return refs
+    .map((ref) => {
+      if (!ref || typeof ref !== "object") {
+        return undefined;
+      }
+      const candidate = ref as LlmEvidenceRef;
+      if (
+        typeof candidate.message_id !== "string" ||
+        typeof candidate.excerpt !== "string"
+      ) {
+        return undefined;
+      }
+      const messageId = candidate.message_id.trim();
+      const excerpt = candidate.excerpt.trim();
+      if (!messageId || !excerpt) {
+        return undefined;
+      }
+      const message = findMessage(artifact, messageId);
+      if (!message) {
+        return undefined;
+      }
+      return createEvidence(artifact, message, excerpt);
+    })
+    .filter((item): item is DistillEvidenceDraft => Boolean(item));
 }
 
 const factory: DistillerFactory = () =>
@@ -96,7 +140,10 @@ const factory: DistillerFactory = () =>
     version: "0.1.0",
     supported_types: ["pitfall-card"],
 
-    async run({ artifactStore, llm }: DistillerRunInput): Promise<DistillResultDraft<PitfallCardPayload>[]> {
+    async run({
+      artifactStore,
+      llm,
+    }: DistillerRunInput): Promise<DistillResultDraft<PitfallCardPayload>[]> {
       const results: DistillResultDraft<PitfallCardPayload>[] = [];
 
       for await (const artifact of artifactStore.getUnprocessed(DISTILLER_ID)) {
@@ -120,22 +167,9 @@ const factory: DistillerFactory = () =>
 
           const parsed = parsePitfalls(response.content);
           for (const pitfall of parsed) {
-            const evidence = (pitfall.evidence_refs ?? [])
-              .map((ref) => {
-                const message = findMessage(artifact, ref.message_id);
-                if (!message) {
-                  return undefined;
-                }
-                return createEvidence(artifact, message, ref.excerpt);
-              })
-              .filter((item): item is DistillResultDraft["evidence"][number] => Boolean(item));
-
+            const evidence = buildEvidence(artifact, pitfall.evidence_refs);
             if (evidence.length === 0) {
-              const fallbackMessage = artifact.messages[0];
-              if (!fallbackMessage) {
-                continue;
-              }
-              evidence.push(createEvidence(artifact, fallbackMessage, fallbackMessage.content ?? pitfall.problem));
+              continue;
             }
 
             const payload: PitfallCardPayload = {
@@ -151,7 +185,10 @@ const factory: DistillerFactory = () =>
               type: "pitfall-card",
               title: pitfall.problem.slice(0, 80),
               summary: `${pitfall.problem} -> ${pitfall.solution}`,
-              confidence: typeof pitfall.confidence === "number" ? pitfall.confidence : 0.7,
+              confidence:
+                typeof pitfall.confidence === "number"
+                  ? pitfall.confidence
+                  : 0.7,
               tags: ["pitfall", pitfall.category],
               payload,
               evidence,
