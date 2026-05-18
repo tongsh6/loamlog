@@ -14,7 +14,15 @@ describe("idea-seed distiller", () => {
           next_probe: "Try extracting idea seeds from three recent sessions.",
           confidence: 0.86,
           evidence_refs: [
-            { message_id: "msg_1", excerpt: "很多想法或者经验要沉淀" },
+            {
+              message_id: "msg_1",
+              excerpt: "很多想法或者经验要沉淀",
+            },
+            {
+              message_id: "msg_1",
+              excerpt:
+                "Next probe: try extracting idea seeds from three recent sessions.",
+            },
           ],
         },
       ]),

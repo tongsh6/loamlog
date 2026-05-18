@@ -63,6 +63,9 @@ export function collectEvidence(
         (item) => item.id === ref.message_id,
       );
       if (!message) return undefined;
+      if (!isExcerptAnchoredInMessage(ref.excerpt, message.content ?? "")) {
+        return undefined;
+      }
       return createEvidence(artifact, message, ref.excerpt);
     })
     .filter((item): item is DistillEvidenceDraft => Boolean(item));
@@ -135,8 +138,12 @@ export function shouldKeepRepresentativeAsset(input: {
   evidence: DistillEvidenceDraft[];
   artifact: SessionArtifact;
 }): boolean {
-  const evidenceText = evidenceSourceText(input.artifact, input.evidence);
-  const normalizedEvidenceText = normalizeText(evidenceText);
+  const evidenceContextText = evidenceContextSourceText(
+    input.artifact,
+    input.evidence,
+  );
+  const citedEvidenceText = citedEvidenceSourceText(input.evidence);
+  const normalizedCitedEvidenceText = normalizeText(citedEvidenceText);
   const assetText = normalizeText(
     [
       input.title,
@@ -146,16 +153,26 @@ export function shouldKeepRepresentativeAsset(input: {
       ),
     ].join(" "),
   );
-  const combinedText = `${assetText} ${normalizeText(evidenceText)}`;
+  const combinedText = `${assetText} ${normalizeText(evidenceContextText)}`;
 
-  if (isAssistantProcessLog(input.artifact, input.evidence, evidenceText)) {
+  if (
+    isAssistantProcessLog(
+      input.artifact,
+      input.evidence,
+      evidenceContextText,
+    )
+  ) {
     return false;
   }
   if (isActionShellTitle(input.title)) {
     return false;
   }
   if (
-    !hasSupportedHighRiskPayloadFields(input.type, input.payload, evidenceText)
+    !hasSupportedHighRiskPayloadFields(
+      input.type,
+      input.payload,
+      citedEvidenceText,
+    )
   ) {
     return false;
   }
@@ -165,7 +182,7 @@ export function shouldKeepRepresentativeAsset(input: {
       return keepFollowUpWorkItem(
         input.payload,
         combinedText,
-        normalizedEvidenceText,
+        normalizedCitedEvidenceText,
       );
     case "idea-seed":
       return (
@@ -667,7 +684,11 @@ function isProjectInternalWorkflow(text: string): boolean {
   );
 }
 
-function evidenceSourceText(
+function citedEvidenceSourceText(evidence: DistillEvidenceDraft[]): string {
+  return evidence.map((item) => item.excerpt).join(" ");
+}
+
+function evidenceContextSourceText(
   artifact: SessionArtifact,
   evidence: DistillEvidenceDraft[],
 ): string {
@@ -690,4 +711,10 @@ function flattenPayloadText(value: unknown): string[] {
 
 function normalizeText(value: string): string {
   return value.toLowerCase().replace(/\s+/g, " ").trim();
+}
+
+function isExcerptAnchoredInMessage(excerpt: string, messageContent: string) {
+  const normalizedExcerpt = normalizeText(excerpt);
+  if (!normalizedExcerpt) return false;
+  return normalizeText(messageContent).includes(normalizedExcerpt);
 }

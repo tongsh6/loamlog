@@ -30,6 +30,17 @@ describe("representative asset shared helpers", () => {
     assert.equal(evidence.length, 0);
   });
 
+  test("collectEvidence drops excerpts not anchored in the source message", () => {
+    const artifact = makeArtifact();
+    const evidence = collectEvidence(artifact, [
+      {
+        message_id: "msg_1",
+        excerpt: "invented cited evidence that is not in the message",
+      },
+    ]);
+    assert.equal(evidence.length, 0);
+  });
+
   test("buildSessionPrompt includes message ids and roles", () => {
     const prompt = buildSessionPrompt(makeArtifact());
     assert.match(prompt, /session_id: ses_rep_1/);
@@ -298,7 +309,8 @@ describe("representative asset shared helpers", () => {
           {
             session_id: "ses_rep_1",
             message_id: "msg_1",
-            excerpt: "后续需要复评代表性资产小样本",
+            excerpt:
+              "后续需要复评代表性资产小样本，并记录每类资产 >=3 比例，更新 dogfooding 报告。",
           },
         ],
         artifact: makeArtifact({
@@ -355,6 +367,40 @@ describe("representative asset shared helpers", () => {
     );
   });
 
+  test("shared post-filter does not support high-risk fields from uncited message text", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "idea-seed",
+        title: "Capture ideas from AI sessions",
+        summary: "Capture ideas before they are forgotten.",
+        payload: {
+          idea: "Capture ideas from AI sessions",
+          context: "AI sessions contain ideas that can be forgotten.",
+          target_audience: "Enterprise admins",
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "AI sessions contain ideas that can be forgotten.",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "AI sessions contain ideas that can be forgotten. A separate note mentions enterprise admins for another product track.",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
   test("shared post-filter keeps supported optional field details", () => {
     assert.equal(
       shouldKeepRepresentativeAsset({
@@ -390,6 +436,41 @@ describe("representative asset shared helpers", () => {
         }),
       }),
       true,
+    );
+  });
+
+  test("shared post-filter requires cited excerpt to state open follow-up work", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "follow-up-work-item",
+        title: "Rerun representative asset review",
+        summary:
+          "The same message mentions a future rerun, but the cited excerpt does not.",
+        payload: {
+          action: "Rerun representative asset review",
+          reason: "The review quality was low.",
+          acceptance: ["Review rerun results are recorded"],
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "manual review showed low quality",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "The manual review showed low quality. Next step: rerun representative asset review.",
+            },
+          ],
+        }),
+      }),
+      false,
     );
   });
 
