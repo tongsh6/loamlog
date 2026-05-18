@@ -6,8 +6,8 @@
 
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
-| **代码编译** | ✅ 通过 | 2026-05-18 `pnpm run build` 全绿，包含 Signal Gate rerun CLI、post-capture auto job、evidence-support verifier、follow-up open-work gate 与代表性资产字段级 evidence gate |
-| **测试** | ✅ 通过 | 2026-05-18 复跑 `pnpm run test` 全绿，283 pass / 0 fail；代表性资产 focused tests：43 pass / 0 fail；evidence-support verifier focused tests：4 pass / 0 fail |
+| **代码编译** | ✅ 通过 | 2026-05-19 `pnpm run build` 全绿，包含 Signal Gate rerun CLI、post-capture auto job、evidence-support verifier、follow-up open-work gate、代表性资产字段级 evidence gate 与 cited evidence hardening |
+| **测试** | ✅ 通过 | 2026-05-19 复跑 `pnpm run test` 全绿，286 pass / 0 fail；代表性资产 focused tests：46 pass / 0 fail；evidence-support verifier focused tests：4 pass / 0 fail |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
 | **下一道门禁** | Distiller Repair + Re-review | Signal Gate 入口已补齐；不再扩大样本，下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、duplicate-topic / old-roadmap 过滤层，并小批量复评 |
@@ -23,7 +23,7 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-18T15-55-27Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0；复扫对比 `2026-05-18T15-55-04Z`，0 fixed / 0 still present / 0 new
+- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-18T16-17-07Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0；复扫对比 `2026-05-18T16-13-22Z`，0 fixed / 0 still present / 0 new
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -120,6 +120,7 @@
 | Evidence-first alignment v0.7 | ✅ 已落成 | 2026-05-17 统一内置文档类 distiller 的 evidence 策略：`prd-draft` / `pitfall-card` 不再在 invalid / missing `evidence_refs` 时 fallback 到首条 message，避免无证据资产进入 Cross-Asset Dogfooding；focused tests 覆盖 invalid refs 与 omitted refs |
 | Follow-up open-work gate v0.8 | ✅ 已落成 | 2026-05-18 为 `follow-up-work-item` 增加确定性 open-work evidence gate：候选不仅要有 action / reason / acceptance，还要求 cited evidence 明确包含 future / pending / blocked / next-step / still-needs-follow-up 等开放工作信号；无开放工作证据的风险、经验、排障、review-only 记录或执行记录不再被 LLM payload 包装成后续待办；focused tests 覆盖英文拒绝、review-only 拒绝、中文保留和 distiller run path |
 | Field evidence gate v0.9 | ✅ 已落成 | 2026-05-18 为 5 类代表性资产共享 post-filter 增加高风险字段 evidence 支撑检查：`idea-seed` 的 audience / next_probe 等、`follow-up-work-item` 的 priority / due / acceptance 等、`decision-rationale` 的 options / tradeoffs / constraints / revisit_trigger、`practice-pitfall` 的 symptom / root_cause / prevention、`skill-candidate` 的 required_context / inputs / outputs / constraints / negative_cases 均不得无证据扩写；设计记录见 `tasks/2026-05-18-representative-field-evidence-gate/plan.md` |
+| Cited evidence hardening v0.10 | ✅ 已落成 | 2026-05-19 收紧代表性资产字段级 evidence gate：`collectEvidence` 会丢弃无法在源 message 中定位的 excerpt；高风险字段支撑和 `follow-up-work-item` open-work 判定只读取 anchored cited `evidence.excerpt`，不再借用同一条 source message 的未引用文本；全文 message 仅保留给 assistant-process / noise 类上下文过滤。设计记录见 `tasks/2026-05-19-cited-evidence-gate-hardening/plan.md` |
 
 ### 2.ab 2026-05-18 DAG refined lineage 修复
 
