@@ -1,0 +1,55 @@
+{
+  "runId": "2026-05-18T16-46-51Z",
+  "startedAt": "2026-05-18T16:46:51.210Z",
+  "completedAt": "2026-05-18T16:47:05.237Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "612b563",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "ackages/distill/src/dag-runner.test.ts",
+      "ackages/distill/src/dag-runner.ts",
+      "ackages/distill/src/signal-routing.test.ts",
+      "ackages/distill/src/signal-routing.ts",
+      "AIEF/reports/static-scan/2026-05-18T16-45-54Z/",
+      "tasks/2026-05-19-signal-consumption-lineage/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}

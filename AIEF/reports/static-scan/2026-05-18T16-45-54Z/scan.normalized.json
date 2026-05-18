@@ -1,0 +1,34 @@
+{
+  "findings": [
+    {
+      "id": "biome:lint/style/noNonNullAssertion:packages/distill/src/dag-runner.test.ts:512:7:i6asde",
+      "tool": "biome",
+      "ruleId": "lint/style/noNonNullAssertion",
+      "severity": "low",
+      "category": "lint",
+      "file": "packages/distill/src/dag-runner.test.ts",
+      "line": 512,
+      "column": 7,
+      "message": "Forbidden non-null assertion.",
+      "evidence": "{\"severity\":\"warning\",\"message\":\"Forbidden non-null assertion.\",\"category\":\"lint/style/noNonNullAssertion\",\"location\":{\"path\":\"packages/distill/src/dag-runner.test.ts\",\"start\":{\"line\":512,\"column\":7},\"end\":{\"line\":512,\"column\":36}},\"advices\":[]}",
+      "inChangedFile": false,
+      "confidence": 0.8,
+      "rankScore": 175
+    },
+    {
+      "id": "biome:lint/style/noNonNullAssertion:packages/distill/src/dag-runner.test.ts:514:47:i6asde",
+      "tool": "biome",
+      "ruleId": "lint/style/noNonNullAssertion",
+      "severity": "low",
+      "category": "lint",
+      "file": "packages/distill/src/dag-runner.test.ts",
+      "line": 514,
+      "column": 47,
+      "message": "Forbidden non-null assertion.",
+      "evidence": "{\"severity\":\"warning\",\"message\":\"Forbidden non-null assertion.\",\"category\":\"lint/style/noNonNullAssertion\",\"location\":{\"path\":\"packages/distill/src/dag-runner.test.ts\",\"start\":{\"line\":514,\"column\":47},\"end\":{\"line\":514,\"column\":76}},\"advices\":[]}",
+      "inChangedFile": false,
+      "confidence": 0.8,
+      "rankScore": 175
+    }
+  ]
+}

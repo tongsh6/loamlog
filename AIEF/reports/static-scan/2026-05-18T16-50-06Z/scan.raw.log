@@ -1,0 +1,203 @@
+## typescript
+Command: pnpm run typecheck
+Required: yes
+Skipped: no
+Exit code: 0
+
+--- stdout ---
+
+> loamlog@0.7.0 typecheck /Users/loong/workspace/code/github/ai/loamlog
+> pnpm --filter @loamlog/core run build && pnpm --filter @loamlog/sanitizer run build && pnpm --filter @loamlog/archive run build && pnpm --filter @loamlog/distiller-sdk run build && pnpm --filter @loamlog/pipeline run build && pnpm --filter @loamlog/distill run build && pnpm --filter @loamlog/rules run build && pnpm --filter @loamlog/trigger run build && pnpm --filter @loamlog/provider-opencode run build && pnpm --filter @loamlog/provider-claude-code run build && pnpm --filter @loamlog/provider-gemini-cli run build && pnpm --filter @loamlog/provider-codex run build && pnpm --filter @loamlog/evaluation-harness run build && pnpm --filter @loamlog/distiller-representative-assets run build && pnpm --filter @loamlog/core run typecheck && pnpm --filter @loamlog/sanitizer run typecheck && pnpm --filter @loamlog/archive run typecheck && pnpm --filter @loamlog/distiller-sdk run typecheck && pnpm --filter @loamlog/pipeline run typecheck && pnpm --filter @loamlog/distill run typecheck && pnpm --filter @loamlog/rules run typecheck && pnpm --filter @loamlog/trigger run typecheck && pnpm --filter @loamlog/distiller-pitfall-card run typecheck && pnpm --filter @loamlog/distiller-issue-draft run typecheck && pnpm --filter @loamlog/distiller-knowledge-card run typecheck && pnpm --filter @loamlog/distiller-prd-draft run typecheck && pnpm --filter @loamlog/distiller-representative-assets run typecheck && pnpm --filter @loamlog/sink-file run typecheck && pnpm --filter @loamlog/sink-github run typecheck && pnpm --filter @loamlog/sink-notion run typecheck && pnpm --filter @loamlog/provider-opencode run typecheck && pnpm --filter @loamlog/provider-claude-code run typecheck && pnpm --filter @loamlog/provider-gemini-cli run typecheck && pnpm --filter @loamlog/provider-codex run typecheck && pnpm --filter @loamlog/evaluation-harness run typecheck && pnpm --filter @loamlog/cli run typecheck
+
+
+> @loamlog/core@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/core
+> tsc -p tsconfig.json
+
+
+> @loamlog/sanitizer@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/sanitizer
+> tsc -p tsconfig.json
+
+
+> @loamlog/archive@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/archive
+> tsc -p tsconfig.json
+
+
+> @loamlog/distiller-sdk@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/distiller-sdk
+> tsc -p tsconfig.json
+
+
+> @loamlog/pipeline@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/pipeline
+> tsc -p tsconfig.json
+
+
+> @loamlog/distill@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/distill
+> tsc -p tsconfig.json
+
+
+> @loamlog/rules@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/rules
+> tsc -p tsconfig.json && node --input-type=module -e "import { copyFileSync, mkdirSync } from 'node:fs'; import path from 'node:path'; const src = path.resolve('src/default.rules.yaml'); const destDir = path.resolve('dist'); mkdirSync(destDir, { recursive: true }); copyFileSync(src, path.join(destDir, 'default.rules.yaml'));"
+
+
+> @loamlog/trigger@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/trigger
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-opencode@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/opencode
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-claude-code@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/claude-code
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-gemini-cli@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/gemini-cli
+> tsc -p tsconfig.json
+
+
+> @loamlog/provider-codex@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/providers/codex
+> tsc -p tsconfig.json
+
+
+> @loamlog/evaluation-harness@0.3.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/evaluation-harness
+> tsc -p tsconfig.json
+
+
+> @loamlog/distiller-representative-assets@0.1.0 build /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/representative-assets
+> tsc -p tsconfig.json
+
+
+> @loamlog/core@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/core
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sanitizer@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sanitizer
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/archive@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/archive
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-sdk@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distiller-sdk
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/pipeline@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/pipeline
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distill@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distill
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/rules@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/rules
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/trigger@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/trigger
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-pitfall-card@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/pitfall-card
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-issue-draft@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/issue-draft
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-knowledge-card@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/knowledge-card
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-prd-draft@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/prd-draft
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/distiller-representative-assets@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/distillers/representative-assets
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sink-file@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sinks/file
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sink-github@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sinks/github
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/sink-notion@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/sinks/notion
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-opencode@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/opencode
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-claude-code@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/claude-code
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-gemini-cli@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/gemini-cli
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/provider-codex@0.1.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/providers/codex
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/evaluation-harness@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/evaluation-harness
+> tsc -p tsconfig.json --noEmit
+
+
+> @loamlog/cli@0.3.0 typecheck /Users/loong/workspace/code/github/ai/loamlog/packages/cli
+> tsc -p tsconfig.json --noEmit
+
+
+
+--- stderr ---
+(empty)
+
+## biome
+Command: pnpm exec biome lint . --reporter=json
+Required: yes
+Skipped: no
+Exit code: 0
+
+--- stdout ---
+{"summary":{"changed":0,"unchanged":207,"matches":0,"duration":24994792,"errors":0,"warnings":0,"infos":0,"skipped":0,"suggestedFixesSkipped":0,"diagnosticsNotPrinted":0,"scannerDuration":7593458},"diagnostics":[],"command":"lint"}
+
+
+--- stderr ---
+The --json option is unstable/experimental and its output might change between patches/minor releases.
+
+
+## pnpm-audit
+Command: pnpm audit --audit-level moderate --json
+Required: yes
+Skipped: no
+Exit code: 0
+
+--- stdout ---
+{
+  "actions": [],
+  "advisories": {},
+  "muted": [],
+  "metadata": {
+    "vulnerabilities": {
+      "info": 0,
+      "low": 0,
+      "moderate": 0,
+      "high": 0,
+      "critical": 0
+    },
+    "dependencies": 72,
+    "devDependencies": 0,
+    "optionalDependencies": 0,
+    "totalDependencies": 72
+  }
+}
+
+
+--- stderr ---
+(empty)
