@@ -302,8 +302,7 @@ describe("runDistillDAG", () => {
     assert.equal(result.results.length, 1);
     assert.equal(result.candidates[0].verification?.status, "verified");
     assert.match(
-      result.candidates[0].verification?.evidence.evidence_support_status ??
-        "",
+      result.candidates[0].verification?.evidence.evidence_support_status ?? "",
       /supported/,
     );
   });
@@ -372,9 +371,9 @@ describe("runDistillDAG", () => {
     const snapshot = buildSnapshot("ses_signal_route");
     snapshot.messages.push({
       id: "msg-2",
-      role: "assistant",
+      role: "user",
       timestamp: "2026-03-04T00:00:01.000Z",
-      content: "I will inspect files before making edits.",
+      content: "TODO: review the quality report",
     });
     await writeSessionSnapshot({ dumpDir: tempDir, snapshot });
 
@@ -402,6 +401,21 @@ describe("runDistillDAG", () => {
                         {
                           message_id: "msg-1",
                           excerpt: "TODO: refactor",
+                        },
+                      ],
+                      promotion_hints: [],
+                    },
+                    {
+                      scope: "message",
+                      kind: "task_delta",
+                      tags: ["created"],
+                      actor: "user",
+                      temporal_state: "future",
+                      confidence: 0.86,
+                      evidence_refs: [
+                        {
+                          message_id: "msg-2",
+                          excerpt: "TODO: review the quality report",
                         },
                       ],
                       promotion_hints: [],
@@ -469,10 +483,14 @@ describe("runDistillDAG", () => {
 
     assert.equal(result.report.status, "success");
     assert.equal(result.results.length, 1);
-    assert.equal(distillerSawSignals, 1);
-    assert.equal(distillerSawMessages, 1);
+    assert.equal(distillerSawSignals, 2);
+    assert.equal(distillerSawMessages, 2);
     assert.equal(result.candidates[0].signals.length, 1);
     assert.equal(result.candidates[0].signals[0].kind, "task_delta");
+    assert.deepEqual(
+      result.candidates[0].signals[0].spans.map((span) => span.message_id),
+      ["msg-1"],
+    );
 
     const store = new LocalAssetStore(tempDir, "_global", {
       info() {},
@@ -480,12 +498,28 @@ describe("runDistillDAG", () => {
       error() {},
     });
     const signals = await store.listSignals();
-    assert.equal(signals.length, 1);
-    const consumptions = await store.listSignalConsumptions(signals[0].id);
-    assert.equal(consumptions.length, 1);
-    assert.equal(consumptions[0].result, "produced");
-    assert.equal(consumptions[0].distiller_id, "@test/signal-routed");
-    assert.equal(consumptions[0].asset_id, result.candidates[0].id);
+    assert.equal(signals.length, 2);
+    const consumptions = await store.listSignalConsumptions();
+    assert.equal(consumptions.length, 2);
+
+    const signalByMessage = new Map(
+      signals.map((signal) => [signal.spans[0]?.message_id, signal]),
+    );
+    const consumptionBySignalId = new Map(
+      consumptions.map((consumption) => [consumption.signal_id, consumption]),
+    );
+    const producedSignal = signalByMessage.get("msg-1");
+    const skippedSignal = signalByMessage.get("msg-2");
+    assert.ok(producedSignal);
+    assert.ok(skippedSignal);
+    const produced = consumptionBySignalId.get(producedSignal.id);
+    const skipped = consumptionBySignalId.get(skippedSignal.id);
+
+    assert.equal(produced?.result, "produced");
+    assert.equal(produced?.distiller_id, "@test/signal-routed");
+    assert.equal(produced?.asset_id, result.candidates[0].id);
+    assert.equal(skipped?.result, "skipped");
+    assert.equal(skipped?.asset_id, undefined);
   });
 });
 

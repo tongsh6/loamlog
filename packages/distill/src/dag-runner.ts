@@ -52,6 +52,7 @@ import { classifySignals } from "./signal-classifier.js";
 import {
   recordSignalConsumptions,
   scopeArtifactToSignals,
+  selectSignalsForEvidence,
   selectSignalsForDistiller,
 } from "./signal-routing.js";
 import { type ConfiguredSink, runSinks } from "./sink-runner.js";
@@ -125,9 +126,11 @@ function selectVerificationReport(
     .sort((a, b) => b.mining_score - a.mining_score)[0];
   if (verified) return verified;
 
-  return reports
-    .filter((report) => report.status === "unverified")
-    .sort((a, b) => b.mining_score - a.mining_score)[0] ?? reports[0];
+  return (
+    reports
+      .filter((report) => report.status === "unverified")
+      .sort((a, b) => b.mining_score - a.mining_score)[0] ?? reports[0]
+  );
 }
 
 /**
@@ -433,6 +436,7 @@ export function createDistillDAG(
 
         // ── Per-session processing (validate → dedup → deliver) ──
         const sessionResults: DistillResult[] = [];
+        const producedSignalIds = new Set<string>();
         for (const draft of result.drafts) {
           const validationError = validateDraft(draft);
           if (validationError) {
@@ -451,11 +455,22 @@ export function createDistillDAG(
             continue;
           }
 
-          knownFingerprints[r.fingerprint] = true;
           const candidate = mapDistillResultToCandidate(r);
           if (result.routedSignals && result.routedSignals.length > 0) {
-            candidate.signals = result.routedSignals;
+            const matchedSignals = selectSignalsForEvidence(
+              result.routedSignals,
+              r.evidence,
+            );
+            if (matchedSignals.length === 0) {
+              totalSkipped += 1;
+              ctx.logger.warn(
+                `[dag:signal] asset skipped: ${r.id} has no evidence overlap with routed signals`,
+              );
+              continue;
+            }
+            candidate.signals = matchedSignals;
           }
+          knownFingerprints[r.fingerprint] = true;
 
           // ── Layer 2: Smelting (Verification) ──
           // Combine multiple verifiers (Mining-aligned)
@@ -501,13 +516,16 @@ export function createDistillDAG(
             await recordSignalConsumptions(
               assetStore,
               distiller,
-              result.routedSignals,
+              candidate.signals,
               "produced",
               {
                 assetId: candidate.id,
-                reason: "matched distiller consumes_signals manifest",
+                reason: "candidate evidence overlapped routed signal spans",
               },
             );
+            for (const signal of candidate.signals) {
+              producedSignalIds.add(signal.id);
+            }
           }
 
           sessionResults.push(r);
@@ -529,18 +547,21 @@ export function createDistillDAG(
         acc.artifactsProcessed += 1;
         await state.markProcessed(distiller.id, [artifact.meta.session_id]);
 
-        if (
-          result.routedSignals &&
-          result.routedSignals.length > 0 &&
-          sessionResults.length === 0
-        ) {
+        if (result.routedSignals && result.routedSignals.length > 0) {
+          const unconsumedSignals = result.routedSignals.filter(
+            (signal) => !producedSignalIds.has(signal.id),
+          );
           await recordSignalConsumptions(
             assetStore,
             distiller,
-            result.routedSignals,
+            unconsumedSignals,
             result.error ? "error" : "skipped",
             {
-              reason: result.error ?? "distiller produced no asset",
+              reason:
+                result.error ??
+                (sessionResults.length === 0
+                  ? "distiller produced no asset"
+                  : "no asset cited this signal evidence"),
             },
           );
         }
