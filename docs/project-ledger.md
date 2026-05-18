@@ -46,6 +46,7 @@
 - ✅ **跨资产 evidence fallback 不一致已修复**：2026-05-17 已将 `prd-draft` / `pitfall-card` 对齐到 `knowledge-card`、`issue-draft` 和代表性资产策略：无有效 `evidence_refs`、引用不存在 message、或 malformed refs 时直接丢弃候选，不 fallback 到首条 message；新增 focused regression tests。
 - ✅ **DAG 聚合后 result / candidate / quality 对齐风险已修复**：2026-05-18 已在 DAG 内引入 refined delivery item，把 `RefinedAsset -> DistillResult / AssetCandidate / QualityReport` 作为同一个内部投递单元流转；`deliver_to_sinks` 不再用 id/index fallback 回找 candidate/quality，audit 与 approval 使用 refined candidate 的重新计算质量报告。新增回归测试覆盖“两个候选聚合为一个 refined result，首个原始候选低置信度但 refined candidate 高置信度”的错配场景。
 - ✅ **代表性资产高风险字段 evidence gate 已补齐**：2026-05-18 已在代表性资产共享 post-filter 中新增字段级 evidence 支撑检查，覆盖 owner / priority / due / acceptance / audience / next_probe / tradeoff / constraint / revisit_trigger / symptom / root_cause / prevention / skill constraints 等高风险扩写字段；无 evidence 支撑的可选字段会导致候选被丢弃，避免 Batch 1 中的无证据 owner、deadline、tradeoff、revisit trigger、acceptance 等扩写继续进入 review。
+- ✅ **Aggregator 资产线边界已收紧**：2026-05-19 已修复 `TopicAggregator` 第二层语义合并只看标题导致不同 `candidate_type` / `distiller_id` 资产可能被折叠的问题；exact identity hash 现在包含 `candidate_type`，loose semantic merge 仅在同类型同 distiller 内执行。跨类型重复主题继续保留为独立资产，交给人工 review 或未来显式仲裁策略处理。
 
 ---
 
@@ -133,6 +134,12 @@
 | 事项 | 状态 | 描述 |
 | :--- | :--- | :--- |
 | Evidence support verifier | ✅ 已落成 | 为 smelting 阶段新增 `EvidenceSupportVerifier`，对代表性资产等非代码候选做保守的 cited-evidence lexical support 检查；DAG 合并策略保持 git/log verifier 优先级，同时允许 evidence 明确支撑的非代码资产进入 `verified`，弱支撑保留 `unverified` 交给人工 review；设计记录见 `tasks/2026-05-18-evidence-support-verifier/plan.md`，focused tests 覆盖英文、中文、弱证据和无证据场景 |
+
+### 2.ad 2026-05-19 Aggregator 资产线边界修复
+
+| 事项 | 状态 | 描述 |
+| :--- | :--- | :--- |
+| TopicAggregator type boundary | ✅ 已落成 | 修复 `TopicAggregator` exact identity / loose semantic merge 的资产线边界：identity hash 从 repo + distiller + topic 收紧为 repo + distiller + type + topic，第二层标题相似合并要求 same `candidate_type` + same `distiller_id`；避免 cross-asset dogfooding 中同一主题的 decision / follow-up / idea 等不同资产线被静默折叠。设计记录见 `tasks/2026-05-19-aggregator-type-boundary/plan.md`，focused tests 覆盖跨类型、跨 distiller 同标题不合并。 |
 
 ---
 

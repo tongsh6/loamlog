@@ -1,0 +1,52 @@
+{
+  "runId": "2026-05-18T16-32-45Z",
+  "startedAt": "2026-05-18T16:32:45.559Z",
+  "completedAt": "2026-05-18T16:33:00.751Z",
+  "profile": "fast",
+  "topN": 5,
+  "git": {
+    "branch": "develop",
+    "head": "20e7f51",
+    "dirty": true
+  },
+  "scope": {
+    "changedFiles": [
+      "ackages/distill/src/aggregator.test.ts",
+      "ackages/distill/src/aggregator.ts",
+      "tasks/2026-05-19-aggregator-type-boundary/"
+    ],
+    "includePatterns": [
+      "packages/**/*.ts",
+      "plugins/**/*.ts",
+      "skills/**/*.ts"
+    ],
+    "excludePatterns": [
+      "**/dist/**",
+      "**/node_modules/**",
+      "AIEF/reports/**"
+    ]
+  },
+  "tools": [
+    {
+      "name": "typescript",
+      "command": "pnpm run typecheck",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "biome",
+      "command": "pnpm exec biome lint . --reporter=json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    },
+    {
+      "name": "pnpm-audit",
+      "command": "pnpm audit --audit-level moderate --json",
+      "required": true,
+      "skipped": false,
+      "exitCode": 0
+    }
+  ]
+}
