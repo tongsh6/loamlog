@@ -541,6 +541,7 @@ export interface VerificationReport {
   mining_score: number;
   evidence: {
     dialogue_ref: string;
+    evidence_support_status?: string;
     git_gap_status?: string;
     physical_log_ref?: string;
   };

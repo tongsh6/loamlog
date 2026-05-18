@@ -1,13 +1,13 @@
 # Project Ledger — Loamlog 事实台账
 
-## 0. 当前门禁 (Product Gate) — 2026-05-15
+## 0. 当前门禁 (Product Gate) — 2026-05-18
 
 > **新会话 AI 必读**：本节是项目当前优先级的唯一权威来源。
 
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
-| **代码编译** | ✅ 通过 | 2026-05-15 `pnpm run build` 全绿，包含 Signal Gate rerun CLI 与 post-capture auto job |
-| **测试** | ✅ 通过 | 2026-05-18 复跑 `pnpm run test` 全绿，272 pass / 0 fail；代表性资产 focused tests：37 pass / 0 fail |
+| **代码编译** | ✅ 通过 | 2026-05-18 `pnpm run build` 全绿，包含 Signal Gate rerun CLI、post-capture auto job 与 evidence-support verifier |
+| **测试** | ✅ 通过 | 2026-05-18 复跑 `pnpm run test` 全绿，277 pass / 0 fail；代表性资产 focused tests：37 pass / 0 fail；evidence-support verifier focused tests：4 pass / 0 fail |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
 | **下一道门禁** | Distiller Repair + Re-review | Signal Gate 入口已补齐；不再扩大样本，下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、duplicate-topic / old-roadmap 过滤层，并小批量复评 |
@@ -23,7 +23,7 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-17T17-40-34Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0
+- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-18T14-59-08Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0；复扫对比 `2026-05-18T14-58-38Z`，0 fixed / 0 still present / 0 new
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -39,7 +39,7 @@
 - ✅ Batch 1 dogfooding：隔离临时 dump 跑 5 个真实 Loamlog `claude-code` session，5 类 distiller 均成功，输出 41 条 pending 资产，0 errors。
 - ❌ Batch 1 人工质量 No-Go：41 条人工评分总分 37/205，平均 0.90/5；`follow-up-work-item`、`idea-seed`、`skill-candidate` 均 No-Go，`practice-pitfall` Conditional，`decision-rationale` 需大改。
 - ⚠️ 主要失败模式：AI 过程日志污染、已完成事项误转待办、动作壳标题、类型路由错误、无证据扩写、旧路线图机械复活、跨类型重复资产。
-- ⚠️ 现有 verifier 对 idea / decision / skill 等非代码资产只会给出 `unverified`，需要补非代码资产 evidence-support review。
+- ✅ 非代码资产 evidence-support review 已补最小 deterministic verifier：`EvidenceSupportVerifier` 可对 idea / decision / skill 等候选执行保守的 cited-evidence lexical support 检查；弱支撑仍保留 `unverified` 交给人工 review，真实样本复评效果待观察。
 
 ### 0.2 Review 新发现（2026-05-13）
 
@@ -65,7 +65,7 @@
 | :--- | :--- | :--- | :--- |
 | **破碎 (Normalizer)** | ✅ **已闭环 (代码)** | `packages/distill/src/normalizer.ts` | 真实样本验证 |
 | **选矿 (Distiller)** | ⚠️ **Knowledge-card 通过；代表性资产质量 No-Go** | `packages/distill`, `packages/distillers/representative-assets`, `knowledge-card`, `AIEF/openspec/signal-gate.md`, `AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`, `AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md` | Signal Gate 已补齐；下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、post-filter，并跑小批量复评 |
-| **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1)** | `verifier/git-gap.ts`, `verifier/log-weave.ts` | 真实数据下证据织补效果未观察 |
+| **冶炼 (Verifier)** | ✅ **已闭环 (P0/P1 + evidence-support)** | `verifier/git-gap.ts`, `verifier/log-weave.ts`, `verifier/evidence-support.ts` | 真实数据下证据织补与非代码 evidence-support 效果待复评观察 |
 | **精炼 (Aggregator)** | ✅ **已闭环 (代码)** | `packages/distill/src/aggregator.ts`（含 token-Jaccard 二次合并） | 跨 session 真实数据效果：12→6/7 refined |
 | **底座 (Foundations)** | ✅ **已落成** | `store.ts`, `registry.ts`（已从 `src/` 泄漏产物清理为 package 公共 API） | 当前规模无检索性能瓶颈 |
 | **储运 (Sink)** | ✅ **已闭环** | `dag-runner.ts`, `packages/sinks/{file,github,notion}`, `loam show` 命令 | 外部 sink 真实投递回报缺失 |
@@ -123,6 +123,12 @@
 | 事项 | 状态 | 描述 |
 | :--- | :--- | :--- |
 | Refined delivery lineage | ✅ 已落成 | 修复 `process_results` 聚合后 result / candidate / quality parallel arrays 失配风险：DAG 内部维护 `DeliveryItem`，refined asset 重新生成 aligned result / candidate / quality，并让 sink approval 与 audit 只消费该结构；设计记录见 `tasks/2026-05-18-dag-refined-lineage/plan.md`，focused regression test 已覆盖聚合改 ID / 重排后的 quality 错配 |
+
+### 2.ac 2026-05-18 非代码资产 evidence-support verifier
+
+| 事项 | 状态 | 描述 |
+| :--- | :--- | :--- |
+| Evidence support verifier | ✅ 已落成 | 为 smelting 阶段新增 `EvidenceSupportVerifier`，对代表性资产等非代码候选做保守的 cited-evidence lexical support 检查；DAG 合并策略保持 git/log verifier 优先级，同时允许 evidence 明确支撑的非代码资产进入 `verified`，弱支撑保留 `unverified` 交给人工 review；设计记录见 `tasks/2026-05-18-evidence-support-verifier/plan.md`，focused tests 覆盖英文、中文、弱证据和无证据场景 |
 
 ---
 

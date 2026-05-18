@@ -245,6 +245,69 @@ describe("runDistillDAG", () => {
     assert.equal(result.artifactsProcessed, 0);
   });
 
+  test("marks dialogue-supported non-code assets as verified during smelting", async () => {
+    tempDir = await mkdtemp(path.join(tmpdir(), "loam-dag-evidence-"));
+
+    const snapshot = buildSnapshot("ses_dag_evidence_support");
+    snapshot.messages[0].content =
+      "Decision: defer MCP implementation until cross-asset dogfooding quality stabilizes.";
+    await writeSessionSnapshot({
+      dumpDir: tempDir,
+      snapshot,
+    });
+
+    const distillerPath = path.join(tempDir, "evidence-distiller.mjs");
+    await writeFile(
+      distillerPath,
+      [
+        "export default {",
+        "  id: '@test/evidence-distiller',",
+        "  name: 'Evidence Distiller',",
+        "  version: '0.1.0',",
+        "  supported_types: ['decision-rationale'],",
+        "  async run({ artifactStore }) {",
+        "    for await (const artifact of artifactStore.getUnprocessed('@test/evidence-distiller')) {",
+        "      return [{",
+        "        type: 'decision-rationale',",
+        "        title: 'Defer MCP until cross-asset quality stabilizes',",
+        "        summary: 'Defer MCP implementation because cross-asset dogfooding quality is the current constraint.',",
+        "        confidence: 0.9,",
+        "        tags: ['decision', 'cross-asset', 'quality'],",
+        "        payload: { decision: 'Defer MCP', rationale: 'cross-asset dogfooding quality is the current constraint' },",
+        "        evidence: [{ session_id: artifact.meta.session_id, message_id: artifact.messages[0].id, excerpt: artifact.messages[0].content }]",
+        "      }];",
+        "    }",
+        "    return [];",
+        "  }",
+        "};",
+      ].join("\n"),
+      "utf8",
+    );
+
+    const { default: distillerFactory } = await import(distillerPath);
+    const distiller =
+      typeof distillerFactory === "function"
+        ? distillerFactory()
+        : distillerFactory;
+
+    const result = await runDistillDAG({
+      distiller,
+      llm: makeLLMRouter(),
+      state: createDistillerStateKV(tempDir, "@test/evidence-distiller"),
+      sinks: [],
+      dumpDir: tempDir,
+    });
+
+    assert.equal(result.report.status, "success");
+    assert.equal(result.results.length, 1);
+    assert.equal(result.candidates[0].verification?.status, "verified");
+    assert.match(
+      result.candidates[0].verification?.evidence.evidence_support_status ??
+        "",
+      /supported/,
+    );
+  });
+
   test("skips duplicate results via fingerprint dedup", async () => {
     tempDir = await mkdtemp(path.join(tmpdir(), "loam-dag-dedup-"));
     process.env.OPENAI_API_KEY = "test-key";

@@ -12,6 +12,7 @@ import type {
   QualityReport,
   SessionArtifact,
   Signal,
+  VerificationReport,
 } from "@loamlog/core";
 import {
   approvalGate,
@@ -55,6 +56,7 @@ import {
 } from "./signal-routing.js";
 import { type ConfiguredSink, runSinks } from "./sink-runner.js";
 import { LocalAssetStore } from "./store.js";
+import { EvidenceSupportVerifier } from "./verifier/evidence-support.js";
 import { GitGapVerifier } from "./verifier/git-gap.js";
 import { LogWeaveVerifier } from "./verifier/log-weave.js";
 
@@ -107,6 +109,25 @@ interface DeliveryItem {
   result: DistillResult;
   candidate: AssetCandidate;
   quality: QualityReport;
+}
+
+function selectVerificationReport(
+  reports: VerificationReport[],
+): VerificationReport {
+  const rejected = reports.find((report) => report.status === "rejected");
+  if (rejected) return rejected;
+
+  const archived = reports.find((report) => report.status === "archived");
+  if (archived) return archived;
+
+  const verified = reports
+    .filter((report) => report.status === "verified")
+    .sort((a, b) => b.mining_score - a.mining_score)[0];
+  if (verified) return verified;
+
+  return reports
+    .filter((report) => report.status === "unverified")
+    .sort((a, b) => b.mining_score - a.mining_score)[0] ?? reports[0];
 }
 
 /**
@@ -440,29 +461,25 @@ export function createDistillDAG(
           // Combine multiple verifiers (Mining-aligned)
           const gitVerifier = new GitGapVerifier();
           const logVerifier = new LogWeaveVerifier(evidenceRegistry);
+          const evidenceSupportVerifier = new EvidenceSupportVerifier();
 
-          const [gitRep, logRep] = await Promise.all([
-            gitVerifier.verify(candidate, {
-              repoPath: artifact.context.worktree,
-              capturedAt: artifact.meta.captured_at,
-              logger: ctx.logger,
-            }),
-            logVerifier.verify(candidate, {
-              repoPath: artifact.context.worktree,
-              capturedAt: artifact.meta.captured_at,
-              logger: ctx.logger,
-            }),
+          const verifierContext = {
+            repoPath: artifact.context.worktree,
+            capturedAt: artifact.meta.captured_at,
+            logger: ctx.logger,
+          };
+
+          const [gitRep, logRep, evidenceSupportRep] = await Promise.all([
+            gitVerifier.verify(candidate, verifierContext),
+            logVerifier.verify(candidate, verifierContext),
+            evidenceSupportVerifier.verify(candidate, verifierContext),
           ]);
 
-          // Merge Verification Results: Verified wins over Unverified
-          candidate.verification =
-            logRep.status === "verified" ? logRep : gitRep;
-          if (logRep.status === "verified") {
-            candidate.verification.mining_score = Math.max(
-              gitRep.mining_score,
-              logRep.mining_score,
-            );
-          }
+          candidate.verification = selectVerificationReport([
+            gitRep,
+            logRep,
+            evidenceSupportRep,
+          ]);
 
           const quality = validateAssetCandidate(candidate);
 
