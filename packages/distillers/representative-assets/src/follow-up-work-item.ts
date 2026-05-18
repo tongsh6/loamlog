@@ -29,6 +29,7 @@ const SYSTEM_PROMPT = [
   "Each evidence_refs item must include message_id and excerpt.",
   ...REPRESENTATIVE_ASSET_PROMPT_GUARDRAILS,
   "Accept only future or still-open work that is actionable and verifiable after the session.",
+  "The cited evidence must explicitly say the work remains open, pending, blocked, next-step, or still needs follow-up.",
   "Each item should include concrete acceptance criteria when the evidence supports them.",
   "Reject completed work, assistant process steps, action-shell titles, generic placeholders, routine tool commands, and risks or practices that belong in another asset type.",
 ].join("\n");

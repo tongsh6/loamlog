@@ -136,6 +136,7 @@ export function shouldKeepRepresentativeAsset(input: {
   artifact: SessionArtifact;
 }): boolean {
   const evidenceText = evidenceSourceText(input.artifact, input.evidence);
+  const normalizedEvidenceText = normalizeText(evidenceText);
   const assetText = normalizeText(
     [
       input.title,
@@ -156,7 +157,11 @@ export function shouldKeepRepresentativeAsset(input: {
 
   switch (input.type) {
     case "follow-up-work-item":
-      return keepFollowUpWorkItem(input.payload, combinedText);
+      return keepFollowUpWorkItem(
+        input.payload,
+        combinedText,
+        normalizedEvidenceText,
+      );
     case "idea-seed":
       return (
         !hasDoneState(combinedText) &&
@@ -330,16 +335,29 @@ function representativeCjkBigrams(text: string): string[] {
 function keepFollowUpWorkItem(
   payload: Record<string, unknown>,
   combinedText: string,
+  evidenceText: string,
 ): boolean {
   const action = String(payload.action ?? "");
   if (hasDoneState(combinedText)) return false;
   if (isOldRoadmapResidue(combinedText)) return false;
   if (isActionShellTitle(action)) return false;
+  if (!hasOpenFollowUpEvidenceSignal(evidenceText)) return false;
   const acceptance = payload.acceptance;
   return (
     Array.isArray(acceptance) &&
     acceptance.some(
       (item) => typeof item === "string" && item.trim().length > 0,
+    )
+  );
+}
+
+function hasOpenFollowUpEvidenceSignal(text: string): boolean {
+  return (
+    /\b(need(?:s|ed)? to|todo|to do|follow[- ]?up|next step|remaining|still need|pending|open|blocked|continue|plan to|revisit|rerun)\b/.test(
+      text,
+    ) ||
+    /需要|还需|仍需|待办|待处理|后续|下一步|继续|推进|未完成|尚未|阻塞|复评|复跑|重跑|补充|跟进|回看/.test(
+      text,
     )
   );
 }

@@ -214,6 +214,109 @@ describe("representative asset shared helpers", () => {
     );
   });
 
+  test("shared post-filter rejects follow-up items without open-work evidence", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "follow-up-work-item",
+        title: "Refine provider prompt and error handling",
+        summary:
+          "The evidence describes a provider prompt risk, not a remaining task.",
+        payload: {
+          action: "Refine provider prompt and error handling",
+          reason: "Provider prompt and error handling risks were discussed.",
+          acceptance: ["Provider prompt behavior is reviewed"],
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "Provider prompt and error handling risk",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "Provider prompt and error handling risk is a practice/pitfall observation.",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
+  test("shared post-filter rejects review-only evidence as follow-up work", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "follow-up-work-item",
+        title: "Review representative asset quality",
+        summary: "The evidence only reports a completed review finding.",
+        payload: {
+          action: "Review representative asset quality",
+          reason: "The manual review showed low quality.",
+          acceptance: ["Quality review is completed"],
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "manual review showed Product Quality No-Go",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "The manual review showed Product Quality No-Go for representative assets.",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
+  test("shared post-filter keeps Chinese follow-up items with explicit open-work evidence", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "follow-up-work-item",
+        title: "复评代表性资产小样本",
+        summary: "后续需要复评代表性资产，并记录每类 >=3 比例。",
+        payload: {
+          action: "复评代表性资产小样本",
+          reason: "当前代表性资产质量 No-Go，需要验证修复效果。",
+          acceptance: ["记录每类资产 >=3 比例", "更新 dogfooding 报告"],
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt: "后续需要复评代表性资产小样本",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "后续需要复评代表性资产小样本，并记录每类资产 >=3 比例。",
+            },
+          ],
+        }),
+      }),
+      true,
+    );
+  });
+
   test("shared post-filter rejects one-off command skill candidates", () => {
     assert.equal(
       shouldKeepRepresentativeAsset({
