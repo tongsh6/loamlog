@@ -14,7 +14,13 @@ describe("follow-up-work-item distiller", () => {
           priority_hint: "p0",
           acceptance: ["five distillers run through CLI built-in resolution"],
           confidence: 0.83,
-          evidence_refs: [{ message_id: "msg_1", excerpt: "继续推进" }],
+          evidence_refs: [
+            {
+              message_id: "msg_1",
+              excerpt:
+                "P0 继续推进 representative asset distiller package，验收是 five distillers run through CLI built-in resolution",
+            },
+          ],
         },
       ]),
     );
@@ -138,7 +144,8 @@ function makeArtifact(): SessionArtifact {
         id: "msg_1",
         role: "user",
         timestamp: "2026-05-13T00:00:00.000Z",
-        content: "继续推进。",
+        content:
+          "P0 继续推进 representative asset distiller package，验收是 five distillers run through CLI built-in resolution。",
       },
       {
         id: "msg_2",

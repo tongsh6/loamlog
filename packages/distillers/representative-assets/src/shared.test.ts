@@ -308,7 +308,83 @@ describe("representative asset shared helpers", () => {
               role: "user",
               timestamp: "2026-05-13T00:00:00.000Z",
               content:
-                "后续需要复评代表性资产小样本，并记录每类资产 >=3 比例。",
+                "后续需要复评代表性资产小样本，并记录每类资产 >=3 比例，更新 dogfooding 报告。",
+            },
+          ],
+        }),
+      }),
+      true,
+    );
+  });
+
+  test("shared post-filter rejects unsupported optional field expansion", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "decision-rationale",
+        title: "Defer MCP API gateway implementation",
+        summary:
+          "Decision: defer MCP API gateway because cross-asset quality is the current constraint.",
+        payload: {
+          decision: "Defer MCP API gateway implementation",
+          context: "MCP API gateway was considered against current priorities.",
+          rationale:
+            "Defer because cross-asset quality is the current constraint.",
+          revisit_trigger: "Revisit when marketplace adoption drops.",
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt:
+              "Decide to defer MCP API gateway because cross-asset quality is the current constraint.",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "Decide to defer MCP API gateway because cross-asset quality is the current constraint.",
+            },
+          ],
+        }),
+      }),
+      false,
+    );
+  });
+
+  test("shared post-filter keeps supported optional field details", () => {
+    assert.equal(
+      shouldKeepRepresentativeAsset({
+        type: "idea-seed",
+        title: "Extract idea seeds from recent sessions",
+        summary:
+          "The user wants to capture ideas before they are forgotten. Next probe: extract idea seeds from three recent sessions.",
+        payload: {
+          idea: "Extract idea seeds from recent sessions",
+          context:
+            "AI sessions contain ideas that are lost during current work.",
+          next_probe: "Extract idea seeds from three recent sessions.",
+          target_audience: "AI power users",
+        },
+        evidence: [
+          {
+            session_id: "ses_rep_1",
+            message_id: "msg_1",
+            excerpt:
+              "AI power users need to capture ideas before they are forgotten. Next probe: extract idea seeds from three recent sessions.",
+          },
+        ],
+        artifact: makeArtifact({
+          messages: [
+            {
+              id: "msg_1",
+              role: "user",
+              timestamp: "2026-05-13T00:00:00.000Z",
+              content:
+                "AI power users need to capture ideas before they are forgotten. Next probe: extract idea seeds from three recent sessions.",
             },
           ],
         }),

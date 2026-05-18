@@ -154,6 +154,11 @@ export function shouldKeepRepresentativeAsset(input: {
   if (isActionShellTitle(input.title)) {
     return false;
   }
+  if (
+    !hasSupportedHighRiskPayloadFields(input.type, input.payload, evidenceText)
+  ) {
+    return false;
+  }
 
   switch (input.type) {
     case "follow-up-work-item":
@@ -182,6 +187,7 @@ export function shouldKeepRepresentativeAsset(input: {
 }
 
 const DUPLICATE_TOPIC_THRESHOLD = 0.6;
+const FIELD_SUPPORT_COVERAGE = 0.45;
 
 const TOPIC_STOPWORDS = new Set([
   "a",
@@ -208,6 +214,59 @@ const TOPIC_STOPWORDS = new Set([
   "to",
   "with",
 ]);
+
+const SUPPORT_STOPWORDS = new Set([
+  ...TOPIC_STOPWORDS,
+  "after",
+  "before",
+  "business",
+  "criteria",
+  "due",
+  "field",
+  "hint",
+  "later",
+  "must",
+  "only",
+  "option",
+  "options",
+  "priority",
+  "target",
+  "trigger",
+  "try",
+  "value",
+  "when",
+]);
+
+const HIGH_RISK_PAYLOAD_FIELDS: Record<string, string[]> = {
+  "idea-seed": [
+    "why_now",
+    "potential_value",
+    "target_audience",
+    "uncertainty",
+    "next_probe",
+  ],
+  "follow-up-work-item": [
+    "owner_hint",
+    "priority_hint",
+    "due_context",
+    "acceptance",
+    "related_assets",
+  ],
+  "decision-rationale": [
+    "options_considered",
+    "tradeoffs",
+    "constraints",
+    "revisit_trigger",
+  ],
+  "practice-pitfall": ["symptom", "root_cause", "prevention"],
+  "skill-candidate": [
+    "required_context",
+    "inputs",
+    "outputs",
+    "constraints",
+    "negative_cases",
+  ],
+};
 
 export function dedupeRepresentativeAssetDrafts<T>(
   drafts: DistillResultDraft<T>[],
@@ -318,6 +377,55 @@ function representativeTopicTokens(text: string): string[] {
     )
     .filter((token) => token.length >= 3 && !TOPIC_STOPWORDS.has(token));
   return [...latin, ...representativeCjkBigrams(normalized)];
+}
+
+function hasSupportedHighRiskPayloadFields(
+  type: string,
+  payload: Record<string, unknown>,
+  evidenceText: string,
+): boolean {
+  const fields = HIGH_RISK_PAYLOAD_FIELDS[type] ?? [];
+  if (fields.length === 0) return true;
+
+  for (const field of fields) {
+    for (const value of flattenPayloadText(payload[field])) {
+      if (!isFieldValueSupportedByEvidence(value, evidenceText)) {
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+
+function isFieldValueSupportedByEvidence(
+  value: string,
+  evidenceText: string,
+): boolean {
+  const normalizedValue = normalizeText(value);
+  const normalizedEvidence = normalizeText(evidenceText);
+  if (!normalizedValue) return true;
+  if (normalizedEvidence.includes(normalizedValue)) return true;
+
+  const valueTokens = supportTokens(normalizedValue);
+  if (valueTokens.length === 0) return true;
+  const evidenceTokens = new Set(supportTokens(normalizedEvidence));
+  const shared = valueTokens.filter((token) =>
+    evidenceTokens.has(token),
+  ).length;
+  const minShared = Math.min(2, valueTokens.length);
+  return (
+    shared >= minShared && shared / valueTokens.length >= FIELD_SUPPORT_COVERAGE
+  );
+}
+
+function supportTokens(text: string): string[] {
+  const latin = (text.match(/[a-z0-9]+/g) ?? [])
+    .map((token) =>
+      token.length > 4 && token.endsWith("s") ? token.slice(0, -1) : token,
+    )
+    .filter((token) => token.length >= 2 && !SUPPORT_STOPWORDS.has(token));
+  return [...new Set([...latin, ...representativeCjkBigrams(text)])];
 }
 
 function representativeCjkBigrams(text: string): string[] {

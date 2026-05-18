@@ -137,7 +137,8 @@ function makeArtifact(): SessionArtifact {
         id: "msg_1",
         role: "user",
         timestamp: "2026-05-13T00:00:00.000Z",
-        content: "很多想法或者经验要沉淀，但是困于当前事情推进，过后就忘了。",
+        content:
+          "很多想法或者经验要沉淀，但是困于当前事情推进，过后就忘了。Next probe: try extracting idea seeds from three recent sessions.",
       },
     ],
     redacted: { patterns_applied: [], redacted_count: 0 },
