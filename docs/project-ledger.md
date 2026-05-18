@@ -6,8 +6,8 @@
 
 | 维度 | 状态 | 说明 |
 | :--- | :--- | :--- |
-| **代码编译** | ✅ 通过 | 2026-05-19 `pnpm run build` 全绿，包含 Signal Gate rerun CLI、post-capture auto job、evidence-support verifier、follow-up open-work gate、代表性资产字段级 evidence gate 与 cited evidence hardening |
-| **测试** | ✅ 通过 | 2026-05-19 复跑 `pnpm run test` 全绿，286 pass / 0 fail；代表性资产 focused tests：46 pass / 0 fail；evidence-support verifier focused tests：4 pass / 0 fail |
+| **代码编译** | ✅ 通过 | 2026-05-19 `pnpm run build` 全绿，包含 Signal Gate rerun CLI、post-capture auto job、evidence-support verifier、follow-up open-work gate、代表性资产字段级 evidence gate、cited evidence hardening 与 signal consumption lineage 修复 |
+| **测试** | ✅ 通过 | 2026-05-19 复跑 `pnpm run test` 全绿，289 pass / 0 fail；Signal routing focused tests：5 pass / 0 fail；DAG runner focused tests：9 pass / 0 fail |
 | **代码闭环** | ✅ 已落成 | 炼矿四工序 + AssetStore + Registry + Sinks + `loam show` / `loam list --format md` + 代表性资产 distiller 包 |
 | **产品闭环** | ⚠️ **Knowledge-card Phase 2 Go / 跨资产质量 No-Go** | 2026-05-13 中文复验：9 个真实 session → 10 张 knowledge-card，人工评分 10/10 ≥3/5；但 2026-05-15 代表性资产人工评分仅 37/205，平均 0.90/5，`>=3` 仅 7/41 |
 | **下一道门禁** | Distiller Repair + Re-review | Signal Gate 入口已补齐；不再扩大样本，下一步重写 5 类代表性资产 distiller 的定义、prompt、schema、duplicate-topic / old-roadmap 过滤层，并小批量复评 |
@@ -23,7 +23,7 @@
 - 中文复验终版报告：`AIEF/reports/dogfooding/2026-05-13-validation-phase2-zh-rerun-final.md`：10/10 ≥3/5，Phase 2 Go；仍需收紧 evidence selection 与技术机制验证
 - 代表性资产 Batch 1 冒烟：`AIEF/reports/dogfooding/2026-05-13-representative-assets-batch1.md`：5 类 distiller 跑通，5 个真实 Loamlog session → 41 条 pending 资产，46/46 quality gate 通过，0 errors；结论为 Execution Smoke Go / Product Quality Pending
 - 代表性资产 Batch 1 人工评分：`AIEF/reports/dogfooding/2026-05-15-representative-assets-batch1-review.md`：41 条逐条 review，总分 37/205，平均 0.90/5，`>=3` 7/41，`>=4` 2/41；结论为 Product Quality No-Go
-- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-18T16-17-07Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0；复扫对比 `2026-05-18T16-13-22Z`，0 fixed / 0 still present / 0 new
+- 本次 AI completion gate：`AIEF/reports/static-scan/2026-05-18T16-50-06Z`：typescript / biome / pnpm-audit exit 0，Findings 0，blocking 0，Top N 0；复扫对比 `2026-05-18T16-48-53Z`，0 fixed / 0 still present / 0 new
 
 ### 0.1 已知缺陷 / 修复状态
 
@@ -47,6 +47,7 @@
 - ✅ **DAG 聚合后 result / candidate / quality 对齐风险已修复**：2026-05-18 已在 DAG 内引入 refined delivery item，把 `RefinedAsset -> DistillResult / AssetCandidate / QualityReport` 作为同一个内部投递单元流转；`deliver_to_sinks` 不再用 id/index fallback 回找 candidate/quality，audit 与 approval 使用 refined candidate 的重新计算质量报告。新增回归测试覆盖“两个候选聚合为一个 refined result，首个原始候选低置信度但 refined candidate 高置信度”的错配场景。
 - ✅ **代表性资产高风险字段 evidence gate 已补齐**：2026-05-18 已在代表性资产共享 post-filter 中新增字段级 evidence 支撑检查，覆盖 owner / priority / due / acceptance / audience / next_probe / tradeoff / constraint / revisit_trigger / symptom / root_cause / prevention / skill constraints 等高风险扩写字段；无 evidence 支撑的可选字段会导致候选被丢弃，避免 Batch 1 中的无证据 owner、deadline、tradeoff、revisit trigger、acceptance 等扩写继续进入 review。
 - ✅ **Aggregator 资产线边界已收紧**：2026-05-19 已修复 `TopicAggregator` 第二层语义合并只看标题导致不同 `candidate_type` / `distiller_id` 资产可能被折叠的问题；exact identity hash 现在包含 `candidate_type`，loose semantic merge 仅在同类型同 distiller 内执行。跨类型重复主题继续保留为独立资产，交给人工 review 或未来显式仲裁策略处理。
+- ✅ **Signal consumption lineage 已收紧**：2026-05-19 已修复 Signal Gate routed distiller 的候选归因过宽问题；DAG 现在只把与候选 cited evidence 同 session/message 重叠的 routed signals 挂到候选并记录 `produced`，同 session 未被任何候选引用的 routed signals 记录为 `skipped`，避免 review/feedback 误以为所有 routed signals 都被同一资产成功消费。
 
 ---
 
@@ -105,7 +106,7 @@
 | SignalStore 切片 | ✅ 已落成 | `AssetStore` contract 与 `LocalAssetStore` 已支持 signal 写入、列表/详情、人工 review、consumption 记录和基础 lineage 查询；classifier 重跑不会覆盖人工 review |
 | Signal CLI 切片 | ✅ 已落成 | `loam signal list/show/review` 已支持读取 `LocalAssetStore` signals、按 kind/status/session/distiller/promotable 过滤、默认隐藏 `raw_model_output`、人工 review 覆盖 classification |
 | Signal classifier schema 切片 | ✅ 已落成 | `@loamlog/distill` 已新增 `signal-classifier` 模块，导出 Signal Gate LLM 输出 JSON schema、prompt builder、LLM classify helper、deterministic normalize/policy check；无有效 evidence 的 classifier item 不落库，非法 tag 进入 `raw_tags` |
-| Signal-based distiller routing 切片 | ✅ 已落成 | `runDistillDAG` 对声明 `consumes_signals` 的 distiller 先执行 Signal classifier、写入 `LocalAssetStore`、按 manifest 选择可消费 signal、将 distiller 输入缩小到 signal evidence messages，并记录 `SignalConsumption` lineage；未声明 signal 消费的旧 distiller 行为不变 |
+| Signal-based distiller routing 切片 | ✅ 已落成 | `runDistillDAG` 对声明 `consumes_signals` 的 distiller 先执行 Signal classifier、写入 `LocalAssetStore`、按 manifest 选择可消费 signal、将 distiller 输入缩小到 signal evidence messages，并按候选 cited evidence overlap 精确记录 `SignalConsumption` lineage；未声明 signal 消费的旧 distiller 行为不变 |
 | Signal classifier rerun CLI 切片 | ✅ 已落成 | `loam signal rerun` 可按 repo / session / since / until / limit 读取 archive 快照、复用 Signal classifier 重跑、写入 `LocalAssetStore` signals，并输出 processed / signals / rejected_items / errors 摘要；人工 review 仍由 store 保留 |
 | Post-capture Signal Gate job 切片 | ✅ 已落成 | daemon capture 写入 redacted snapshot 后会异步触发单会话 Signal Gate job，复用 `runSignalGateForArtifact` 写入 `LocalAssetStore`；classifier / LLM / enqueue 失败只记录日志，不影响 capture 返回 202 |
 
@@ -140,6 +141,12 @@
 | 事项 | 状态 | 描述 |
 | :--- | :--- | :--- |
 | TopicAggregator type boundary | ✅ 已落成 | 修复 `TopicAggregator` exact identity / loose semantic merge 的资产线边界：identity hash 从 repo + distiller + topic 收紧为 repo + distiller + type + topic，第二层标题相似合并要求 same `candidate_type` + same `distiller_id`；避免 cross-asset dogfooding 中同一主题的 decision / follow-up / idea 等不同资产线被静默折叠。设计记录见 `tasks/2026-05-19-aggregator-type-boundary/plan.md`，focused tests 覆盖跨类型、跨 distiller 同标题不合并。 |
+
+### 2.ae 2026-05-19 Signal consumption lineage 修复
+
+| 事项 | 状态 | 描述 |
+| :--- | :--- | :--- |
+| Signal evidence-scoped consumption | ✅ 已落成 | 修复 Signal Gate routed distiller 对候选/Signal 的过宽归因：新增 `selectSignalsForEvidence` helper，DAG 只给候选挂载与 cited evidence 同 session/message 重叠的 routed signals，并只对这些 signals 记录 `produced`；同 session 未被候选引用的 routed signals 记录为 `skipped`，保留负反馈。设计记录见 `tasks/2026-05-19-signal-consumption-lineage/plan.md`，focused tests 覆盖两个 routed signals 只产出一个候选时的 produced/skipped lineage。 |
 
 ---
 
