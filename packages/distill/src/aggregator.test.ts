@@ -6,7 +6,7 @@ import { TopicAggregator } from "./aggregator.js";
 describe("TopicAggregator", () => {
   const mockCtx: AggregatorContext = {
     repo_path: "/work/repo",
-    logger: { info: () => {}, warn: () => {}, error: () => {} }
+    logger: { info: () => {}, warn: () => {}, error: () => {} },
   };
 
   const asset1: VerifiedAsset = {
@@ -21,7 +21,12 @@ describe("TopicAggregator", () => {
     signals: [],
     evidence: [{ session_id: "ses_1", message_id: "m1", excerpt: "typo here" }],
     payload: {},
-    verification: { status: "verified", mining_score: 0.9, evidence: { dialogue_ref: "m1" }, verified_at: "..." }
+    verification: {
+      status: "verified",
+      mining_score: 0.9,
+      evidence: { dialogue_ref: "m1" },
+      verified_at: "...",
+    },
   };
 
   const asset2: VerifiedAsset = {
@@ -36,7 +41,12 @@ describe("TopicAggregator", () => {
     signals: [],
     evidence: [{ session_id: "ses_2", message_id: "m2", excerpt: "another typo" }],
     payload: {},
-    verification: { status: "unverified", mining_score: 0.5, evidence: { dialogue_ref: "m2" }, verified_at: "..." }
+    verification: {
+      status: "unverified",
+      mining_score: 0.5,
+      evidence: { dialogue_ref: "m2" },
+      verified_at: "...",
+    },
   };
 
   it("merges assets with same semantic identity", async () => {
@@ -66,5 +76,55 @@ describe("TopicAggregator", () => {
     const aggregator = new TopicAggregator();
     const refined = await aggregator.refine([asset1, asset3], mockCtx);
     assert.strictEqual(refined.length, 2);
+  });
+
+  it("does not merge same-title assets from different candidate types", async () => {
+    const decision = {
+      ...asset1,
+      id: "decision",
+      candidate_type: "decision-rationale",
+      title: "Dogfooding validation loop",
+      distiller_id: "dist_1",
+    };
+    const followUp = {
+      ...asset2,
+      id: "follow-up",
+      candidate_type: "follow-up-work-item",
+      title: "Dogfooding validation loop",
+      distiller_id: "dist_1",
+    };
+
+    const aggregator = new TopicAggregator();
+    const refined = await aggregator.refine([decision, followUp], mockCtx);
+
+    assert.strictEqual(refined.length, 2);
+    assert.deepStrictEqual(
+      refined.map((asset) => asset.candidate_type).sort(),
+      ["decision-rationale", "follow-up-work-item"],
+    );
+  });
+
+  it("does not merge same-title assets from different distillers", async () => {
+    const first = {
+      ...asset1,
+      id: "first",
+      title: "Static scan report asset chain",
+      distiller_id: "dist_1",
+    };
+    const second = {
+      ...asset2,
+      id: "second",
+      title: "Static scan report asset chain",
+      distiller_id: "dist_2",
+    };
+
+    const aggregator = new TopicAggregator();
+    const refined = await aggregator.refine([first, second], mockCtx);
+
+    assert.strictEqual(refined.length, 2);
+    assert.deepStrictEqual(
+      refined.map((asset) => asset.distiller_id).sort(),
+      ["dist_1", "dist_2"],
+    );
   });
 });

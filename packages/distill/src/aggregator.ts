@@ -124,10 +124,11 @@ function sameTopic(a: Set<string>, b: Set<string>, threshold: number): boolean {
  * Correlates and merges assets based on semantic and physical identity.
  *
  * Two-pass strategy:
- *  1. Exact identity hash group (Repo + Distiller + normalized title prefix).
- *  2. Loose semantic group: union-find merge of groups whose representative
- *     titles satisfy `sameTopic`. This catches "Tauri CI gate" phrasings
- *     that the strict hash misses.
+ *  1. Exact identity hash group (Repo + Distiller + Type + normalized title prefix).
+ *  2. Loose semantic group: union-find merge of groups from the same asset line
+ *     whose representative titles satisfy `sameTopic`. This catches "Tauri CI
+ *     gate" phrasings that the strict hash misses without collapsing different
+ *     candidate types.
  */
 export class TopicAggregator implements AggregatorPlugin {
   id = "@loamlog/aggregator-topic";
@@ -169,6 +170,7 @@ export class TopicAggregator implements AggregatorPlugin {
     for (let i = 0; i < groupArr.length; i++) {
       for (let j = i + 1; j < groupArr.length; j++) {
         if (
+          sameAggregationLine(groupArr[i][1], groupArr[j][1]) &&
           sameTopic(tokenSets[i], tokenSets[j], TopicAggregator.TOPIC_THRESHOLD)
         ) {
           parent[find(j)] = find(i);
@@ -196,16 +198,17 @@ export class TopicAggregator implements AggregatorPlugin {
   }
 
   private computeIdentityHash(asset: VerifiedAsset, repo: string): string {
-    // Identity = Repo + Distiller + TopicKey
+    // Identity = Repo + Distiller + Type + TopicKey
     // Normalize topic key: remove punctuation, lowercase, and limit length to prevent hash pollution
     const topicKey = (asset.title || asset.candidate_type)
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
       .slice(0, 50);
 
-    // Explicitly include repo and distiller_id to prevent cross-project or cross-tool collisions
+    // Explicitly include repo, distiller_id, and candidate_type to prevent
+    // cross-project, cross-tool, or cross-asset-line collisions.
     return createHash("sha256")
-      .update(`${repo}:${asset.distiller_id}:${topicKey}`)
+      .update(`${repo}:${asset.distiller_id}:${asset.candidate_type}:${topicKey}`)
       .digest("hex");
   }
 
@@ -275,4 +278,13 @@ export class TopicAggregator implements AggregatorPlugin {
       version: group.length > 1 ? maxVersion : maxVersion,
     };
   }
+}
+
+function sameAggregationLine(a: VerifiedAsset[], b: VerifiedAsset[]): boolean {
+  const left = a[0];
+  const right = b[0];
+  return (
+    left?.candidate_type === right?.candidate_type &&
+    left?.distiller_id === right?.distiller_id
+  );
 }

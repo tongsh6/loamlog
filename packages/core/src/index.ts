@@ -554,7 +554,7 @@ export interface VerifiedAsset extends AssetCandidate {
 }
 
 export interface RefinedAsset extends VerifiedAsset {
-  /** Global identity hash across sessions: SHA256(Repo:Distiller:Topic) */
+  /** Global identity hash across sessions: SHA256(Repo:Distiller:Type:Topic) */
   identity_hash: string;
   /** List of all original session IDs that contributed to this refined asset */
   contributing_sessions: string[];
